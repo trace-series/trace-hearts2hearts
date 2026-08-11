@@ -38,6 +38,7 @@
     --text-mid: #3d6a86;
     --text-light: #8fb3c7;
     --border: rgba(20, 20, 20, 0.12);
+    --content-top: 120px; /* header+member-tabsの実測高さでJSから上書きされる（フォールバック値） */
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -180,7 +181,7 @@
 
   /* ── MAIN ── */
   main {
-    padding-top: 120px;
+    padding-top: var(--content-top);
     padding-bottom: 60px;
   }
 
@@ -196,7 +197,7 @@
 
   .map-container {
     position: relative;
-    height: calc(100vh - 120px);
+    height: calc(100vh - var(--content-top));
     overflow: hidden;
     touch-action: none;
   }
@@ -2112,6 +2113,38 @@
 <div id="member-tabs-hint" style="display:none;background:#ececec;text-align:center;font-size:11px;color:#4d4d4d;padding:4px 0;">
   👆 タップしてスポットのメンバーを選択
 </div>
+
+<script>
+  // header + member-tabs（＋表示中ならヒント帯）の実測高さを --content-top に反映する。
+  // メンバー数が増減してタブが2段になった場合や、投稿画面でヒント帯が出る場合でも
+  // main のpadding-topとmap-containerの高さが常に正しく追従するようにするための処理。
+  (function () {
+    function syncContentTop() {
+      var header = document.querySelector('header');
+      var tabs = document.getElementById('member-tabs');
+      var hint = document.getElementById('member-tabs-hint');
+      var h = header ? header.offsetHeight : 56;
+      if (tabs && getComputedStyle(tabs).display !== 'none') {
+        h += tabs.offsetHeight;
+        if (hint && getComputedStyle(hint).display !== 'none') h += hint.offsetHeight;
+      }
+      document.documentElement.style.setProperty('--content-top', h + 'px');
+    }
+    window.syncContentTop = syncContentTop;
+    syncContentTop();
+    window.addEventListener('resize', syncContentTop);
+    window.addEventListener('orientationchange', syncContentTop);
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(syncContentTop);
+      var headerEl = document.querySelector('header');
+      var tabsEl = document.getElementById('member-tabs');
+      var hintEl = document.getElementById('member-tabs-hint');
+      if (headerEl) ro.observe(headerEl);
+      if (tabsEl) ro.observe(tabsEl);
+      if (hintEl) ro.observe(hintEl);
+    }
+  })();
+</script>
 
 <main>
 
@@ -5604,6 +5637,7 @@ function showView(name) {
       if (hint) hint.style.display = 'none';
     }
   }
+  if (window.syncContentTop) window.syncContentTop();
 
   window.scrollTo(0, 0);
 }
