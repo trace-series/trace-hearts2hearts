@@ -269,7 +269,7 @@
 
   .map-bottom-card.open {
     transform: translateY(0);
-    max-height: 80vh;
+    max-height: calc(100% - 60px); /* 100% = .map-containerの実高さ。60pxは下部ナビとの重なり防止 */
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
