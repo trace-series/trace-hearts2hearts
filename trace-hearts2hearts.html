@@ -4289,7 +4289,7 @@ function gm_authFailure() {
 function openCard(spot) {
   currentSpot = spot;
   document.getElementById('card-title').textContent = spot.name;
-  document.getElementById('card-sub').textContent = spot.sub;
+  document.getElementById('card-sub').innerHTML = linkifyText(spot.sub);
         if (spot.image_url) {
           const thumb = document.getElementById('card-thumb');
           thumb.innerHTML = '';
@@ -5172,6 +5172,15 @@ async function submitNewSpot() {
   function escHtml(str) {
     if (!str) return '';
     return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // 文字列中のURLをタップ可能な<a>リンクに変換（それ以外はエスケープしてプレーン表示）
+  function linkifyText(str) {
+    if (!str) return '';
+    const urlPattern = /(https?:\/\/[^\s]+)/g;
+    return escHtml(str).replace(/(https?:\/\/[^\s]+)/g, function(url) {
+      return '<a href="' + url + '" target="_blank" rel="noopener noreferrer" style="color:var(--primary,#4aa3d8);text-decoration:underline;word-break:break-all;">' + url + '</a>';
+    });
   }
 
   // スポットのmember文字列（単一 or カンマ区切りの複数）を配列に変換
