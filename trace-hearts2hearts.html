@@ -5179,7 +5179,7 @@ async function submitNewSpot() {
     if (!str) return '';
     const urlPattern = /(https?:\/\/[^\s]+)/g;
     return escHtml(str).replace(/(https?:\/\/[^\s]+)/g, function(url) {
-      return '<a href="' + url + '" target="_blank" rel="noopener noreferrer" style="color:var(--primary,#4aa3d8);text-decoration:underline;word-break:break-all;">' + url + '</a>';
+      return '<a href="' + url + '" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" style="color:var(--primary,#4aa3d8);text-decoration:underline;word-break:break-all;">' + url + '</a>';
     });
   }
 
