@@ -5193,12 +5193,15 @@ function toggleCard() {
   cardOpen = !cardOpen;
   const card = document.getElementById('map-card');
   const nearBtn = document.getElementById('nearest-spot-btn');
+  const listBtn = document.getElementById('list-view-toggle');
   if (cardOpen) {
     card.classList.add('open');
     if (nearBtn) nearBtn.style.display = 'none';
+    if (listBtn) listBtn.style.display = 'none';
   } else {
     card.classList.remove('open');
     if (nearBtn) nearBtn.style.display = 'flex';
+    if (listBtn) listBtn.style.display = '';
   }
 }
 
