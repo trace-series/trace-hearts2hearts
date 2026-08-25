@@ -256,7 +256,7 @@
 
   /* MAP下部カード */
   .map-bottom-card {
-    position: absolute;
+    position: fixed;
     bottom: 0; left: 0; right: 0;
     background: white;
     border-radius: 20px 20px 0 0;
@@ -2217,6 +2217,7 @@
         <button id="nearest-spot-btn" onclick="goToNearestSpot()" style="position:fixed;bottom:90px;right:16px;z-index:1000;background:linear-gradient(135deg,#1a1a1a,#7b1a3e);color:#fff;border:none;border-radius:50px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);display:none;align-items:center;gap:6px;">📍 最寄りスポット</button>
 
       <!-- 下部カード -->
+    </div>
       <div class="map-bottom-card" id="map-card">
         <div class="card-handle-wrap" onclick="toggleCard()"><div class="card-handle"></div></div>
         <div class="card-preview" onclick="toggleCard()">
@@ -2318,7 +2319,6 @@
 
         </div>
       </div>
-    </div>
   </div>
 
   <!-- RANKING VIEW -->
