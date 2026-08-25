@@ -5201,6 +5201,8 @@ async function submitNewSpot() {
     return String(memberStr).split(',').map(function(m){ return m.trim(); }).filter(Boolean);
   }
 
+let _bodyScrollY = 0;
+
 function toggleCard() {
   cardOpen = !cardOpen;
   const card = document.getElementById('map-card');
@@ -5210,12 +5212,24 @@ function toggleCard() {
     card.classList.add('open');
     if (nearBtn) nearBtn.style.display = 'none';
     if (listBtn) listBtn.style.display = 'none';
-    document.body.style.overflow = 'hidden';
+    // iOS Safariはbody{overflow:hidden}だけではスクロールを止められないため、
+    // position:fixedで固定し、閉じたときに元のスクロール位置へ戻す
+    _bodyScrollY = window.scrollY || window.pageYOffset || 0;
+    document.body.style.position = 'fixed';
+    document.body.style.top = (-_bodyScrollY) + 'px';
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
   } else {
     card.classList.remove('open');
     if (nearBtn) nearBtn.style.display = 'flex';
     if (listBtn) listBtn.style.display = '';
-    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.width = '';
+    window.scrollTo(0, _bodyScrollY);
   }
 }
 
