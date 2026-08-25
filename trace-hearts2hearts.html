@@ -274,12 +274,22 @@
     -webkit-overflow-scrolling: touch;
   }
 
+  .card-handle-wrap {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: white;
+    margin: -16px -16px 12px;
+    padding: 10px 0 8px;
+    cursor: pointer;
+  }
+
   .card-handle {
     width: 40px;
     height: 4px;
     background: var(--purple-light);
     border-radius: 2px;
-    margin: 0 auto 12px;
+    margin: 0 auto;
     cursor: pointer;
   }
 
@@ -2206,7 +2216,7 @@
 
       <!-- 下部カード -->
       <div class="map-bottom-card" id="map-card">
-        <div class="card-handle" onclick="toggleCard()"></div>
+        <div class="card-handle-wrap" onclick="toggleCard()"><div class="card-handle"></div></div>
         <div class="card-preview" onclick="toggleCard()">
           <div class="card-thumb" id="card-thumb">📍</div>
           <div>
