@@ -272,6 +272,7 @@
     max-height: calc(100% - 60px); /* 100% = .map-containerの実高さ。60pxは下部ナビとの重なり防止 */
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
   .card-handle-wrap {
@@ -5208,10 +5209,12 @@ function toggleCard() {
     card.classList.add('open');
     if (nearBtn) nearBtn.style.display = 'none';
     if (listBtn) listBtn.style.display = 'none';
+    document.body.style.overflow = 'hidden';
   } else {
     card.classList.remove('open');
     if (nearBtn) nearBtn.style.display = 'flex';
     if (listBtn) listBtn.style.display = '';
+    document.body.style.overflow = '';
   }
 }
 
