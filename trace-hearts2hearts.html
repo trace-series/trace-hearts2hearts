@@ -198,6 +198,7 @@
   .map-container {
     position: relative;
     height: calc(100vh - var(--content-top));
+    height: calc(100dvh - var(--content-top));
     overflow: hidden;
     touch-action: none;
   }
@@ -270,7 +271,8 @@
 
   .map-bottom-card.open {
     transform: translateY(0);
-    max-height: calc(100vh - var(--content-top) - 60px); /* ヘッダー+メンバータブ(2段)の実測高さを差し引き、下部ナビとの重なりも防止 */
+    max-height: calc(100vh - var(--content-top) - 60px); /* フォールバック */
+    max-height: calc(100dvh - var(--content-top) - 60px); /* ヘッダー+メンバータブ(2段)の実測高さを差し引き、下部ナビとの重なりも防止。dvhでツールバー変動に追従 */
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
@@ -2147,6 +2149,11 @@
     syncContentTop();
     window.addEventListener('resize', syncContentTop);
     window.addEventListener('orientationchange', syncContentTop);
+    // iOS Safariのツールバー(アドレスバー)の表示/非表示は通常のresizeイベントでは
+    // 拾えないことがあるため、visualViewportのresizeも監視する。
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', syncContentTop);
+    }
     if (window.ResizeObserver) {
       var ro = new ResizeObserver(syncContentTop);
       var headerEl = document.querySelector('header');
