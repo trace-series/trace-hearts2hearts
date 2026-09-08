@@ -4244,10 +4244,36 @@ async function initMap() {
   // 初回起動チェック
   checkOnboarding();
 
+  // 同一座標（またはごく近い座標）のスポットが複数ある場合、ピンが完全に重なって
+  // 下側のピンをタップできなくなるのを防ぐため、見た目の表示位置だけを円状に少しずらす。
+  // spot.lat/lng自体（距離計算・ルート等で使う実座標）は変更しない。
+  function getMarkerOffsetPositions(spots) {
+    const groups = {};
+    spots.forEach(s => {
+      const key = s.lat.toFixed(5) + ',' + s.lng.toFixed(5);
+      (groups[key] = groups[key] || []).push(s);
+    });
+    const offsetMap = new Map();
+    Object.values(groups).forEach(group => {
+      if (group.length <= 1) return;
+      const radius = 0.00015; // 緯度経度で約15m相当
+      group.forEach((s, i) => {
+        const angle = (2 * Math.PI * i) / group.length;
+        offsetMap.set(s, {
+          lat: s.lat + radius * Math.cos(angle),
+          lng: s.lng + (radius * Math.sin(angle)) / Math.cos(s.lat * Math.PI / 180)
+        });
+      });
+    });
+    return offsetMap;
+  }
+
   // ピンを追加
+  const markerOffsetPositions = getMarkerOffsetPositions(SPOTS);
   SPOTS.forEach(spot => {
+    const markerPos = markerOffsetPositions.get(spot) || { lat: spot.lat, lng: spot.lng };
     const marker = new google.maps.Marker({
-      position: { lat: spot.lat, lng: spot.lng },
+      position: markerPos,
       map: map,
       title: spot.name,
       icon: {
