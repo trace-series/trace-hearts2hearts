@@ -270,7 +270,7 @@
 
   .map-bottom-card.open {
     transform: translateY(0);
-    max-height: 80vh;
+    max-height: calc(100vh - var(--content-top) - 60px); /* ヘッダー+メンバータブ(2段)の実測高さを差し引き、下部ナビとの重なりも防止 */
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
