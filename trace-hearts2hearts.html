@@ -1998,6 +1998,7 @@
     background: #f9f7ff;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     z-index: 100;
     padding: 8px 12px 80px;
   }
@@ -2215,6 +2216,7 @@
         <button id="vfbtn-unvisited" class="radius-btn" onclick="setVisitedFilter('unvisited', this)">⬜ 未訪問</button>
       </div>
         <button id="nearest-spot-btn" onclick="goToNearestSpot()" style="position:fixed;bottom:90px;right:16px;z-index:1000;background:linear-gradient(135deg,#1a1a1a,#7b1a3e);color:#fff;border:none;border-radius:50px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);display:none;align-items:center;gap:6px;">📍 最寄りスポット</button>
+        <button id="card-fixed-close-btn" onclick="toggleCard()" aria-label="カードを閉じる" style="position:fixed;top:calc(var(--content-top) + 10px);right:14px;z-index:1200;width:36px;height:36px;border-radius:50%;background:rgba(20,20,20,0.75);color:#fff;border:none;font-size:18px;line-height:1;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);">✕</button>
 
       <!-- 下部カード -->
     </div>
@@ -4423,6 +4425,8 @@ function openCard(spot) {
   document.getElementById('card-detail').style.display = 'block';
   document.getElementById('map-card').classList.add('open');
   cardOpen = true;
+  const closeBtnOnOpen = document.getElementById('card-fixed-close-btn');
+  if (closeBtnOnOpen) closeBtnOnOpen.style.display = 'flex';
   const nearBtn2 = document.getElementById('nearest-spot-btn');
   if (nearBtn2) nearBtn2.style.display = 'none';
 
@@ -5228,14 +5232,17 @@ function toggleCard() {
   const card = document.getElementById('map-card');
   const nearBtn = document.getElementById('nearest-spot-btn');
   const listBtn = document.getElementById('list-view-toggle');
+  const closeBtn = document.getElementById('card-fixed-close-btn');
   if (cardOpen) {
     card.classList.add('open');
     if (nearBtn) nearBtn.style.display = 'none';
     if (listBtn) listBtn.style.display = 'none';
+    if (closeBtn) closeBtn.style.display = 'flex';
   } else {
     card.classList.remove('open');
     if (nearBtn) nearBtn.style.display = 'flex';
     if (listBtn) listBtn.style.display = '';
+    if (closeBtn) closeBtn.style.display = 'none';
   }
 }
 
@@ -5310,6 +5317,8 @@ function setOriginSpot() {
   activeRadius = 0;
   document.getElementById('map-card').classList.remove('open');
   cardOpen = false;
+  const closeBtnOnOrigin = document.getElementById('card-fixed-close-btn');
+  if (closeBtnOnOrigin) closeBtnOnOrigin.style.display = 'none';
   listViewOpen = true;
   var container = document.getElementById('spot-list-container');
   container.style.display = 'block';
