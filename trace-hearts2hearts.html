@@ -5606,6 +5606,10 @@ function renderSearchResults() {
       || (s.sub && s.sub.toLowerCase().includes(q))
       || (s.member && s.member.toLowerCase().includes(q))
       || (s.no != null && String(s.no) === q);
+  }).sort(function(a, b) {
+    var aExact = (a.no != null && String(a.no) === q) ? 0 : 1;
+    var bExact = (b.no != null && String(b.no) === q) ? 0 : 1;
+    return aExact - bExact;
   }).slice(0, 30);
   if (matches.length === 0) {
     container.innerHTML = '<div style="padding:20px;text-align:center;color:#999;font-size:13px;">見つかりませんでした</div>';
