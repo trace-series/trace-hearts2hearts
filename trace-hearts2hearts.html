@@ -3996,6 +3996,7 @@ async function fetchSpotsFromDB() {
       badCount: s.bad_count || 0,
       adminLevel: s.admin_level || 'reliable',
       db_id: s.id,
+      no: s.no != null ? s.no : null,
     }));
   } catch(e) {
     console.warn('Supabase取得失敗、ローカルデータで起動:', e);
@@ -5603,7 +5604,8 @@ function renderSearchResults() {
     return (s.name && s.name.toLowerCase().includes(q))
       || (s.address && s.address.toLowerCase().includes(q))
       || (s.sub && s.sub.toLowerCase().includes(q))
-      || (s.member && s.member.toLowerCase().includes(q));
+      || (s.member && s.member.toLowerCase().includes(q))
+      || (s.no != null && String(s.no) === q);
   }).slice(0, 30);
   if (matches.length === 0) {
     container.innerHTML = '<div style="padding:20px;text-align:center;color:#999;font-size:13px;">見つかりませんでした</div>';
