@@ -2276,7 +2276,6 @@
           <button id="btn-navi" onclick="openNavi()" style="flex:1;background:linear-gradient(135deg,#ededed,#e6e6e6);border:2px solid #bfbfbf;border-radius:12px;padding:9px;font-size:13px;font-weight:700;color:#333333;cursor:pointer;">🗺️ ナビ</button>
           <button id="btn-set-origin" onclick="setOriginSpot()" style="flex:1;background:linear-gradient(135deg,#ededed,#e6e6e6);border:2px solid #bfbfbf;border-radius:12px;padding:9px;font-size:13px;font-weight:700;color:#333333;cursor:pointer;">📍 起点に設定</button>
         </div>
-        <button id="btn-card-gallery" onclick="openGalleryForCurrentSpot()" style="display:block;width:100%;margin-top:8px;background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:9px;font-size:13px;font-weight:700;color:var(--purple-deep);cursor:pointer;">🖼️ このスポットの写真をギャラリーで見る</button>
         <div class="card-detail" id="card-detail" style="display:none;">
           <div class="card-detail-row">
             <span class="icon">📍</span>
@@ -2441,6 +2440,7 @@
     <div id="gallery-wrap" style="display:none;">
       <div class="gal-controls">
         <input class="gal-search" type="search" placeholder="🔍 スポット名で検索" oninput="onGallerySearch(this)">
+        <button id="gal-search-clear" onclick="clearGallerySearch()" style="display:none;flex-shrink:0;border:none;background:var(--purple-mid);color:#fff;border-radius:12px;padding:10px 12px;font-size:13px;font-weight:700;cursor:pointer;">✕ 解除</button>
       </div>
       <div class="gal-sort-row">
         <button class="gal-sort-btn active" data-sort="activity" onclick="setGallerySort('activity')">📅 活動日順</button>
@@ -4344,6 +4344,13 @@ function onGallerySearch(input) {
   renderGallery();
 }
 
+function clearGallerySearch() {
+  const input = document.querySelector('#gallery-wrap .gal-search');
+  if (input) input.value = '';
+  galleryQuery = '';
+  renderGallery();
+}
+
 function renderGallery() {
   const grid = document.getElementById('gallery-grid');
   const countEl = document.getElementById('gallery-count');
@@ -4367,6 +4374,8 @@ function renderGallery() {
   }
 
   if (countEl) countEl.textContent = `${galleryFiltered.length}件`;
+  const clearBtn = document.getElementById('gal-search-clear');
+  if (clearBtn) clearBtn.style.display = galleryQuery ? 'block' : 'none';
   const noteEl = document.getElementById('gallery-member-note');
   if (noteEl) {
     if (activeMember === 'all') {
