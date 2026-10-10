@@ -2446,6 +2446,7 @@
         <button class="gal-sort-btn" data-sort="recent" onclick="setGallerySort('recent')">🆕 登録が新しい順</button>
         <span id="gallery-count"></span>
       </div>
+      <div id="gallery-member-note" style="display:none;font-size:12px;color:#d9363e;font-weight:600;line-height:1.5;margin:-4px 2px 10px;"></div>
       <div id="gallery-grid"></div>
     </div>
 
@@ -4350,6 +4351,15 @@ function renderGallery() {
   }
 
   if (countEl) countEl.textContent = `${galleryFiltered.length}件`;
+  const noteEl = document.getElementById('gallery-member-note');
+  if (noteEl) {
+    if (activeMember === 'all') {
+      noteEl.style.display = 'none';
+    } else {
+      noteEl.textContent = `※ メンバー絞り込みは聖地スポット単位です。${activeMember}が訪れたスポットの写真をすべて表示するため、他のメンバーだけが写っている写真や、「全員」で登録されたスポットの写真も含まれます。`;
+      noteEl.style.display = 'block';
+    }
+  }
   galleryShownCount = 0;
   grid.innerHTML = '';
 
