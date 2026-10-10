@@ -4259,6 +4259,8 @@ let galleryFiltered = [];
 let galleryShownCount = 0;
 let gallerySort = 'activity'; // 'activity'（活動日順・年表） | 'recent'（登録が新しい順）
 let galleryQuery = '';
+let galleryIsEditor = false;
+let galleryCurrent = null;
 
 function switchFeedMode(mode) {
   galleryMode = (mode === 'gallery');
@@ -4281,7 +4283,7 @@ async function loadGallery() {
   if (!galleryCache) {
     grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-light);">読み込み中...</div>';
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/spot_media?select=id,media_type,url,thumb_url,embed_provider,source_url,activity_date_manual,source_posted_at,created_at,sort_order,spots(name,member,no)&order=created_at.desc&limit=2000`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/spot_media?select=id,spot_id,media_type,url,thumb_url,embed_provider,source_url,activity_date_manual,activity_date_precision,source_posted_at,created_at,sort_order,spots(name,member,no)&order=created_at.desc&limit=2000`, {
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
       });
       const data = await res.json();
@@ -4292,6 +4294,11 @@ async function loadGallery() {
         no: m.spots.no,
         activity: galleryActivityDate(m),
       })) : [];
+      // 管理者（media_editorsに登録されたユーザー）だけ活動月の設定UIを出す
+      try {
+        const { data: ed } = await getSupabaseClient().rpc('is_media_editor');
+        galleryIsEditor = ed === true;
+      } catch(e) { galleryIsEditor = false; }
     } catch(e) {
       console.warn('ギャラリー取得失敗:', e);
       grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-light);">読み込みに失敗しました</div>';
@@ -4309,6 +4316,14 @@ function galleryActivityDate(m) {
     return d.toISOString().slice(0, 10);
   }
   return null;
+}
+
+function galleryItemDateLabel(m) {
+  if (m.activity_date_manual && m.activity_date_precision === 'month' && m.activity) {
+    const p = m.activity.split('-');
+    return `${p[0]}.${p[1]}`;
+  }
+  return galleryDateLabel(m.activity);
 }
 
 function galleryDateLabel(ymd) {
@@ -4413,6 +4428,7 @@ function galleryGroupKey(m) {
 function openGalleryItem(el) {
   const m = galleryFiltered[parseInt(el.getAttribute('data-idx'), 10)];
   if (!m) return;
+  galleryCurrent = m;
   const box = document.getElementById('gallery-lightbox');
   const body = document.getElementById('gallery-lightbox-body');
   if (!box || !body) return;
@@ -4424,13 +4440,64 @@ function openGalleryItem(el) {
     <div style="padding:12px 4px 0;">
       <div style="font-size:15px;font-weight:700;color:var(--purple-deep);line-height:1.4;margin-bottom:4px;">${m.no != null ? 'No.' + m.no + ' ' : ''}${escHtml(m.spot_name)}</div>
       <div style="font-size:12px;color:var(--text-mid);margin-bottom:2px;">👥 ${escHtml(m.member)}</div>
-      <div style="font-size:12px;color:var(--text-mid);margin-bottom:10px;">📅 活動日：${galleryDateLabel(m.activity)}</div>
+      <div style="font-size:12px;color:var(--text-mid);margin-bottom:10px;">📅 活動日：${galleryItemDateLabel(m)}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button data-spot-name="${escHtml(m.spot_name)}" onclick="closeGalleryLightbox();jumpToSpotFromFeed(this)" style="flex:1;min-width:140px;border:none;background:linear-gradient(135deg,var(--purple-mid),var(--purple-deep));color:#fff;border-radius:12px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;">📍 このスポットを見る</button>
         ${m.source_url ? `<a href="${escHtml(m.source_url)}" target="_blank" rel="noopener" style="flex:1;min-width:110px;text-align:center;border:1.5px solid var(--border);background:#fff;color:var(--purple-deep);border-radius:12px;padding:10px;font-size:13px;font-weight:700;text-decoration:none;">🔗 元ネタ</a>` : ''}
       </div>
+      ${galleryIsEditor ? galleryEditorHtml(m) : ''}
     </div>`;
   box.style.display = 'flex';
+}
+
+function galleryEditorHtml(m) {
+  const sameSpot = galleryCache.filter(x => x.spot_id === m.spot_id).length;
+  const cur = m.activity_date_manual ? m.activity_date_manual.slice(0, 7) : (m.activity ? m.activity.slice(0, 7) : '');
+  return `<div style="margin-top:14px;padding:12px;border-radius:12px;background:#fff4f4;border:1.5px dashed #e08a8a;">
+    <div style="font-size:12px;font-weight:700;color:#c0392b;margin-bottom:8px;">🔧 管理者：活動月を設定</div>
+    <input type="month" id="gal-edit-month" value="${cur}" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:10px;padding:8px 10px;font-size:16px;margin-bottom:8px;background:#fff;">
+    ${sameSpot > 1 ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-mid);margin-bottom:10px;"><input type="checkbox" id="gal-edit-all" checked> このスポットの写真すべて（${sameSpot}枚）に適用</label>` : ''}
+    <div style="display:flex;gap:8px;">
+      <button onclick="saveGalleryDate(false)" style="flex:2;border:none;background:#c0392b;color:#fff;border-radius:10px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;">保存</button>
+      <button onclick="saveGalleryDate(true)" style="flex:1;border:1.5px solid var(--border);background:#fff;color:var(--text-mid);border-radius:10px;padding:10px;font-size:12px;font-weight:600;cursor:pointer;">自動に戻す</button>
+    </div>
+    <div id="gal-edit-msg" style="font-size:12px;color:#c0392b;margin-top:6px;"></div>
+  </div>`;
+}
+
+async function saveGalleryDate(clear) {
+  const m = galleryCurrent;
+  if (!m) return;
+  const msg = document.getElementById('gal-edit-msg');
+  const monthEl = document.getElementById('gal-edit-month');
+  const allEl = document.getElementById('gal-edit-all');
+  const ym = monthEl ? monthEl.value : '';
+  if (!clear && !/^\d{4}-\d{2}$/.test(ym)) {
+    if (msg) msg.textContent = '月を選んでください';
+    return;
+  }
+  const applyAll = !!(allEl && allEl.checked);
+  if (msg) msg.textContent = '保存中...';
+  const { data, error } = await getSupabaseClient().rpc('set_media_activity_date', {
+    p_media_id: m.id,
+    p_date: clear ? null : ym + '-01',
+    p_precision: 'month',
+    p_apply_to_spot: applyAll,
+  });
+  if (error) {
+    if (msg) msg.textContent = '保存できませんでした：' + (error.message || '');
+    return;
+  }
+  galleryCache.forEach(x => {
+    if (x.id === m.id || (applyAll && x.spot_id === m.spot_id)) {
+      x.activity_date_manual = clear ? null : ym + '-01';
+      x.activity_date_precision = 'month';
+      x.activity = galleryActivityDate(x);
+    }
+  });
+  const box = document.getElementById('gallery-lightbox');
+  if (box) box.style.display = 'none';
+  renderGallery();
 }
 
 function closeGalleryLightbox(ev) {
