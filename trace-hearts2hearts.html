@@ -2331,6 +2331,11 @@
             </div>
           </div>
 
+          <!-- 動画（埋め込み。タップで再生） -->
+          <div id="card-video-wrap" style="display:none;margin-top:14px;">
+            <div style="font-size:12px;font-weight:700;color:var(--text-light);margin-bottom:6px;">🎬 動画</div>
+            <div id="card-video-list"></div>
+          </div>
           <!-- 元ネタ写真（ボタン操作の邪魔にならないよう最下部に配置） -->
           <div id="card-source-photo-wrap" style="display:none;margin-top:14px;">
             <div style="font-size:12px;font-weight:700;color:var(--text-light);margin-bottom:6px;">📷 元ネタ写真</div>
@@ -4210,6 +4215,8 @@ async function loadFeed() {
           s.has_video = media.some(m => m.media_type === 'video');
           const firstPhoto = media.find(m => m.media_type === 'photo');
           if (firstPhoto) s.image_url = firstPhoto.thumb_url || firstPhoto.url || s.image_url;
+          const firstVideo = media.find(m => m.media_type === 'video');
+          if (!s.image_url && firstVideo) s.image_url = firstVideo.thumb_url || videoThumbFor(firstVideo.url);
         });
       }
     } catch(e) { console.warn('feed spot_media取得失敗:', e); }
@@ -4423,7 +4430,7 @@ function showMoreGallery() {
         prevGroup = g;
       }
     }
-    const src = m.thumb_url || (m.media_type === 'photo' ? m.url : '');
+    const src = m.thumb_url || (m.media_type === 'photo' ? m.url : videoThumbFor(m.url));
     html += `<div class="gal-tile" data-idx="${i}" onclick="openGalleryItem(this)">
       ${src ? `<img src="${escHtml(src)}" loading="lazy" alt="">` : `<div class="gal-tile-ph">🎬</div>`}
       ${m.media_type === 'video' ? '<span class="gal-video-mark">🎬</span>' : ''}
@@ -4453,7 +4460,7 @@ function openGalleryItem(el) {
   if (!box || !body) return;
   const media = m.media_type === 'photo'
     ? `<img src="${escHtml(m.url)}" style="width:100%;max-height:60vh;object-fit:contain;border-radius:12px;background:#000;display:block;">`
-    : (m.thumb_url ? `<img src="${escHtml(m.thumb_url)}" style="width:100%;max-height:60vh;object-fit:contain;border-radius:12px;background:#000;display:block;">` : `<div style="font-size:48px;text-align:center;padding:30px 0;">🎬</div>`);
+    : renderVideoBlock(m.url, m.thumb_url);
   body.innerHTML = `
     ${media}
     <div style="padding:12px 4px 0;">
@@ -4545,6 +4552,8 @@ function closeGalleryLightbox(ev) {
   if (ev && ev.target && ev.target.id !== 'gallery-lightbox') return;
   const box = document.getElementById('gallery-lightbox');
   if (box) box.style.display = 'none';
+  const body = document.getElementById('gallery-lightbox-body');
+  if (body) body.innerHTML = ''; // 再生中の動画を止める
 }
 
 // MAP・スポットカードからギャラリーを開く（spotNameを渡すとそのスポットで絞り込み）
@@ -4567,6 +4576,134 @@ function openGalleryForCurrentSpot() {
   if (closeBtn) closeBtn.style.display = 'none';
   openGalleryFromMap(name);
 }
+
+// ── 動画（埋め込み方式：Supabaseの容量は使わない） ──
+// 対応：YouTube（通常・ショート）／Instagram（投稿・リール）／X／TikTok。Weverse等は埋め込み不可なのでリンクボタン
+function parseVideoUrl(url) {
+  if (!url) return null;
+  let m;
+  // YouTube
+  m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/))([A-Za-z0-9_-]{11})/);
+  if (m) {
+    const id = m[1];
+    const isShort = /youtube\.com\/shorts\//.test(url);
+    let start = 0;
+    const t = url.match(/[?&](?:t|start)=([0-9hms]+)/);
+    if (t) {
+      const v = t[1];
+      if (/^\d+$/.test(v)) start = parseInt(v, 10);
+      else {
+        const h = v.match(/(\d+)h/), mi = v.match(/(\d+)m/), s = v.match(/(\d+)s/);
+        start = (h ? +h[1] * 3600 : 0) + (mi ? +mi[1] * 60 : 0) + (s ? +s[1] : 0);
+      }
+    }
+    return {
+      provider: 'youtube', label: 'YouTube',
+      embed: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&playsinline=1&rel=0${start ? '&start=' + start : ''}`,
+      thumb: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+      ratio: isShort ? '9/16' : '16/9', height: 0,
+    };
+  }
+  // Instagram
+  m = url.match(/instagram\.com\/(p|reel|reels|tv)\/([A-Za-z0-9_-]+)/);
+  if (m) {
+    const kind = m[1] === 'reels' ? 'reel' : m[1];
+    return { provider: 'instagram', label: 'Instagram', embed: `https://www.instagram.com/${kind}/${m[2]}/embed/`, thumb: '', ratio: '', height: 600 };
+  }
+  // X（旧Twitter）
+  m = url.match(/(?:x|twitter)\.com\/[^/]+\/status\/(\d+)/);
+  if (m) {
+    return { provider: 'x', label: 'X', embed: `https://platform.twitter.com/embed/Tweet.html?id=${m[1]}&lang=ja`, thumb: '', ratio: '', height: 600 };
+  }
+  // TikTok
+  m = url.match(/tiktok\.com\/.+\/video\/(\d+)/);
+  if (m) {
+    return { provider: 'tiktok', label: 'TikTok', embed: `https://www.tiktok.com/embed/v2/${m[1]}`, thumb: '', ratio: '', height: 740 };
+  }
+  // Weverse・その他（埋め込み不可）
+  const label = /weverse\.io/.test(url) ? 'Weverse' : '元の動画';
+  return { provider: /weverse\.io/.test(url) ? 'weverse' : 'link', label, embed: '', thumb: '', ratio: '', height: 0 };
+}
+
+function videoThumbFor(url) {
+  const v = parseVideoUrl(url);
+  return v && v.thumb ? v.thumb : '';
+}
+
+// タップするまでは読み込まない（通信量・表示速度のため）。タップでiframeに差し替え
+function renderVideoBlock(url, thumbUrl) {
+  const v = parseVideoUrl(url);
+  if (!v) return '';
+  if (!v.embed) {
+    return `<a href="${escHtml(url)}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;box-sizing:border-box;padding:14px;border-radius:12px;background:linear-gradient(135deg,var(--purple-mid),var(--purple-deep));color:#fff;font-size:13px;font-weight:700;text-decoration:none;margin-bottom:8px;">🎬 ${escHtml(v.label)}で動画を見る ↗</a>`;
+  }
+  const thumb = thumbUrl || v.thumb;
+  const bg = thumb ? `background:#000 url('${escHtml(thumb)}') center/cover no-repeat;` : 'background:linear-gradient(135deg,#2b2b2b,#555);';
+  const sizeCss = v.ratio ? `aspect-ratio:${v.ratio};${v.ratio === '9/16' ? 'max-height:70vh;margin:0 auto 8px;' : 'margin-bottom:8px;'}` : 'height:180px;margin-bottom:8px;';
+  return `<div class="video-embed-ph" data-embed="${escHtml(v.embed)}" data-ratio="${v.ratio}" data-h="${v.height}" data-provider="${v.provider}" onclick="playVideoEmbed(this)" style="position:relative;width:100%;${sizeCss}border-radius:12px;overflow:hidden;cursor:pointer;${bg}">
+    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:rgba(0,0,0,0.25);">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.92);display:flex;align-items:center;justify-content:center;font-size:22px;color:#222;padding-left:4px;box-sizing:border-box;">▶</div>
+      <div style="font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.6);">${escHtml(v.label)}で再生</div>
+    </div>
+  </div>`;
+}
+
+function playVideoEmbed(el) {
+  const src = el.getAttribute('data-embed');
+  if (!src) return;
+  const ratio = el.getAttribute('data-ratio');
+  const h = parseInt(el.getAttribute('data-h') || '0', 10);
+  const iframe = document.createElement('iframe');
+  iframe.src = src;
+  iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
+  iframe.setAttribute('allowfullscreen', '');
+  iframe.setAttribute('loading', 'lazy');
+  iframe.style.cssText = 'width:100%;border:0;border-radius:12px;display:block;background:#000;margin-bottom:8px;' +
+    (ratio ? `aspect-ratio:${ratio};${ratio === '9/16' ? 'max-height:70vh;' : ''}` : `height:${h || 600}px;background:#fff;`);
+  el.replaceWith(iframe);
+}
+
+// スポットカードの「🎬 動画」欄
+let cardVideoReqId = 0;
+async function loadCardVideos(spot) {
+  const wrap = document.getElementById('card-video-wrap');
+  const list = document.getElementById('card-video-list');
+  if (!wrap || !list) return;
+  wrap.style.display = 'none';
+  list.innerHTML = '';
+  if (!spot || !spot.db_id) return;
+  const reqId = ++cardVideoReqId;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/spot_media?select=url,thumb_url,sort_order&spot_id=eq.${spot.db_id}&media_type=eq.video&order=sort_order.asc`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+    });
+    const data = await res.json();
+    if (reqId !== cardVideoReqId) return; // 別のスポットを開き直した場合は破棄
+    if (Array.isArray(data) && data.length) {
+      list.innerHTML = data.map(v => renderVideoBlock(v.url, v.thumb_url)).join('');
+      wrap.style.display = 'block';
+    }
+  } catch(e) { console.warn('動画取得失敗:', e); }
+}
+
+// カードを閉じたら再生中の動画を止める（iframeを外す）
+(function watchCardCloseForVideo() {
+  function attach() {
+    const card = document.getElementById('map-card');
+    if (!card) return;
+    new MutationObserver(function() {
+      if (!card.classList.contains('open')) {
+        const list = document.getElementById('card-video-list');
+        if (list && list.querySelector('iframe')) list.innerHTML = '';
+        const wrap = document.getElementById('card-video-wrap');
+        if (wrap) wrap.style.display = 'none';
+        cardVideoReqId++;
+      }
+    }).observe(card, { attributes: true, attributeFilter: ['class'] });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', attach);
+  else attach();
+})();
 
 function showMoreFeed() {
   const list = document.getElementById('feed-list');
@@ -4936,6 +5073,7 @@ function openCard(spot) {
             linkWrap.style.display = 'none';
           }
         }
+        loadCardVideos(spot);
   document.getElementById('card-address').textContent = spot.address;
   document.getElementById('card-discoverer').textContent = spot.discoverer;
   document.getElementById('card-likes').textContent = spot.likes + ' 件の巡礼報告';
