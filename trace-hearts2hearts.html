@@ -2410,7 +2410,48 @@
   <!-- FEED VIEW -->
   <div id="view-feed">
     <div class="section-title">タイムライン</div>
-    <div class="section-sub">みんなの巡礼レポート</div>
+    <div class="section-sub" id="feed-section-sub">最新の更新とみんなの巡礼レポート</div>
+
+    <style>
+      .feed-seg-wrap { display:flex; gap:6px; background:var(--purple-pale); border-radius:14px; padding:4px; margin:0 0 14px; }
+      .feed-seg { flex:1; border:none; background:transparent; color:var(--text-mid); border-radius:10px; padding:9px 6px; font-size:13px; font-weight:700; cursor:pointer; }
+      .feed-seg.active { background:#fff; color:var(--purple-deep); box-shadow:0 1px 4px rgba(0,0,0,0.08); }
+      .gal-controls { display:flex; gap:8px; align-items:center; margin-bottom:10px; }
+      .gal-search { flex:1; min-width:0; border:1.5px solid var(--border); border-radius:12px; padding:9px 12px; font-size:16px; background:#fff; color:var(--text); }
+      .gal-sort-row { display:flex; gap:6px; align-items:center; margin-bottom:12px; }
+      .gal-sort-btn { border:1.5px solid var(--border); background:#fff; color:var(--text-mid); border-radius:20px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; }
+      .gal-sort-btn.active { background:var(--purple-mid); border-color:var(--purple-mid); color:#fff; }
+      #gallery-count { margin-left:auto; font-size:12px; color:var(--text-light); }
+      #gallery-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:3px; }
+      .gal-group { grid-column:1/-1; font-size:13px; font-weight:700; color:var(--purple-deep); padding:12px 2px 6px; }
+      .gal-tile { position:relative; aspect-ratio:1/1; overflow:hidden; border-radius:6px; background:var(--purple-pale); cursor:pointer; }
+      .gal-tile img { width:100%; height:100%; object-fit:cover; display:block; }
+      .gal-tile-ph { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:28px; }
+      .gal-video-mark { position:absolute; right:4px; top:4px; font-size:12px; background:rgba(0,0,0,0.55); color:#fff; border-radius:6px; padding:1px 4px; }
+      #gallery-lightbox { position:fixed; inset:0; z-index:3000; background:rgba(0,0,0,0.75); display:none; align-items:center; justify-content:center; padding:16px; }
+      #gallery-lightbox-body { background:#fff; border-radius:18px; padding:12px; width:100%; max-width:480px; max-height:90vh; overflow-y:auto; }
+    </style>
+
+    <div class="feed-seg-wrap">
+      <button class="feed-seg active" id="feedtab-tl" onclick="switchFeedMode('timeline')">🕒 タイムライン</button>
+      <button class="feed-seg" id="feedtab-gal" onclick="switchFeedMode('gallery')">🖼️ ギャラリー</button>
+    </div>
+
+    <div id="gallery-wrap" style="display:none;">
+      <div class="gal-controls">
+        <input class="gal-search" type="search" placeholder="🔍 スポット名で検索" oninput="onGallerySearch(this)">
+      </div>
+      <div class="gal-sort-row">
+        <button class="gal-sort-btn active" data-sort="activity" onclick="setGallerySort('activity')">📅 活動日順</button>
+        <button class="gal-sort-btn" data-sort="recent" onclick="setGallerySort('recent')">🆕 登録が新しい順</button>
+        <span id="gallery-count"></span>
+      </div>
+      <div id="gallery-grid"></div>
+    </div>
+
+    <div id="gallery-lightbox" onclick="closeGalleryLightbox(event)">
+      <div id="gallery-lightbox-body"></div>
+    </div>
 
     <div class="feed-list" id="feed-list">
       <div style="text-align:center;padding:40px 20px;color:var(--text-light);">
@@ -4207,6 +4248,185 @@ async function loadFeed() {
 
   list.innerHTML = '';
   showMoreFeed();
+}
+
+// ── ギャラリー（spot_mediaの写真・動画を一覧表示） ──
+const GALLERY_PAGE_SIZE = 60;
+let galleryMode = false;
+let galleryCache = null;
+let galleryFiltered = [];
+let galleryShownCount = 0;
+let gallerySort = 'activity'; // 'activity'（活動日順・年表） | 'recent'（登録が新しい順）
+let galleryQuery = '';
+
+function switchFeedMode(mode) {
+  galleryMode = (mode === 'gallery');
+  const tl = document.getElementById('feed-list');
+  const gal = document.getElementById('gallery-wrap');
+  const sub = document.getElementById('feed-section-sub');
+  if (tl) tl.style.display = galleryMode ? 'none' : 'block';
+  if (gal) gal.style.display = galleryMode ? 'block' : 'none';
+  if (sub) sub.textContent = galleryMode ? '推しの軌跡を写真で振り返る' : '最新の更新とみんなの巡礼レポート';
+  const btnTl = document.getElementById('feedtab-tl');
+  const btnGal = document.getElementById('feedtab-gal');
+  if (btnTl) btnTl.classList.toggle('active', !galleryMode);
+  if (btnGal) btnGal.classList.toggle('active', galleryMode);
+  if (galleryMode) loadGallery();
+}
+
+async function loadGallery() {
+  const grid = document.getElementById('gallery-grid');
+  if (!grid) return;
+  if (!galleryCache) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-light);">読み込み中...</div>';
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/spot_media?select=id,media_type,url,thumb_url,embed_provider,source_url,activity_date_manual,source_posted_at,created_at,sort_order,spots(name,member,no)&order=created_at.desc&limit=2000`, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+      });
+      const data = await res.json();
+      galleryCache = Array.isArray(data) ? data.filter(m => m.spots).map(m => ({
+        ...m,
+        spot_name: m.spots.name,
+        member: m.spots.member || '全員',
+        no: m.spots.no,
+        activity: galleryActivityDate(m),
+      })) : [];
+    } catch(e) {
+      console.warn('ギャラリー取得失敗:', e);
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-light);">読み込みに失敗しました</div>';
+      return;
+    }
+  }
+  renderGallery();
+}
+
+// 活動日：手入力があれば優先、なければ出典の公開日（日本時間の日付）
+function galleryActivityDate(m) {
+  if (m.activity_date_manual) return m.activity_date_manual;
+  if (m.source_posted_at) {
+    const d = new Date(new Date(m.source_posted_at).getTime() + 9 * 3600 * 1000);
+    return d.toISOString().slice(0, 10);
+  }
+  return null;
+}
+
+function galleryDateLabel(ymd) {
+  if (!ymd) return '日付不明';
+  const p = ymd.split('-');
+  return `${p[0]}.${p[1]}.${p[2]}`;
+}
+
+function setGallerySort(sort) {
+  gallerySort = sort;
+  document.querySelectorAll('.gal-sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === sort));
+  renderGallery();
+}
+
+function onGallerySearch(input) {
+  galleryQuery = (input.value || '').trim().toLowerCase();
+  renderGallery();
+}
+
+function renderGallery() {
+  const grid = document.getElementById('gallery-grid');
+  const countEl = document.getElementById('gallery-count');
+  if (!grid || !galleryCache) return;
+
+  galleryFiltered = galleryCache.filter(m => {
+    const memberOk = activeMember === 'all' || m.member === '全員' || getSpotMemberList(m.member).includes(activeMember);
+    const queryOk = !galleryQuery || (m.spot_name || '').toLowerCase().includes(galleryQuery) || (m.no != null && ('no.' + m.no) === galleryQuery.replace(/\s/g, ''));
+    return memberOk && queryOk;
+  });
+
+  if (gallerySort === 'activity') {
+    galleryFiltered.sort((a, b) => {
+      if (a.activity && b.activity) return a.activity < b.activity ? 1 : a.activity > b.activity ? -1 : (a.sort_order || 0) - (b.sort_order || 0);
+      if (a.activity) return -1;
+      if (b.activity) return 1;
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
+  } else {
+    galleryFiltered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at) || (a.sort_order || 0) - (b.sort_order || 0));
+  }
+
+  if (countEl) countEl.textContent = `${galleryFiltered.length}件`;
+  galleryShownCount = 0;
+  grid.innerHTML = '';
+
+  if (!galleryFiltered.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-light);"><div style="font-size:28px;margin-bottom:6px;">🖼️</div><div style="font-size:13px;">該当する写真がありません</div></div>';
+    return;
+  }
+  showMoreGallery();
+}
+
+function showMoreGallery() {
+  const grid = document.getElementById('gallery-grid');
+  if (!grid) return;
+  const oldBtn = document.getElementById('gallery-more-btn');
+  if (oldBtn) oldBtn.remove();
+
+  const start = galleryShownCount;
+  const end = Math.min(start + GALLERY_PAGE_SIZE, galleryFiltered.length);
+  let html = '';
+  let prevGroup = start > 0 ? galleryGroupKey(galleryFiltered[start - 1]) : null;
+  for (let i = start; i < end; i++) {
+    const m = galleryFiltered[i];
+    if (gallerySort === 'activity') {
+      const g = galleryGroupKey(m);
+      if (g !== prevGroup) {
+        html += `<div class="gal-group">${g}</div>`;
+        prevGroup = g;
+      }
+    }
+    const src = m.thumb_url || (m.media_type === 'photo' ? m.url : '');
+    html += `<div class="gal-tile" data-idx="${i}" onclick="openGalleryItem(this)">
+      ${src ? `<img src="${escHtml(src)}" loading="lazy" alt="">` : `<div class="gal-tile-ph">🎬</div>`}
+      ${m.media_type === 'video' ? '<span class="gal-video-mark">🎬</span>' : ''}
+    </div>`;
+  }
+  grid.insertAdjacentHTML('beforeend', html);
+  galleryShownCount = end;
+
+  if (galleryShownCount < galleryFiltered.length) {
+    grid.insertAdjacentHTML('beforeend',
+      `<button id="gallery-more-btn" onclick="showMoreGallery()" style="grid-column:1/-1;border:1.5px solid var(--border);background:#fff;color:var(--purple-deep);border-radius:14px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;margin:8px 0 16px;">もっと見る（あと${galleryFiltered.length - galleryShownCount}件）</button>`);
+  }
+}
+
+function galleryGroupKey(m) {
+  if (!m.activity) return '日付不明';
+  const p = m.activity.split('-');
+  return `${p[0]}年${parseInt(p[1], 10)}月`;
+}
+
+function openGalleryItem(el) {
+  const m = galleryFiltered[parseInt(el.getAttribute('data-idx'), 10)];
+  if (!m) return;
+  const box = document.getElementById('gallery-lightbox');
+  const body = document.getElementById('gallery-lightbox-body');
+  if (!box || !body) return;
+  const media = m.media_type === 'photo'
+    ? `<img src="${escHtml(m.url)}" style="width:100%;max-height:60vh;object-fit:contain;border-radius:12px;background:#000;display:block;">`
+    : (m.thumb_url ? `<img src="${escHtml(m.thumb_url)}" style="width:100%;max-height:60vh;object-fit:contain;border-radius:12px;background:#000;display:block;">` : `<div style="font-size:48px;text-align:center;padding:30px 0;">🎬</div>`);
+  body.innerHTML = `
+    ${media}
+    <div style="padding:12px 4px 0;">
+      <div style="font-size:15px;font-weight:700;color:var(--purple-deep);line-height:1.4;margin-bottom:4px;">${m.no != null ? 'No.' + m.no + ' ' : ''}${escHtml(m.spot_name)}</div>
+      <div style="font-size:12px;color:var(--text-mid);margin-bottom:2px;">👥 ${escHtml(m.member)}</div>
+      <div style="font-size:12px;color:var(--text-mid);margin-bottom:10px;">📅 活動日：${galleryDateLabel(m.activity)}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button data-spot-name="${escHtml(m.spot_name)}" onclick="closeGalleryLightbox();jumpToSpotFromFeed(this)" style="flex:1;min-width:140px;border:none;background:linear-gradient(135deg,var(--purple-mid),var(--purple-deep));color:#fff;border-radius:12px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;">📍 このスポットを見る</button>
+        ${m.source_url ? `<a href="${escHtml(m.source_url)}" target="_blank" rel="noopener" style="flex:1;min-width:110px;text-align:center;border:1.5px solid var(--border);background:#fff;color:var(--purple-deep);border-radius:12px;padding:10px;font-size:13px;font-weight:700;text-decoration:none;">🔗 元ネタ</a>` : ''}
+      </div>
+    </div>`;
+  box.style.display = 'flex';
+}
+
+function closeGalleryLightbox(ev) {
+  if (ev && ev.target && ev.target.id !== 'gallery-lightbox') return;
+  const box = document.getElementById('gallery-lightbox');
+  if (box) box.style.display = 'none';
 }
 
 function showMoreFeed() {
@@ -6173,6 +6393,9 @@ function filterMember(el, member) {
       item.style.display = m === member ? 'block' : 'none';
     }
   });
+
+  // ギャラリー表示中はメンバーで絞り込み
+  if (galleryMode && galleryCache) renderGallery();
 
   // マップフィルター（ANDフィルター）
   if (map) applyFilters();
