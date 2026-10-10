@@ -4086,16 +4086,23 @@ async function toggleLike(id, btn, table) {
   }
 }
 
+// タイムライン：最初に20件、「もっと見る」で20件ずつ追加（上限100件）
+const FEED_PAGE_SIZE = 20;
+const FEED_MAX_ITEMS = 100;
+let feedItemsCache = [];
+let feedShownCount = 0;
+
 async function loadFeed() {
   const list = document.getElementById('feed-list');
   if (!list) return;
   list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--text-light);">読み込み中...</div>';
 
+  const authHeaders = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` };
+
+  // ① ファンの投稿（承認済み）
   let posts = [];
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/submissions?status=eq.approved&type=eq.new_spot&order=created_at.desc&limit=20`, {
-      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-    });
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/submissions?status=eq.approved&type=eq.new_spot&order=created_at.desc&limit=${FEED_MAX_ITEMS}`, { headers: authHeaders });
     const data = await res.json();
     if (Array.isArray(data)) {
       posts = data.map(s => ({
@@ -4112,6 +4119,51 @@ async function loadFeed() {
     }
   } catch(e) { console.warn('feed submissions取得失敗:', e); }
 
+  // ② 運営が登録したスポット（spotsテーブル）
+  let spotItems = [];
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/spots?select=id,name,member,sub,image_url,source_url,created_at,no&order=created_at.desc,no.desc&limit=${FEED_MAX_ITEMS}`, { headers: authHeaders });
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      // ファンの投稿から承認されたスポットは①と重複するので除外
+      const postNames = new Set(posts.map(p => p.spot_name));
+      spotItems = data
+        .filter(s => !postNames.has(s.name))
+        .map(s => ({
+          feedType: 'spot',
+          id: s.id,
+          spot_name: s.name,
+          member: s.member || '全員',
+          description: s.sub || '',
+          image_url: s.image_url || null,
+          source_url: s.source_url || null,
+          created_at: s.created_at,
+          no: s.no,
+          has_video: false,
+        }));
+    }
+  } catch(e) { console.warn('feed spots取得失敗:', e); }
+
+  // ②の補足：spot_media（サムネイル・動画の有無）
+  if (spotItems.length) {
+    try {
+      const ids = spotItems.map(s => s.id).join(',');
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/spot_media?select=spot_id,media_type,url,thumb_url,sort_order&spot_id=in.(${ids})&order=sort_order.asc`, { headers: authHeaders });
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        const bySpot = {};
+        data.forEach(m => { (bySpot[m.spot_id] = bySpot[m.spot_id] || []).push(m); });
+        spotItems.forEach(s => {
+          const media = bySpot[s.id] || [];
+          s.has_video = media.some(m => m.media_type === 'video');
+          const firstPhoto = media.find(m => m.media_type === 'photo');
+          if (firstPhoto) s.image_url = firstPhoto.thumb_url || firstPhoto.url || s.image_url;
+        });
+      }
+    } catch(e) { console.warn('feed spot_media取得失敗:', e); }
+  }
+
+  // ③ 巡礼報告
   let visits = [];
   try {
     const client = getSupabaseClient();
@@ -4119,7 +4171,7 @@ async function loadFeed() {
       .from('visit_log')
       .select('id, user_id, spot_name, visited_at, likes_count')
       .order('visited_at', { ascending: false })
-      .limit(20);
+      .limit(FEED_MAX_ITEMS);
     if (verr) console.warn('visit_log取得エラー:', verr);
     if (Array.isArray(vdata) && vdata.length) {
       const userIds = [...new Set(vdata.map(v => v.user_id).filter(Boolean))];
@@ -4142,50 +4194,102 @@ async function loadFeed() {
     }
   } catch(e) { console.warn('feed visit_log取得失敗:', e); }
 
-  const items = [...posts, ...visits]
+  feedItemsCache = [...posts, ...spotItems, ...visits]
     .filter(i => i.created_at)
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-    .slice(0, 30);
+    .slice(0, FEED_MAX_ITEMS);
+  feedShownCount = 0;
 
-  if (!items.length) {
+  if (!feedItemsCache.length) {
     list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--text-light);"><div style="font-size:32px;margin-bottom:8px;">📸</div><div style="font-size:14px;">巡礼報告が投稿されると表示されます</div></div>';
     return;
   }
 
-  list.innerHTML = items.map(item => {
-    if (item.feedType === 'visit') {
-      const liked = hasLikedPost('visit_log:' + item.id);
-      return `<div style="background:linear-gradient(135deg,#fff,var(--purple-pale));border-radius:18px;padding:14px 16px;margin-bottom:10px;box-shadow:0 2px 8px rgba(123,79,166,0.08);border:1px solid var(--border);">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-          <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--purple-mid),var(--purple-deep));display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">🚩</div>
-          <div style="font-size:13px;color:var(--text);line-height:1.4;"><b style="color:var(--purple-deep);">${escHtml(item.display_name)}</b>さんが<br><b>「${escHtml(item.spot_name)}」</b>を巡礼しました 🌸</div>
+  list.innerHTML = '';
+  showMoreFeed();
+}
+
+function showMoreFeed() {
+  const list = document.getElementById('feed-list');
+  if (!list) return;
+  const oldBtn = document.getElementById('feed-more-btn');
+  if (oldBtn) oldBtn.remove();
+
+  const next = feedItemsCache.slice(feedShownCount, feedShownCount + FEED_PAGE_SIZE);
+  list.insertAdjacentHTML('beforeend', next.map(renderFeedItem).join(''));
+  feedShownCount += next.length;
+
+  if (feedShownCount < feedItemsCache.length) {
+    list.insertAdjacentHTML('beforeend',
+      `<button id="feed-more-btn" onclick="showMoreFeed()" style="display:block;width:100%;border:1.5px solid var(--border);background:#fff;color:var(--purple-deep);border-radius:14px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;margin:4px 0 16px;">もっと見る（あと${feedItemsCache.length - feedShownCount}件）</button>`);
+  }
+}
+
+function jumpToSpotFromFeed(el) {
+  const name = el && el.getAttribute('data-spot-name');
+  if (name) jumpToSpot(name);
+}
+
+function feedLikeButton(item, table) {
+  const liked = hasLikedPost(table + ':' + item.id);
+  return `<button class="${liked ? 'liked' : ''}" onclick="toggleLike('${item.id}', this, '${table}')" ${liked ? 'disabled' : ''} style="border:none;background:${liked ? 'rgba(224,60,110,0.15)' : 'var(--purple-pale)'};color:${liked ? '#c0392b' : 'var(--purple-mid)'};border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;cursor:${liked ? 'default' : 'pointer'};display:flex;align-items:center;gap:5px;">
+    <span>${liked ? '❤️ いいね済み' : '🤍 いいね'}</span><span style="opacity:0.75;">${item.likes_count}件</span>
+  </button>`;
+}
+
+function renderFeedItem(item) {
+  // 巡礼報告
+  if (item.feedType === 'visit') {
+    return `<div style="background:linear-gradient(135deg,#fff,var(--purple-pale));border-radius:18px;padding:14px 16px;margin-bottom:10px;box-shadow:0 2px 8px rgba(123,79,166,0.08);border:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--purple-mid),var(--purple-deep));display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">🚩</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.4;"><b style="color:var(--purple-deep);">${escHtml(item.display_name)}</b>さんが<br><b>「${escHtml(item.spot_name)}」</b>を巡礼しました 🌸</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+        <div style="font-size:11px;color:var(--text-light);">${timeAgoLabel(item.created_at)}</div>
+        ${feedLikeButton(item, 'visit_log')}
+      </div>
+    </div>`;
+  }
+
+  // 運営が登録したスポット
+  if (item.feedType === 'spot') {
+    const videoBadge = item.has_video ? `<span style="font-size:10px;background:#e0245e;color:#fff;border-radius:8px;padding:2px 8px;">🎬 動画あり</span>` : '';
+    return `<div data-spot-name="${escHtml(item.spot_name)}" onclick="jumpToSpotFromFeed(this)" style="cursor:pointer;background:#fff;border-radius:18px;padding:14px 16px;margin-bottom:10px;box-shadow:0 2px 8px rgba(123,79,166,0.08);border:${item.has_video ? '2px solid #e0245e' : '1px solid var(--border)'};">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+        <span style="font-size:10px;background:var(--purple-mid);color:#fff;border-radius:8px;padding:2px 8px;">📍 新スポット追加${item.no != null ? ' No.' + item.no : ''}</span>
+        ${videoBadge}
+        <span style="font-size:11px;color:var(--text-light);margin-left:auto;">${timeAgoLabel(item.created_at)}</span>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center;">
+        ${item.image_url ? `<img src="${escHtml(item.image_url)}" loading="lazy" style="width:76px;height:76px;object-fit:cover;border-radius:12px;flex-shrink:0;">` : ''}
+        <div style="min-width:0;">
+          <div style="font-size:14px;font-weight:700;color:var(--purple-deep);line-height:1.35;margin-bottom:4px;">${escHtml(item.spot_name)}</div>
+          <div style="font-size:12px;color:var(--text-mid);margin-bottom:2px;">👥 ${escHtml(item.member)}</div>
+          ${item.description ? `<div style="font-size:11px;color:var(--text-light);line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${escHtml(item.description)}</div>` : ''}
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
-          <div style="font-size:11px;color:var(--text-light);">${timeAgoLabel(item.created_at)}</div>
-          <button class="${liked ? 'liked' : ''}" onclick="toggleLike('${item.id}', this, 'visit_log')" ${liked ? 'disabled' : ''} style="border:none;background:${liked ? 'rgba(224,60,110,0.15)' : 'var(--purple-pale)'};color:${liked ? '#c0392b' : 'var(--purple-mid)'};border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;cursor:${liked ? 'default' : 'pointer'};display:flex;align-items:center;gap:5px;">
-            <span>${liked ? '❤️ いいね済み' : '🤍 いいね'}</span><span style="opacity:0.75;">${item.likes_count}件</span>
-          </button>
-        </div>
-      </div>`;
-    }
-    const liked = hasLikedPost('submissions:' + item.id);
-    return `<div style="background:linear-gradient(135deg,#fff,var(--purple-pale));border-radius:18px;padding:16px;margin-bottom:10px;box-shadow:0 2px 8px rgba(123,79,166,0.08);border:1px solid var(--border);">
+      </div>
+    </div>`;
+  }
+
+  // ファンの投稿（承認済み）— 一番目立たせる
+  return `<div style="background:linear-gradient(135deg,#fff8e1,#fff);border-radius:18px;padding:16px;margin-bottom:10px;box-shadow:0 4px 14px rgba(212,160,23,0.25);border:2px solid var(--gold);">
+    <div style="font-size:13px;color:var(--text);margin-bottom:8px;line-height:1.4;">🏆 <b style="color:var(--purple-deep);">${escHtml(item.submitter)}</b> さんが新しい聖地を発見！</div>
+    <div data-spot-name="${escHtml(item.spot_name)}" onclick="jumpToSpotFromFeed(this)" style="cursor:pointer;">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
         <span style="font-size:15px;">📍</span>
         <span style="font-size:14px;font-weight:700;color:var(--purple-deep);">${escHtml(item.spot_name)}</span>
-        <span style="font-size:10px;background:var(--gold);color:#fff;border-radius:8px;padding:2px 8px;margin-left:auto;">🌟 新スポット</span>
+        <span style="font-size:10px;background:var(--gold);color:#fff;border-radius:8px;padding:2px 8px;margin-left:auto;">🌟 発見者</span>
       </div>
       ${item.description ? `<div style="font-size:13px;color:var(--text-mid);margin-bottom:8px;line-height:1.5;">${escHtml(item.description)}</div>` : ''}
-      ${item.image_url ? `<img src="${item.image_url}" style="width:100%;max-height:260px;object-fit:cover;border-radius:12px;margin-bottom:8px;display:block;" loading="lazy">` : ''}
-      ${item.source_url ? `<a href="${escHtml(item.source_url)}" target="_blank" rel="noopener" style="display:inline-block;font-size:11px;color:var(--purple-mid);margin-bottom:8px;text-decoration:underline;">🔗 元ネタを見る</a>` : ''}
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div style="font-size:11px;color:var(--text-light);">👤 ${escHtml(item.submitter)} · ${timeAgoLabel(item.created_at)}</div>
-        <button class="${liked ? 'liked' : ''}" onclick="toggleLike('${item.id}', this, 'submissions')" ${liked ? 'disabled' : ''} style="border:none;background:${liked ? 'rgba(224,60,110,0.15)' : 'var(--purple-pale)'};color:${liked ? '#c0392b' : 'var(--purple-mid)'};border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;cursor:${liked ? 'default' : 'pointer'};display:flex;align-items:center;gap:5px;">
-          <span>${liked ? '❤️ いいね済み' : '🤍 いいね'}</span><span style="opacity:0.75;">${item.likes_count}件</span>
-        </button>
-      </div>
-    </div>`;
-  }).join('');
+      ${item.image_url ? `<img src="${escHtml(item.image_url)}" style="width:100%;max-height:260px;object-fit:cover;border-radius:12px;margin-bottom:8px;display:block;" loading="lazy">` : ''}
+    </div>
+    ${item.source_url ? `<a href="${escHtml(item.source_url)}" target="_blank" rel="noopener" style="display:inline-block;font-size:11px;color:var(--purple-mid);margin-bottom:8px;text-decoration:underline;">🔗 元ネタを見る</a>` : ''}
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-size:11px;color:var(--text-light);">${timeAgoLabel(item.created_at)}</div>
+      ${feedLikeButton(item, 'submissions')}
+    </div>
+  </div>`;
 }
 
 const SPOTS = []; // Hearts2Hearts: Supabaseから取得するため空配列（オフライン時フォールバックなし）
