@@ -2447,6 +2447,15 @@
         <button class="gal-sort-btn" data-sort="recent" onclick="setGallerySort('recent')">🆕 登録が新しい順</button>
         <span id="gallery-count"></span>
       </div>
+      <details style="margin:-4px 2px 10px;font-size:12px;color:var(--text-mid);">
+        <summary style="cursor:pointer;color:var(--purple-mid);font-weight:700;">ⓘ 活動日について</summary>
+        <div style="margin-top:6px;padding:10px 12px;background:#fff;border:1px solid var(--border);border-radius:10px;line-height:1.7;">
+          ・活動日は、写真の出典元（YouTube・Instagram・Xなど）が公開された日をもとに自動で表示しています。<br>
+          ・運営が実際の日付を確認できたものは、その日付（または月）を優先して表示しています。<br>
+          ・メンバーが実際に訪れた日とは異なる場合があり、<b style="color:#d9363e;">日付の正確性を保証するものではありません</b>。目安としてご覧ください。<br>
+          ・出典元の日付が確認できないものは「日付不明」として表示しています。
+        </div>
+      </details>
       <div id="gallery-member-note" style="display:none;font-size:12px;color:#d9363e;font-weight:600;line-height:1.5;margin:-4px 2px 10px;"></div>
       <div id="gallery-grid"></div>
     </div>
@@ -4450,7 +4459,7 @@ function openGalleryItem(el) {
     <div style="padding:12px 4px 0;">
       <div style="font-size:15px;font-weight:700;color:var(--purple-deep);line-height:1.4;margin-bottom:4px;">${m.no != null ? 'No.' + m.no + ' ' : ''}${escHtml(m.spot_name)}</div>
       <div style="font-size:12px;color:var(--text-mid);margin-bottom:2px;">👥 ${escHtml(m.member)}</div>
-      <div style="font-size:12px;color:var(--text-mid);margin-bottom:10px;">📅 活動日：${galleryItemDateLabel(m)}</div>
+      <div style="font-size:12px;color:var(--text-mid);margin-bottom:10px;">📅 活動日：${galleryItemDateLabel(m)}${m.activity ? '<span style="font-size:10px;color:var(--text-light);margin-left:4px;">（目安）</span>' : ''}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button data-spot-name="${escHtml(m.spot_name)}" onclick="closeGalleryLightbox();jumpToSpotFromFeed(this)" style="flex:1;min-width:140px;border:none;background:linear-gradient(135deg,var(--purple-mid),var(--purple-deep));color:#fff;border-radius:12px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;">📍 このスポットを見る</button>
         ${m.source_url ? `<a href="${escHtml(m.source_url)}" target="_blank" rel="noopener" style="flex:1;min-width:110px;text-align:center;border:1.5px solid var(--border);background:#fff;color:var(--purple-deep);border-radius:12px;padding:10px;font-size:13px;font-weight:700;text-decoration:none;">🔗 元ネタ</a>` : ''}
