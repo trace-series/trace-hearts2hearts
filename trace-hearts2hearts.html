@@ -4450,13 +4450,33 @@ function openGalleryItem(el) {
   box.style.display = 'flex';
 }
 
+function galleryYearOptions(cur) {
+  const sel = cur ? cur.slice(0, 4) : '';
+  const now = new Date().getFullYear();
+  let html = '<option value="">年を選ぶ</option>';
+  for (let y = now + 1; y >= 2024; y--) html += `<option value="${y}"${String(y) === sel ? ' selected' : ''}>${y}年</option>`;
+  return html;
+}
+
+function galleryMonthOptions(cur) {
+  const sel = cur ? cur.slice(5, 7) : '';
+  let html = '<option value="">月を選ぶ</option>';
+  for (let mo = 1; mo <= 12; mo++) {
+    const v = String(mo).padStart(2, '0');
+    html += `<option value="${v}"${v === sel ? ' selected' : ''}>${mo}月</option>`;
+  }
+  return html;
+}
+
 function galleryEditorHtml(m) {
   const sameSpot = galleryCache.filter(x => x.spot_id === m.spot_id).length;
   const cur = m.activity_date_manual ? m.activity_date_manual.slice(0, 7) : (m.activity ? m.activity.slice(0, 7) : '');
   return `<div style="margin-top:14px;padding:12px;border-radius:12px;background:#fff4f4;border:1.5px dashed #e08a8a;">
     <div style="font-size:12px;font-weight:700;color:#c0392b;margin-bottom:8px;">🔧 管理者：活動月を設定</div>
-    <div style="font-size:11px;color:var(--text-mid);margin-bottom:4px;">↓ タップして年月を選ぶ</div>
-    <input type="month" id="gal-edit-month" value="${cur}" style="-webkit-appearance:none;appearance:none;display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;min-height:44px;font-size:16px;text-align:left;color:var(--text);margin-bottom:8px;background:#fff;">
+    <div style="display:flex;gap:8px;margin-bottom:8px;">
+      <select id="gal-edit-year" style="flex:1;min-width:0;border:1.5px solid var(--border);border-radius:10px;padding:10px;font-size:16px;background:#fff;color:var(--text);">${galleryYearOptions(cur)}</select>
+      <select id="gal-edit-mon" style="flex:1;min-width:0;border:1.5px solid var(--border);border-radius:10px;padding:10px;font-size:16px;background:#fff;color:var(--text);">${galleryMonthOptions(cur)}</select>
+    </div>
     ${sameSpot > 1 ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-mid);margin-bottom:10px;"><input type="checkbox" id="gal-edit-all" checked> このスポットの写真すべて（${sameSpot}枚）に適用</label>` : ''}
     <div style="display:flex;gap:8px;">
       <button onclick="saveGalleryDate(false)" style="flex:2;border:none;background:#c0392b;color:#fff;border-radius:10px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;">保存</button>
@@ -4470,11 +4490,12 @@ async function saveGalleryDate(clear) {
   const m = galleryCurrent;
   if (!m) return;
   const msg = document.getElementById('gal-edit-msg');
-  const monthEl = document.getElementById('gal-edit-month');
+  const yEl = document.getElementById('gal-edit-year');
+  const mEl = document.getElementById('gal-edit-mon');
   const allEl = document.getElementById('gal-edit-all');
-  const ym = monthEl ? monthEl.value : '';
+  const ym = (yEl && mEl && yEl.value && mEl.value) ? yEl.value + '-' + mEl.value : '';
   if (!clear && !/^\d{4}-\d{2}$/.test(ym)) {
-    if (msg) msg.textContent = '月を選んでください';
+    if (msg) msg.textContent = '年と月を選んでください';
     return;
   }
   const applyAll = !!(allEl && allEl.checked);
