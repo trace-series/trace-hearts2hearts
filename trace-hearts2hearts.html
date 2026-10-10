@@ -4455,7 +4455,8 @@ function galleryEditorHtml(m) {
   const cur = m.activity_date_manual ? m.activity_date_manual.slice(0, 7) : (m.activity ? m.activity.slice(0, 7) : '');
   return `<div style="margin-top:14px;padding:12px;border-radius:12px;background:#fff4f4;border:1.5px dashed #e08a8a;">
     <div style="font-size:12px;font-weight:700;color:#c0392b;margin-bottom:8px;">🔧 管理者：活動月を設定</div>
-    <input type="month" id="gal-edit-month" value="${cur}" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:10px;padding:8px 10px;font-size:16px;margin-bottom:8px;background:#fff;">
+    <div style="font-size:11px;color:var(--text-mid);margin-bottom:4px;">↓ タップして年月を選ぶ</div>
+    <input type="month" id="gal-edit-month" value="${cur}" style="-webkit-appearance:none;appearance:none;display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;min-height:44px;font-size:16px;text-align:left;color:var(--text);margin-bottom:8px;background:#fff;">
     ${sameSpot > 1 ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-mid);margin-bottom:10px;"><input type="checkbox" id="gal-edit-all" checked> このスポットの写真すべて（${sameSpot}枚）に適用</label>` : ''}
     <div style="display:flex;gap:8px;">
       <button onclick="saveGalleryDate(false)" style="flex:2;border:none;background:#c0392b;color:#fff;border-radius:10px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;">保存</button>
