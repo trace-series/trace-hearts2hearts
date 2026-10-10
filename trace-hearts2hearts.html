@@ -4253,7 +4253,23 @@ async function loadFeed() {
     }
   } catch(e) { console.warn('feed visit_log取得失敗:', e); }
 
-  feedItemsCache = [...posts, ...spotItems, ...visits]
+  // ④ お知らせ（表示中のもののみ）
+  let notices = [];
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/notices?select=*&is_active=eq.true&order=created_at.desc&limit=20`, { headers: authHeaders });
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      notices = data.filter(n => n.created_at).map(n => ({
+        feedType: 'notice',
+        id: n.id,
+        title: n.title || 'お知らせ',
+        body: n.body || '',
+        created_at: n.created_at,
+      }));
+    }
+  } catch(e) { console.warn('feed notices取得失敗:', e); }
+
+  feedItemsCache = [...posts, ...spotItems, ...visits, ...notices]
     .filter(i => i.created_at)
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     .slice(0, FEED_MAX_ITEMS);
@@ -4734,6 +4750,17 @@ function feedLikeButton(item, table) {
 }
 
 function renderFeedItem(item) {
+  // お知らせ
+  if (item.feedType === 'notice') {
+    return `<div style="background:linear-gradient(135deg,var(--purple-deep),var(--purple-mid));color:#fff;border-radius:18px;padding:14px 16px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.12);">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+        <span style="font-size:10px;background:rgba(255,255,255,0.22);border-radius:8px;padding:2px 8px;">📢 運営からのお知らせ</span>
+        <span style="font-size:11px;opacity:0.8;margin-left:auto;">${timeAgoLabel(item.created_at)}</span>
+      </div>
+      <div style="font-size:14px;font-weight:700;line-height:1.4;margin-bottom:4px;">${escHtml(item.title)}</div>
+      ${item.body ? `<div style="font-size:12px;line-height:1.6;opacity:0.92;white-space:pre-wrap;">${escHtml(item.body)}</div>` : ''}
+    </div>`;
+  }
   // 巡礼報告
   if (item.feedType === 'visit') {
     return `<div style="background:linear-gradient(135deg,#fff,var(--purple-pale));border-radius:18px;padding:14px 16px;margin-bottom:10px;box-shadow:0 2px 8px rgba(123,79,166,0.08);border:1px solid var(--border);">
