@@ -2276,6 +2276,7 @@
           <button id="btn-navi" onclick="openNavi()" style="flex:1;background:linear-gradient(135deg,#ededed,#e6e6e6);border:2px solid #bfbfbf;border-radius:12px;padding:9px;font-size:13px;font-weight:700;color:#333333;cursor:pointer;">🗺️ ナビ</button>
           <button id="btn-set-origin" onclick="setOriginSpot()" style="flex:1;background:linear-gradient(135deg,#ededed,#e6e6e6);border:2px solid #bfbfbf;border-radius:12px;padding:9px;font-size:13px;font-weight:700;color:#333333;cursor:pointer;">📍 起点に設定</button>
         </div>
+        <button id="btn-card-gallery" onclick="openGalleryForCurrentSpot()" style="display:block;width:100%;margin-top:8px;background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:9px;font-size:13px;font-weight:700;color:var(--purple-deep);cursor:pointer;">🖼️ このスポットの写真をギャラリーで見る</button>
         <div class="card-detail" id="card-detail" style="display:none;">
           <div class="card-detail-row">
             <span class="icon">📍</span>
@@ -4528,6 +4529,27 @@ function closeGalleryLightbox(ev) {
   if (box) box.style.display = 'none';
 }
 
+// MAP・スポットカードからギャラリーを開く（spotNameを渡すとそのスポットで絞り込み）
+function openGalleryFromMap(spotName) {
+  showView('feed');
+  const input = document.querySelector('#gallery-wrap .gal-search');
+  if (input) input.value = spotName || '';
+  galleryQuery = (spotName || '').trim().toLowerCase();
+  switchFeedMode('gallery');
+  window.scrollTo(0, 0);
+}
+
+function openGalleryForCurrentSpot() {
+  if (!currentSpot) return;
+  const name = currentSpot.name;
+  const card = document.getElementById('map-card');
+  if (card) card.classList.remove('open');
+  cardOpen = false;
+  const closeBtn = document.getElementById('card-fixed-close-btn');
+  if (closeBtn) closeBtn.style.display = 'none';
+  openGalleryFromMap(name);
+}
+
 function showMoreFeed() {
   const list = document.getElementById('feed-list');
   if (!list) return;
@@ -4752,6 +4774,17 @@ async function initMap() {
       { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#ececec' }] }
     ]
   });
+
+  // ズームボタン（＋／−）の上にギャラリーへのショートカットを置く
+  const galleryCtl = document.createElement('button');
+  galleryCtl.type = 'button';
+  galleryCtl.title = 'ギャラリー';
+  galleryCtl.setAttribute('aria-label', 'ギャラリーを開く');
+  galleryCtl.style.cssText = 'width:40px;height:48px;margin:0 10px 8px 0;background:#fff;border:none;border-radius:8px;box-shadow:rgba(0,0,0,0.3) 0 1px 4px -1px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:0;';
+  galleryCtl.innerHTML = '<span style="font-size:18px;line-height:1;">🖼️</span><span style="font-size:9px;font-weight:700;color:#555;line-height:1;">写真</span>';
+  galleryCtl.addEventListener('click', function() { openGalleryFromMap(''); });
+  galleryCtl.index = -1; // マイナス値でズームボタンより上に配置
+  map.controls[google.maps.ControlPosition.RIGHT_CENTER].push(galleryCtl);
 
   // ローディング非表示
   document.getElementById('map-loading').style.display = 'none';
