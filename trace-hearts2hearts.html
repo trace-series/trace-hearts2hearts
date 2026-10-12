@@ -8016,8 +8016,25 @@ function filterMemberAndOshi(el, member) {
   }
 }
 
+function adjustOshiRankingModalTop() {
+  const modal = document.getElementById('oshi-ranking-modal');
+  const tabs = document.getElementById('member-tabs');
+  if (!modal || !tabs) return;
+  const hint = document.getElementById('member-tabs-hint');
+  let bottom = tabs.getBoundingClientRect().bottom;
+  if (hint && hint.style.display !== 'none') {
+    bottom = Math.max(bottom, hint.getBoundingClientRect().bottom);
+  }
+  modal.style.top = Math.max(0, Math.round(bottom)) + 'px';
+}
+window.addEventListener('resize', () => {
+  const m = document.getElementById('oshi-ranking-modal');
+  if (m && m.style.display !== 'none') adjustOshiRankingModalTop();
+});
+
 function showOshiRanking(member) {
   const modal = document.getElementById('oshi-ranking-modal');
+  adjustOshiRankingModalTop();
   // モーダルが既に開いていればメンバーだけ切り替え（×不要）
   if (modal && modal.style.display !== 'none') {
     const isAll = member === 'all';
@@ -8698,7 +8715,7 @@ function applyTransferCode() {
 
 <!-- 推しメンランキングモーダル -->
 <div id="oshi-ranking-modal" style="display:none;position:fixed;top:110px;left:0;right:0;bottom:60px;z-index:600;background:rgba(0,0,0,0.7);overflow-y:auto;" onclick="closeOshiRankingModal(event)">
-  <div style="background:#fff;border-radius:20px;margin:50px 16px 40px;padding:0 0 24px;overflow:hidden;" onclick="event.stopPropagation()">
+  <div style="background:#fff;border-radius:20px;margin:16px 16px 40px;padding:0 0 24px;overflow:hidden;" onclick="event.stopPropagation()">
     <!-- ヘッダー -->
     <div id="oshi-ranking-header" style="padding:20px 20px 16px;background:linear-gradient(135deg,#1a1a1a,#c0392b);color:#fff;position:relative;">
       <button onclick="document.getElementById('oshi-ranking-modal').style.display='none';" style="position:absolute;top:14px;right:16px;background:none;border:none;color:rgba(255,255,255,0.7);font-size:22px;cursor:pointer;">×</button>
