@@ -2453,7 +2453,16 @@
         <button class="gal-sort-btn" data-sort="unknown" onclick="setGallerySort('unknown')">❓ 日付不明</button>
         <span id="gallery-count"></span>
       </div>
-      <details style="margin:-4px 2px 10px;font-size:12px;color:var(--text-mid);">
+      <details id="gal-note-recent" style="display:none;margin:-4px 2px 10px;font-size:12px;color:var(--text-mid);">
+        <summary style="cursor:pointer;color:var(--purple-mid);font-weight:700;">ⓘ 並び順について</summary>
+        <div style="margin-top:6px;padding:10px 12px;background:#fff;border:1px solid var(--border);border-radius:10px;line-height:1.7;">
+          ・この並び順は、写真を<b>アプリに登録した順</b>（新しく登録したものが上）です。<br>
+          ・現在も過去の活動の写真を順次追加しているため、<b style="color:#d9363e;">メンバーの活動が新しい順ではありません</b>。<br>
+          ・昔の活動の写真が、最近の活動より上に表示されることがあります。<br>
+          ・活動の時系列で振り返りたいときは「📅 活動日順」をご利用ください。
+        </div>
+      </details>
+      <details id="gal-note-activity" style="margin:-4px 2px 10px;font-size:12px;color:var(--text-mid);">
         <summary style="cursor:pointer;color:var(--purple-mid);font-weight:700;">ⓘ 活動日について</summary>
         <div style="margin-top:6px;padding:10px 12px;background:#fff;border:1px solid var(--border);border-radius:10px;line-height:1.7;">
           ・活動日は、写真の出典元（YouTube・Instagram・Xなど）が公開された日をもとに自動で表示しています。<br>
@@ -4369,6 +4378,11 @@ function galleryDateLabel(ymd) {
 function setGallerySort(sort) {
   gallerySort = sort;
   document.querySelectorAll('.gal-sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === sort));
+  // 並び順に合わせて注釈を切り替え（活動日順＝活動日について／新しい順・日付不明＝並び順について）
+  const noteActivity = document.getElementById('gal-note-activity');
+  const noteRecent = document.getElementById('gal-note-recent');
+  if (noteActivity) noteActivity.style.display = (sort === 'activity') ? '' : 'none';
+  if (noteRecent) noteRecent.style.display = (sort === 'activity') ? 'none' : '';
   renderGallery();
 }
 
@@ -8016,25 +8030,8 @@ function filterMemberAndOshi(el, member) {
   }
 }
 
-function adjustOshiRankingModalTop() {
-  const modal = document.getElementById('oshi-ranking-modal');
-  const tabs = document.getElementById('member-tabs');
-  if (!modal || !tabs) return;
-  const hint = document.getElementById('member-tabs-hint');
-  let bottom = tabs.getBoundingClientRect().bottom;
-  if (hint && hint.style.display !== 'none') {
-    bottom = Math.max(bottom, hint.getBoundingClientRect().bottom);
-  }
-  modal.style.top = Math.max(0, Math.round(bottom)) + 'px';
-}
-window.addEventListener('resize', () => {
-  const m = document.getElementById('oshi-ranking-modal');
-  if (m && m.style.display !== 'none') adjustOshiRankingModalTop();
-});
-
 function showOshiRanking(member) {
   const modal = document.getElementById('oshi-ranking-modal');
-  adjustOshiRankingModalTop();
   // モーダルが既に開いていればメンバーだけ切り替え（×不要）
   if (modal && modal.style.display !== 'none') {
     const isAll = member === 'all';
@@ -8715,7 +8712,7 @@ function applyTransferCode() {
 
 <!-- 推しメンランキングモーダル -->
 <div id="oshi-ranking-modal" style="display:none;position:fixed;top:110px;left:0;right:0;bottom:60px;z-index:600;background:rgba(0,0,0,0.7);overflow-y:auto;" onclick="closeOshiRankingModal(event)">
-  <div style="background:#fff;border-radius:20px;margin:16px 16px 40px;padding:0 0 24px;overflow:hidden;" onclick="event.stopPropagation()">
+  <div style="background:#fff;border-radius:20px;margin:50px 16px 40px;padding:0 0 24px;overflow:hidden;" onclick="event.stopPropagation()">
     <!-- ヘッダー -->
     <div id="oshi-ranking-header" style="padding:20px 20px 16px;background:linear-gradient(135deg,#1a1a1a,#c0392b);color:#fff;position:relative;">
       <button onclick="document.getElementById('oshi-ranking-modal').style.display='none';" style="position:absolute;top:14px;right:16px;background:none;border:none;color:rgba(255,255,255,0.7);font-size:22px;cursor:pointer;">×</button>
