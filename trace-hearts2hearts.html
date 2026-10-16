@@ -4081,6 +4081,12 @@ async function fetchSpotsFromDB() {
       adminLevel: s.admin_level || 'reliable',
       db_id: s.id,
       no: s.no != null ? s.no : null,
+      // 写真・出典は最初の取得でそのまま持たせる（後から名前で合わせる方式だと、名前を変えたスポットで取りこぼすため）
+      image_url: s.image_url || null,
+      image_url_2: s.image_url_2 || null,
+      image_url_3: s.image_url_3 || null,
+      image_url_4: s.image_url_4 || null,
+      source_url: s.source_url || null,
     }));
   } catch(e) {
     console.warn('Supabase取得失敗、ローカルデータで起動:', e);
