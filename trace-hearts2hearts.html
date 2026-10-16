@@ -2279,10 +2279,11 @@
         <!-- 管理者だけに表示：スポット情報の直接編集 -->
         <div id="admin-edit-row" style="display:none;margin-top:8px;">
           <div style="font-size:11px;font-weight:700;color:#c0392b;margin:0 2px 4px;">🔧 管理者メニュー</div>
-          <div style="display:flex;gap:6px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
             <button onclick="openAdminSpotEditor()" style="flex:1;background:#fff4f4;border:1.5px dashed #e08a8a;border-radius:12px;padding:9px 4px;font-size:12px;font-weight:700;color:#c0392b;cursor:pointer;">✏️ 情報</button>
             <button onclick="openAdminPinEditor()" style="flex:1;background:#fff4f4;border:1.5px dashed #e08a8a;border-radius:12px;padding:9px 4px;font-size:12px;font-weight:700;color:#c0392b;cursor:pointer;">📍 ピン</button>
             <button onclick="openAdminMediaEditor()" style="flex:1;background:#fff4f4;border:1.5px dashed #e08a8a;border-radius:12px;padding:9px 4px;font-size:12px;font-weight:700;color:#c0392b;cursor:pointer;">🖼️ 写真・動画</button>
+            <button onclick="openAdminXText()" style="flex:1;background:#fff4f4;border:1.5px dashed #e08a8a;border-radius:12px;padding:9px 4px;font-size:12px;font-weight:700;color:#c0392b;cursor:pointer;">𝕏 紹介文を作る</button>
           </div>
         </div>
         <div class="card-detail" id="card-detail" style="display:none;">
@@ -4087,6 +4088,8 @@ async function fetchSpotsFromDB() {
       image_url_3: s.image_url_3 || null,
       image_url_4: s.image_url_4 || null,
       source_url: s.source_url || null,
+      end_date: s.end_date || null,
+      is_closed: s.is_closed === true,
     }));
   } catch(e) {
     console.warn('Supabase取得失敗、ローカルデータで起動:', e);
@@ -5133,43 +5136,50 @@ function refreshAdminEditRow() {
   });
 }
 
+function spotStatusLabel(spot) {
+  if (!spot) return '';
+  if (spot.is_closed) return '🚫 閉業・閉校';
+  if (spot.end_date) {
+    const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+    if (spot.end_date < today) return '⏰ 開催終了';
+  }
+  return '';
+}
+const ADMIN_CATEGORIES = ['カフェ・飲食店', '撮影スポット', 'ライブ・イベント会場', '観光・名所', 'ショップ'];
+const ADM_INPUT = 'width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:10px;padding:10px;font-size:16px;background:#fff;color:var(--text);';
+function admLabel(t) { return `<div style="font-size:12px;font-weight:700;color:var(--text-mid);margin:12px 0 5px;">${t}</div>`; }
+function admMemberChipsHtml(memberStr) {
+  const cur = getSpotMemberList(memberStr);
+  const isAll = cur.length === 0 || cur.includes('全員');
+  const chip = (name, on) => `<button type="button" class="adm-chip" data-member="${escHtml(name)}" data-on="${on ? '1' : ''}" onclick="toggleAdminMemberChip(this)" style="border:1.5px solid ${on ? 'var(--purple-mid)' : 'var(--border)'};background:${on ? 'var(--purple-mid)' : '#fff'};color:${on ? '#fff' : 'var(--text-mid)'};border-radius:16px;padding:6px 11px;font-size:13px;font-weight:600;cursor:pointer;">${escHtml(name)}</button>`;
+  return `<div id="adm-members" style="display:flex;flex-wrap:wrap;gap:6px;">${chip('全員', isAll)}${GROUP_CONFIG.members.map(m => chip(m.name, !isAll && cur.includes(m.name))).join('')}</div>`;
+}
+function admSelectedMember() {
+  const selected = Array.from(document.querySelectorAll('#adm-members .adm-chip')).filter(b => b.dataset.on === '1').map(b => b.dataset.member);
+  return (selected.length === 0 || selected.includes('全員')) ? '全員' : GROUP_CONFIG.members.map(m => m.name).filter(n => selected.includes(n)).join(',');
+}
+function admCategoryHtml(cur) {
+  return `<select id="adm-category" style="${ADM_INPUT}">${ADMIN_CATEGORIES.map(c => `<option value="${c}"${c === cur ? ' selected' : ''}>${c}</option>`).join('')}${cur && !ADMIN_CATEGORIES.includes(cur) ? `<option value="${escHtml(cur)}" selected>${escHtml(cur)}（旧カテゴリ）</option>` : ''}</select>`;
+}
+
 function openAdminSpotEditor() {
   const spot = currentSpot;
   if (!spot || !spot.db_id) return;
-  let modal = document.getElementById('admin-edit-modal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'admin-edit-modal';
-    modal.className = 'allow-touch-scroll';
-    modal.style.cssText = 'position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.55);display:flex;align-items:flex-end;justify-content:center;';
-    modal.addEventListener('click', e => { if (e.target === modal) closeAdminSpotEditor(); });
-    document.body.appendChild(modal);
-  }
-  const cur = getSpotMemberList(spot.member);
-  const isAll = cur.length === 0 || cur.includes('全員');
-  const chip = (name, on) => `<button type="button" class="adm-chip" data-member="${escHtml(name)}" onclick="toggleAdminMemberChip(this)" style="border:1.5px solid ${on ? 'var(--purple-mid)' : 'var(--border)'};background:${on ? 'var(--purple-mid)' : '#fff'};color:${on ? '#fff' : 'var(--text-mid)'};border-radius:16px;padding:6px 11px;font-size:13px;font-weight:600;cursor:pointer;">${escHtml(name)}</button>`;
-  const inputCss = 'width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:10px;padding:10px;font-size:16px;background:#fff;color:var(--text);';
-  const label = t => `<div style="font-size:12px;font-weight:700;color:var(--text-mid);margin:12px 0 5px;">${t}</div>`;
-  modal.innerHTML = `<div class="allow-touch-scroll" style="background:#fff;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;border-radius:20px 20px 0 0;padding:16px 16px 28px;box-sizing:border-box;-webkit-overflow-scrolling:touch;">
-    <div style="display:flex;align-items:center;justify-content:space-between;">
-      <div style="font-size:15px;font-weight:700;color:#c0392b;">🔧 スポットを編集${spot.no != null ? '（No.' + spot.no + '）' : ''}</div>
-      <button onclick="closeAdminSpotEditor()" style="border:none;background:none;font-size:20px;cursor:pointer;color:var(--text-light);">✕</button>
-    </div>
-    ${label('スポット名')}<input id="adm-name" type="text" style="${inputCss}" value="${escHtml(spot.name || '')}">
-    ${label('メンバー（「全員」か、個別に複数選択）')}
-    <div id="adm-members" style="display:flex;flex-wrap:wrap;gap:6px;">
-      ${chip('全員', isAll)}${GROUP_CONFIG.members.map(m => chip(m.name, !isAll && cur.includes(m.name))).join('')}
-    </div>
-    ${label('説明文')}<textarea id="adm-sub" rows="4" style="${inputCss}resize:vertical;">${escHtml(spot.sub || '')}</textarea>
-    ${label('出典リンク（YouTube・X・Instagramなど）')}<input id="adm-source" type="url" inputmode="url" style="${inputCss}" value="${escHtml(spot.source_url || '')}">
-    ${label('住所')}<input id="adm-address" type="text" style="${inputCss}" value="${escHtml(spot.address || '')}">
+  adminSheet('admin-edit-modal', `${adminSheetHeader('✏️ スポットを編集' + (spot.no != null ? '（No.' + spot.no + '）' : ''), 'admin-edit-modal')}
+    ${admLabel('スポット名')}<input id="adm-name" type="text" style="${ADM_INPUT}" value="${escHtml(spot.name || '')}">
+    ${admLabel('メンバー（「全員」か、個別に複数選択）')}${admMemberChipsHtml(spot.member)}
+    ${admLabel('カテゴリ')}${admCategoryHtml(spot.category)}
+    ${admLabel('説明文')}<textarea id="adm-sub" rows="4" style="${ADM_INPUT}resize:vertical;">${escHtml(spot.sub || '')}</textarea>
+    ${admLabel('出典リンク（YouTube・X・Instagramなど）')}<input id="adm-source" type="url" inputmode="url" style="${ADM_INPUT}" value="${escHtml(spot.source_url || '')}">
+    ${admLabel('住所')}<input id="adm-address" type="text" style="${ADM_INPUT}" value="${escHtml(spot.address || '')}">
+    ${admLabel('期間限定の終了日（期間限定スポットのみ。過ぎると「開催終了」表示）')}
+    <div style="display:flex;gap:6px;"><input id="adm-end" type="date" style="${ADM_INPUT}flex:1;" value="${escHtml(spot.end_date || '')}"><button type="button" onclick="document.getElementById('adm-end').value=''" style="flex-shrink:0;border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:0 12px;font-size:12px;cursor:pointer;">クリア</button></div>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--text);"><input id="adm-closed" type="checkbox" ${spot.is_closed ? 'checked' : ''} style="width:20px;height:20px;"> 閉業・閉校している（カードに「🚫 閉業・閉校」と表示）</label>
     <div id="adm-msg" style="font-size:12px;color:#c0392b;margin-top:10px;min-height:16px;"></div>
     <div style="display:flex;gap:8px;margin-top:6px;">
-      <button onclick="closeAdminSpotEditor()" style="flex:1;border:1.5px solid var(--border);background:#fff;color:var(--text-mid);border-radius:12px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;">キャンセル</button>
+      <button onclick="closeAdminSheet('admin-edit-modal')" style="flex:1;border:1.5px solid var(--border);background:#fff;color:var(--text-mid);border-radius:12px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;">キャンセル</button>
       <button id="adm-save-btn" onclick="saveAdminSpotEdit()" style="flex:2;border:none;background:#c0392b;color:#fff;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;">保存</button>
-    </div>
-  </div>`;
-  modal.style.display = 'flex';
+    </div>`);
 }
 
 function toggleAdminMemberChip(btn) {
@@ -5181,21 +5191,16 @@ function toggleAdminMemberChip(btn) {
     b.style.color = on ? '#fff' : 'var(--text-mid)';
   };
   const chips = Array.from(wrap.querySelectorAll('.adm-chip'));
-  const isOn = b => b.style.background.indexOf('purple') !== -1 || b.dataset.on === '1';
   const allChip = chips.find(b => b.dataset.member === '全員');
   if (btn === allChip) {
     chips.forEach(b => paint(b, b === allChip));
   } else {
-    paint(btn, !isOn(btn));
-    const anyMember = chips.some(b => b !== allChip && isOn(b));
-    paint(allChip, !anyMember);
+    paint(btn, btn.dataset.on !== '1');
+    paint(allChip, !chips.some(b => b !== allChip && b.dataset.on === '1'));
   }
 }
 
-function closeAdminSpotEditor() {
-  const modal = document.getElementById('admin-edit-modal');
-  if (modal) { modal.style.display = 'none'; modal.innerHTML = ''; }
-}
+function closeAdminSpotEditor() { closeAdminSheet('admin-edit-modal'); }
 
 async function saveAdminSpotEdit() {
   const spot = currentSpot;
@@ -5204,31 +5209,76 @@ async function saveAdminSpotEdit() {
   const btn = document.getElementById('adm-save-btn');
   const name = document.getElementById('adm-name').value.trim();
   if (!name) { msg.textContent = 'スポット名は空にできません'; return; }
-  const chips = Array.from(document.querySelectorAll('#adm-members .adm-chip'));
-  const selected = chips.filter(b => b.style.background.indexOf('purple') !== -1).map(b => b.dataset.member);
-  const member = (selected.length === 0 || selected.includes('全員')) ? '全員'
-    : GROUP_CONFIG.members.map(m => m.name).filter(n => selected.includes(n)).join(',');
+  const member = admSelectedMember();
+  const category = document.getElementById('adm-category').value;
   const sub = document.getElementById('adm-sub').value.trim();
   const source = document.getElementById('adm-source').value.trim();
   const address = document.getElementById('adm-address').value.trim();
+  const endDate = document.getElementById('adm-end').value || null;
+  const closed = document.getElementById('adm-closed').checked;
   if (source && !/^https?:\/\//.test(source)) { msg.textContent = '出典リンクは http から始まるURLにしてください'; return; }
   btn.disabled = true; msg.textContent = '保存中...';
-  const { data, error } = await getSupabaseClient().rpc('admin_update_spot', {
-    p_spot_id: spot.db_id, p_name: name, p_member: member, p_sub: sub,
-    p_source_url: source || null, p_address: address,
+  const { data, error } = await getSupabaseClient().rpc('admin_update_spot_v2', {
+    p_spot_id: spot.db_id, p_name: name, p_member: member, p_category: category, p_sub: sub,
+    p_source_url: source || null, p_address: address, p_end_date: endDate, p_is_closed: closed,
   });
   if (error || data !== 1) {
     btn.disabled = false;
     msg.textContent = '保存できませんでした：' + ((error && error.message) || '対象のスポットが見つかりません');
     return;
   }
-  spot.name = name; spot.member = member; spot.sub = sub; spot.source_url = source || null; spot.address = address;
-  closeAdminSpotEditor();
+  Object.assign(spot, { name, member, category, sub, source_url: source || null, address, end_date: endDate, is_closed: closed, badges: [category] });
+  const mk = markers.find(m => m.spotData === spot);
+  if (mk) mk.setTitle(name);
+  closeAdminSheet('admin-edit-modal');
   openCard(spot);
-  if (typeof galleryCache !== 'undefined') galleryCache = null; // ギャラリーのスポット名・メンバー表示を作り直す
+  if (typeof galleryCache !== 'undefined') galleryCache = null;
   try { if (map) applyFilters(); } catch(e) {}
   try { renderSpotList(); } catch(e) {}
   try { showEvalToast('✅ スポット情報を保存しました'); } catch(e) {}
+}
+
+// ── 管理者：X紹介文 ──
+function adminXText(spot) {
+  const names = getSpotMemberList(spot.member);
+  const memberLine = (!names.length || names.includes('全員')) ? '全員' : names.join('・');
+  const memberTags = GROUP_CONFIG.members.filter(m => names.includes(m.name)).map(m => m.tags[0]).join(' ');
+  const tags = [memberTags, GROUP_CONFIG.hashtags.join(' ')].filter(Boolean).join(' ');
+  return `📍${spot.name}${spot.no != null ? '（No.' + spot.no + '）' : ''}\n👥 ${memberLine}\n${(spot.sub || '').trim()}\n\n${GROUP_CONFIG.appName}の地図で場所をチェック👇\nhttps://trace-series.github.io/trace-hearts2hearts/trace-hearts2hearts.html\n\n${tags}`.replace(/\n{3,}/g, '\n\n');
+}
+function adminXCount(t) {
+  // Xの文字数：URLは23、全角は2、半角は1として数える（目安）
+  const noUrl = t.replace(/https?:\/\/\S+/g, u => 'x'.repeat(23));
+  let n = 0;
+  for (const ch of noUrl) n += /[\u0000-ჿ -‍‐-‟′-‷]/.test(ch) ? 1 : 2;
+  return n;
+}
+function openAdminXText() {
+  const spot = currentSpot;
+  if (!spot) return;
+  const text = adminXText(spot);
+  adminSheet('admin-x-modal', `${adminSheetHeader('𝕏 紹介文', 'admin-x-modal')}
+    <div style="font-size:12px;color:var(--text-mid);margin-bottom:6px;">自由に書き換えてからコピーできます。</div>
+    <textarea id="adm-x-text" rows="10" oninput="document.getElementById('adm-x-count').textContent=adminXCount(this.value)+' / 280'" style="${ADM_INPUT}resize:vertical;line-height:1.5;">${escHtml(text)}</textarea>
+    <div style="text-align:right;font-size:12px;color:var(--text-light);margin-top:4px;">文字数の目安：<span id="adm-x-count">${adminXCount(text)} / 280</span></div>
+    <div id="adm-x-msg" style="font-size:12px;color:#1a7f3c;min-height:16px;margin-top:6px;"></div>
+    <div style="display:flex;gap:8px;margin-top:6px;">
+      <button onclick="copyAdminXText()" style="flex:1;border:1.5px solid var(--purple-mid);background:#fff;color:var(--purple-deep);border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;">📋 コピー</button>
+      <button onclick="openAdminXIntent()" style="flex:1;border:none;background:#111;color:#fff;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;">𝕏 投稿画面へ</button>
+    </div>`);
+}
+async function copyAdminXText() {
+  const t = document.getElementById('adm-x-text').value;
+  const msg = document.getElementById('adm-x-msg');
+  try { await navigator.clipboard.writeText(t); msg.textContent = '✅ コピーしました'; }
+  catch(e) {
+    const el = document.getElementById('adm-x-text'); el.focus(); el.select();
+    try { document.execCommand('copy'); msg.textContent = '✅ コピーしました'; } catch(e2) { msg.textContent = '長押しでコピーしてください'; }
+  }
+}
+function openAdminXIntent() {
+  const t = document.getElementById('adm-x-text').value;
+  window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(t), '_blank');
 }
 
 // 共通：管理用のモーダル（下から出るシート）
@@ -5491,39 +5541,293 @@ async function saveAdminMedia() {
   try { showEvalToast('✅ 写真・動画を保存しました'); } catch(e) {}
 }
 
-// ── 管理者：未整備スポットの一覧 ──
+// ── 管理者：管理一覧（未整備スポット・報告・新規登録・お知らせ） ──
 let adminListTab = 'nophoto';
+let adminReportsCache = null;
+let adminReportsDone = {};
+async function fetchAdminReports() {
+  try {
+    const { data, error } = await getSupabaseClient().rpc('admin_list_reports');
+    adminReportsCache = error ? [] : (data || []);
+  } catch(e) { adminReportsCache = []; }
+  return adminReportsCache;
+}
 function refreshAdminListCtl() {
   const ctl = document.getElementById('admin-list-ctl');
   if (!ctl) return;
-  checkAdminEditor().then(ok => { ctl.style.display = ok ? 'flex' : 'none'; });
+  checkAdminEditor().then(async ok => {
+    ctl.style.display = ok ? 'flex' : 'none';
+    if (!ok) return;
+    const reports = await fetchAdminReports();
+    let dot = document.getElementById('admin-report-dot');
+    if (!dot) {
+      dot = document.createElement('span');
+      dot.id = 'admin-report-dot';
+      dot.style.cssText = 'position:absolute;top:-6px;left:-6px;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;border-radius:9px;background:#e0245e;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center;display:none;';
+      ctl.style.position = 'relative';
+      ctl.appendChild(dot);
+    }
+    dot.textContent = reports.length > 99 ? '99+' : String(reports.length);
+    dot.style.display = reports.length ? 'block' : 'none';
+  });
 }
-function openAdminListPanel(tab) {
+// 5分ごとに報告件数を確認し直す（管理者のみ）
+setInterval(() => { if (adminEditorFlag === true && document.visibilityState === 'visible') refreshAdminListCtl(); }, 5 * 60 * 1000);
+
+const ADMIN_LIST_DEFS = [
+  { key: 'reports', label: '📮 報告' },
+  { key: 'nophoto', label: '📷 写真なし', test: s => !s.image_url },
+  { key: 'allmember', label: '👥 メンバー全員', test: s => !s.member || s.member === '全員' },
+  { key: 'nosource', label: '🔗 出典なし', test: s => !s.source_url },
+  { key: 'flagged', label: '🔴 要確認', test: s => s.trustScore < 0 },
+];
+async function openAdminListPanel(tab) {
   if (tab) adminListTab = tab;
-  const defs = [
-    { key: 'nophoto', label: '📷 写真なし', test: s => !s.image_url },
-    { key: 'allmember', label: '👥 メンバー全員', test: s => !s.member || s.member === '全員' },
-    { key: 'nosource', label: '🔗 出典なし', test: s => !s.source_url },
-    { key: 'flagged', label: '🔴 要確認', test: s => s.trustScore < 0 },
-  ];
-  const cur = defs.find(d => d.key === adminListTab) || defs[0];
-  const list = SPOTS.filter(cur.test).sort((a, b) => (a.no == null ? 99999 : a.no) - (b.no == null ? 99999 : b.no));
-  const tabs = defs.map(d => {
-    const cnt = SPOTS.filter(d.test).length;
+  if (adminListTab === 'reports' && adminReportsCache === null) await fetchAdminReports();
+  const cur = ADMIN_LIST_DEFS.find(d => d.key === adminListTab) || ADMIN_LIST_DEFS[1];
+  const tabs = ADMIN_LIST_DEFS.map(d => {
+    const cnt = d.key === 'reports' ? (adminReportsCache ? adminReportsCache.length : '…') : SPOTS.filter(d.test).length;
     const on = d.key === cur.key;
     return `<button onclick="openAdminListPanel('${d.key}')" style="border:1.5px solid ${on ? '#c0392b' : 'var(--border)'};background:${on ? '#c0392b' : '#fff'};color:${on ? '#fff' : 'var(--text-mid)'};border-radius:16px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;">${d.label} ${cnt}</button>`;
   }).join('');
-  const rows = list.map(s => `<div data-spot-name="${escHtml(s.name)}" onclick="closeAdminSheet('admin-list-modal');jumpToSpotFromFeed(this)" style="display:flex;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--border);cursor:pointer;">
+  let body = '';
+  if (cur.key === 'reports') {
+    const typeLabel = { location_correction: '📍 位置の修正', wrong_report: '🛡️ 誤情報', new_spot: '🏆 新規スポット投稿' };
+    body = `<div style="font-size:11px;color:var(--text-light);line-height:1.6;margin:2px 2px 6px;">承認・却下（ポイント付与）は管理ダッシュボードで行ってください。ここでの操作は報告の状態を変えないので、ダッシュボードで処理するまで一覧に残ります。</div>`
+      + (adminReportsCache.length ? adminReportsCache.map((r, k) => {
+        const target = r.target_spot_name || r.spot_name || '';
+        const spot = SPOTS.find(s => s.name === target);
+        const when = r.created_at ? new Date(r.created_at).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+        const done = adminReportsDone[r.id];
+        return `<div style="padding:10px 4px;border-bottom:1px solid var(--border);">
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            <span style="font-size:11px;font-weight:700;color:#c0392b;">${typeLabel[r.type] || escHtml(r.type)}</span>
+            <span style="font-size:11px;color:var(--text-light);margin-left:auto;">${escHtml(when)}・${escHtml(r.submitter || '匿名')}</span>
+          </div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-top:3px;">${escHtml(target)}${spot && spot.no != null ? ' <span style="font-size:11px;color:var(--purple-mid);">No.' + spot.no + '</span>' : ''}</div>
+          ${r.description ? `<div style="font-size:12px;color:var(--text-mid);margin-top:3px;white-space:pre-wrap;">${escHtml(r.description)}</div>` : ''}
+          ${r.type === 'new_spot' && r.address ? `<div style="font-size:11px;color:var(--text-light);margin-top:2px;">📍 ${escHtml(r.address)}</div>` : ''}
+          <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+            ${spot ? `<button data-spot-name="${escHtml(spot.name)}" onclick="closeAdminSheet('admin-list-modal');jumpToSpotFromFeed(this)" style="border:1.5px solid var(--border);background:#fff;color:var(--purple-deep);border-radius:10px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;">スポットを見る</button>` : ''}
+            ${r.type === 'location_correction' && spot && r.lat != null ? (done ? '<span style="font-size:12px;color:#1a7f3c;font-weight:700;padding:7px 0;">✅ ピンを移動しました</span>' : `<button onclick="applyAdminReportLocation(${k})" style="border:none;background:#c0392b;color:#fff;border-radius:10px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;">📍 この位置にピンを移動</button>`) : ''}
+          </div>
+        </div>`;
+      }).join('') : '<div style="padding:24px;text-align:center;color:var(--text-light);font-size:13px;">未処理の報告はありません 🎉</div>');
+  } else {
+    const list = SPOTS.filter(cur.test).sort((a, b) => (a.no == null ? 99999 : a.no) - (b.no == null ? 99999 : b.no));
+    body = list.map(s => `<div data-spot-name="${escHtml(s.name)}" onclick="closeAdminSheet('admin-list-modal');jumpToSpotFromFeed(this)" style="display:flex;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--border);cursor:pointer;">
       <div style="width:48px;flex-shrink:0;font-size:12px;font-weight:700;color:var(--purple-mid);">${s.no != null ? 'No.' + s.no : '—'}</div>
       <div style="min-width:0;flex:1;">
         <div style="font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(s.name)}</div>
         <div style="font-size:11px;color:var(--text-light);">👥 ${escHtml(s.member || '全員')}</div>
       </div>
       <div style="color:var(--text-light);">›</div>
+    </div>`).join('') || '<div style="padding:24px;text-align:center;color:var(--text-light);font-size:13px;">該当するスポットはありません 🎉</div>';
+  }
+  adminSheet('admin-list-modal', `${adminSheetHeader('🔧 管理（全' + SPOTS.length + '件）', 'admin-list-modal')}
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <button onclick="closeAdminSheet('admin-list-modal');openAdminNewSpot()" style="flex:1;border:none;background:#c0392b;color:#fff;border-radius:12px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;">➕ 新規スポット</button>
+      <button onclick="closeAdminSheet('admin-list-modal');openAdminNotices()" style="flex:1;border:1.5px solid #c0392b;background:#fff;color:#c0392b;border-radius:12px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;">📢 お知らせ</button>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">${tabs}${cur.key === 'reports' ? `<button onclick="adminReportsCache=null;openAdminListPanel('reports');refreshAdminListCtl()" style="border:none;background:none;font-size:12px;color:var(--purple-mid);cursor:pointer;">↻ 更新</button>` : ''}</div>
+    <div>${body}</div>`);
+}
+async function applyAdminReportLocation(k) {
+  const r = adminReportsCache && adminReportsCache[k];
+  if (!r) return;
+  const spot = SPOTS.find(s => s.name === (r.target_spot_name || r.spot_name));
+  if (!spot || r.lat == null) return;
+  if (!confirm(`「${spot.name}」のピンを報告された位置に移動しますか？`)) return;
+  const lat = Math.round(r.lat * 1e6) / 1e6, lng = Math.round(r.lng * 1e6) / 1e6;
+  const { data, error } = await getSupabaseClient().rpc('admin_update_spot_location', { p_spot_id: spot.db_id, p_lat: lat, p_lng: lng });
+  if (error || data !== 1) { alert('移動できませんでした：' + ((error && error.message) || '')); return; }
+  spot.lat = lat; spot.lng = lng;
+  const mk = markers.find(m => m.spotData === spot);
+  if (mk) mk.setPosition({ lat, lng });
+  adminReportsDone[r.id] = true;
+  openAdminListPanel('reports');
+  try { showEvalToast('✅ ピンを移動しました。承認はダッシュボードで'); } catch(e) {}
+}
+
+// ── 管理者：新規スポット登録 ──
+let adminNewMap = null, adminNewMarker = null;
+function addSpotMarker(spot) {
+  if (!map || typeof google === 'undefined') return;
+  const marker = new google.maps.Marker({
+    position: { lat: spot.lat, lng: spot.lng }, map: map, title: spot.name,
+    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 14, fillColor: spot.color, fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2.5 },
+    label: { text: spot.icon, fontSize: '14px' },
+  });
+  marker.spotData = spot;
+  marker.addListener('click', () => { openCard(spot); map.panTo({ lat: spot.lat, lng: spot.lng }); });
+  markers.push(marker);
+}
+function openAdminNewSpot() {
+  const c = map ? map.getCenter() : null;
+  const start = c ? { lat: c.lat(), lng: c.lng() } : { lat: 35.681, lng: 139.767 };
+  adminSheet('admin-new-modal', `${adminSheetHeader('➕ 新規スポットを登録', 'admin-new-modal')}
+    <div style="font-size:12px;color:var(--text-mid);margin-bottom:6px;">地図をタップするかピンをドラッグして、場所を決めてください。</div>
+    <div style="display:flex;gap:6px;margin-bottom:6px;">
+      <input id="adm-new-search" type="search" placeholder="場所名・住所で検索（例：国立中央博物館）" style="${ADM_INPUT}flex:1;">
+      <button type="button" onclick="adminNewSearch()" style="flex-shrink:0;border:none;background:var(--purple-mid);color:#fff;border-radius:10px;padding:0 12px;font-size:13px;font-weight:700;cursor:pointer;">検索</button>
+    </div>
+    <div id="adm-new-map" style="width:100%;height:260px;border-radius:12px;background:#ececec;"></div>
+    <div id="adm-new-coord" style="font-size:11px;color:var(--text-light);margin:6px 2px;">${start.lat.toFixed(6)}, ${start.lng.toFixed(6)}</div>
+    ${admLabel('スポット名')}<input id="adm-name" type="text" style="${ADM_INPUT}">
+    ${admLabel('メンバー')}${admMemberChipsHtml('全員')}
+    ${admLabel('カテゴリ')}${admCategoryHtml('観光・名所')}
+    ${admLabel('説明文')}<textarea id="adm-sub" rows="3" style="${ADM_INPUT}resize:vertical;"></textarea>
+    ${admLabel('出典リンク')}<input id="adm-source" type="url" inputmode="url" style="${ADM_INPUT}">
+    ${admLabel('住所')}<div style="display:flex;gap:6px;"><input id="adm-address" type="text" style="${ADM_INPUT}flex:1;"><button type="button" onclick="adminNewFillAddress()" style="flex-shrink:0;border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:0 10px;font-size:12px;cursor:pointer;">ピンから入力</button></div>
+    ${admLabel('期間限定の終了日（任意）')}<input id="adm-end" type="date" style="${ADM_INPUT}">
+    <div id="adm-msg" style="font-size:12px;color:#c0392b;margin-top:10px;min-height:16px;"></div>
+    <div style="display:flex;gap:8px;margin-top:6px;">
+      <button onclick="closeAdminSheet('admin-new-modal')" style="flex:1;border:1.5px solid var(--border);background:#fff;color:var(--text-mid);border-radius:12px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;">キャンセル</button>
+      <button id="adm-save-btn" onclick="saveAdminNewSpot()" style="flex:2;border:none;background:#c0392b;color:#fff;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;">登録</button>
+    </div>`);
+  setTimeout(() => {
+    const el = document.getElementById('adm-new-map');
+    if (!el || typeof google === 'undefined' || !google.maps) return;
+    adminNewMap = new google.maps.Map(el, { center: start, zoom: 16, disableDefaultUI: true, zoomControl: true, mapTypeControl: true, gestureHandling: 'greedy' });
+    adminNewMarker = new google.maps.Marker({ position: start, map: adminNewMap, draggable: true });
+    const show = () => { const p = adminNewMarker.getPosition(); document.getElementById('adm-new-coord').textContent = p.lat().toFixed(6) + ', ' + p.lng().toFixed(6); };
+    adminNewMarker.addListener('dragend', show);
+    adminNewMap.addListener('click', e => { adminNewMarker.setPosition(e.latLng); show(); });
+  }, 60);
+}
+function adminNewSearch() {
+  const q = (document.getElementById('adm-new-search').value || '').trim();
+  const msg = document.getElementById('adm-msg');
+  if (!q || !adminNewMap) return;
+  new google.maps.Geocoder().geocode({ address: q }, (res, status) => {
+    if (status !== 'OK' || !res || !res[0]) { msg.textContent = '見つかりませんでした。ピンを手で合わせてください（' + status + '）'; return; }
+    const loc = res[0].geometry.location;
+    adminNewMap.setCenter(loc); adminNewMap.setZoom(17); adminNewMarker.setPosition(loc);
+    document.getElementById('adm-new-coord').textContent = loc.lat().toFixed(6) + ', ' + loc.lng().toFixed(6);
+    const nm = document.getElementById('adm-name'); if (nm && !nm.value) nm.value = q;
+    const ad = document.getElementById('adm-address'); if (ad && !ad.value) ad.value = res[0].formatted_address || '';
+    msg.textContent = '';
+  });
+}
+function adminNewFillAddress() {
+  const msg = document.getElementById('adm-msg');
+  if (!adminNewMarker) return;
+  new google.maps.Geocoder().geocode({ location: adminNewMarker.getPosition() }, (res, status) => {
+    if (status !== 'OK' || !res || !res[0]) { msg.textContent = '住所を取得できませんでした（' + status + '）。手で入力してください'; return; }
+    document.getElementById('adm-address').value = res[0].formatted_address || '';
+    msg.textContent = '';
+  });
+}
+async function saveAdminNewSpot() {
+  const msg = document.getElementById('adm-msg');
+  const btn = document.getElementById('adm-save-btn');
+  const name = document.getElementById('adm-name').value.trim();
+  if (!name) { msg.textContent = 'スポット名を入れてください'; return; }
+  if (SPOTS.some(s => s.name === name) && !confirm('同じ名前のスポットがすでにあります。それでも登録しますか？')) return;
+  if (!adminNewMarker) { msg.textContent = '地図が読み込めていません'; return; }
+  const p = adminNewMarker.getPosition();
+  const lat = Math.round(p.lat() * 1e6) / 1e6, lng = Math.round(p.lng() * 1e6) / 1e6;
+  const member = admSelectedMember();
+  const category = document.getElementById('adm-category').value;
+  const sub = document.getElementById('adm-sub').value.trim();
+  const source = document.getElementById('adm-source').value.trim();
+  const address = document.getElementById('adm-address').value.trim();
+  const endDate = document.getElementById('adm-end').value || null;
+  if (source && !/^https?:\/\//.test(source)) { msg.textContent = '出典リンクは http から始まるURLにしてください'; return; }
+  btn.disabled = true; msg.textContent = '登録中...';
+  const { data, error } = await getSupabaseClient().rpc('admin_create_spot', {
+    p_name: name, p_lat: lat, p_lng: lng, p_member: member, p_category: category, p_sub: sub,
+    p_address: address, p_source_url: source || null, p_end_date: endDate,
+  });
+  const row = Array.isArray(data) ? data[0] : data;
+  if (error || !row || !row.id) {
+    btn.disabled = false;
+    msg.textContent = '登録できませんでした：' + ((error && error.message) || '');
+    return;
+  }
+  const spot = {
+    name, lat, lng, sub, icon: '📍', category, address, member, discoverer: '@missing_link', likes: 0,
+    badges: [category], color: '#1a1a1a', trustScore: 8, goodCount: 0, badCount: 0, adminLevel: 'reliable',
+    db_id: row.id, no: row.no != null ? row.no : null,
+    image_url: null, image_url_2: null, image_url_3: null, image_url_4: null, source_url: source || null,
+    end_date: endDate, is_closed: false,
+  };
+  SPOTS.push(spot);
+  addSpotMarker(spot);
+  closeAdminSheet('admin-new-modal');
+  if (map) { map.panTo({ lat, lng }); map.setZoom(16); }
+  openCard(spot);
+  try { if (map) applyFilters(); } catch(e) {}
+  try { renderSpotList(); } catch(e) {}
+  try { showEvalToast(`✅ No.${spot.no != null ? spot.no : '?'} を登録しました`); } catch(e) {}
+  if (confirm('続けて写真・動画を追加しますか？')) openAdminMediaEditor();
+}
+
+// ── 管理者：お知らせ ──
+let adminNoticeList = [];
+async function openAdminNotices(msgText) {
+  adminSheet('admin-notice-modal', `${adminSheetHeader('📢 お知らせ', 'admin-notice-modal')}<div style="text-align:center;padding:24px;color:var(--text-light);">読み込み中...</div>`);
+  const { data, error } = await getSupabaseClient().rpc('admin_list_notices');
+  adminNoticeList = error ? [] : (data || []);
+  const rows = adminNoticeList.map((n, k) => `<div style="padding:10px 4px;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:10px;font-weight:700;border-radius:6px;padding:1px 6px;color:#fff;background:${n.is_active ? '#1a7f3c' : '#999'};">${n.is_active ? '公開中' : '非表示'}</span>
+        <span style="font-size:11px;color:var(--text-light);margin-left:auto;">${n.created_at ? escHtml(new Date(n.created_at).toLocaleDateString('ja-JP')) : ''}</span>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-top:3px;">${escHtml(n.title || '')}</div>
+      ${n.body ? `<div style="font-size:12px;color:var(--text-mid);white-space:pre-wrap;margin-top:2px;">${escHtml(n.body)}</div>` : ''}
+      <div style="display:flex;gap:6px;margin-top:8px;">
+        <button onclick="toggleAdminNotice(${k})" style="border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text-mid);">${n.is_active ? '非表示にする' : '公開する'}</button>
+        <button onclick="editAdminNotice(${k})" style="border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;color:var(--purple-deep);">編集</button>
+        <button onclick="deleteAdminNotice(${k})" style="border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:6px 10px;font-size:12px;cursor:pointer;margin-left:auto;">🗑</button>
+      </div>
     </div>`).join('');
-  adminSheet('admin-list-modal', `${adminSheetHeader('🔧 管理一覧（全' + SPOTS.length + '件）', 'admin-list-modal')}
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">${tabs}</div>
-    <div>${rows || '<div style="padding:24px;text-align:center;color:var(--text-light);font-size:13px;">該当するスポットはありません 🎉</div>'}</div>`);
+  adminSheet('admin-notice-modal', `${adminSheetHeader('📢 お知らせ', 'admin-notice-modal')}
+    <div style="font-size:12px;color:var(--text-mid);line-height:1.6;">公開中のお知らせは、地図の上の「お知らせ」帯とタイムラインに表示されます（スマホへのプッシュ通知ではありません）。</div>
+    <input type="hidden" id="adm-notice-id" value="">
+    ${admLabel('タイトル')}<input id="adm-notice-title" type="text" style="${ADM_INPUT}">
+    ${admLabel('本文（任意）')}<textarea id="adm-notice-body" rows="3" style="${ADM_INPUT}resize:vertical;"></textarea>
+    <div id="adm-msg" style="font-size:12px;color:#c0392b;margin-top:8px;min-height:16px;">${msgText || ''}</div>
+    <button id="adm-save-btn" onclick="saveAdminNotice()" style="width:100%;border:none;background:#c0392b;color:#fff;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;">公開する</button>
+    <div style="font-size:12px;font-weight:700;color:var(--text-mid);margin:16px 0 4px;">これまでのお知らせ</div>
+    <div>${rows || '<div style="padding:16px;text-align:center;color:var(--text-light);font-size:13px;">まだありません</div>'}</div>`);
+}
+function editAdminNotice(k) {
+  const n = adminNoticeList[k]; if (!n) return;
+  document.getElementById('adm-notice-id').value = n.id;
+  document.getElementById('adm-notice-title').value = n.title || '';
+  document.getElementById('adm-notice-body').value = n.body || '';
+  document.getElementById('adm-save-btn').textContent = '変更を保存';
+  document.getElementById('adm-notice-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+async function saveAdminNotice() {
+  const id = document.getElementById('adm-notice-id').value || null;
+  const title = document.getElementById('adm-notice-title').value.trim();
+  const body = document.getElementById('adm-notice-body').value.trim();
+  const msg = document.getElementById('adm-msg');
+  if (!title) { msg.textContent = 'タイトルを入れてください'; return; }
+  const existing = id ? adminNoticeList.find(n => String(n.id) === id) : null;
+  msg.textContent = '保存中...';
+  const { error } = await getSupabaseClient().rpc('admin_save_notice', { p_id: id, p_title: title, p_body: body, p_active: existing ? existing.is_active : true });
+  if (error) { msg.textContent = '保存できませんでした：' + error.message; return; }
+  afterAdminNoticeChange('✅ 保存しました');
+}
+async function toggleAdminNotice(k) {
+  const n = adminNoticeList[k]; if (!n) return;
+  const { error } = await getSupabaseClient().rpc('admin_save_notice', { p_id: String(n.id), p_title: n.title, p_body: n.body || '', p_active: !n.is_active });
+  if (error) { alert('変更できませんでした：' + error.message); return; }
+  afterAdminNoticeChange(n.is_active ? '非表示にしました' : '✅ 公開しました');
+}
+async function deleteAdminNotice(k) {
+  const n = adminNoticeList[k]; if (!n) return;
+  if (!confirm('「' + (n.title || '') + '」を削除しますか？（非表示にするだけなら「非表示にする」を使ってください）')) return;
+  const { error } = await getSupabaseClient().rpc('admin_delete_notice', { p_id: String(n.id) });
+  if (error) { alert('削除できませんでした：' + error.message); return; }
+  afterAdminNoticeChange('削除しました');
+}
+function afterAdminNoticeChange(text) {
+  try { loadNotices(); } catch(e) {}
+  openAdminNotices(text);
 }
 
 function openCard(spot) {
@@ -5600,6 +5904,14 @@ function openCard(spot) {
     memberBadge.textContent = mName;
     badgeEl.appendChild(memberBadge);
   });
+  const statusLabel = spotStatusLabel(spot);
+  if (statusLabel) {
+    const st = document.createElement('span');
+    st.className = 'badge';
+    st.style.cssText = 'background:#555;color:#fff;';
+    st.textContent = statusLabel;
+    badgeEl.appendChild(st);
+  }
 
   // 信頼度UI
   updateTrustUI(spot);
@@ -6773,7 +7085,7 @@ function renderSpotList() {
       : '<div class="spot-list-icon">' + icon + '</div>';
     div.innerHTML = iconHtml
       + '<div class="spot-list-info">'
-      + '<div class="spot-list-name">' + escHtml(s.name) + '</div>'
+      + '<div class="spot-list-name">' + (spotStatusLabel(s) ? '<span style="font-size:11px;color:#777;">［' + (s.is_closed ? '閉業' : '終了') + '］</span>' : '') + escHtml(s.name) + '</div>'
       + '<div class="spot-list-addr">' + escHtml(s.address || '') + '</div>'
       + '</div>' + distHtml;
     div.onclick = (function(spot) { return function() { selectSpotFromList(spot.db_id); }; })(s);
