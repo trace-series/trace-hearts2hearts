@@ -4052,18 +4052,9 @@ function shareBirthdayX(nameJa, nameEn, tag) {
 const SUPABASE_URL = 'https://rxhxbgcivobhxxwuquvi.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4aHhiZ2Npdm9iaHh4d3VxdXZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4MTQ4MzQsImV4cCI6MjEwMTM5MDgzNH0._ly01ZT1CxEERORRm5NPtIbrG2aqPWSvXvPUpR4PEl4';
 
-async function fetchSpotsFromDB() {
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/spots?select=*&order=created_at.asc`, {
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      }
-    });
-    if (!res.ok) throw new Error('Supabase fetch failed');
-    const data = await res.json();
-    // DBのsnake_caseをアプリのcamelCaseに変換
-    return data.map(s => ({
+// DBのsnake_caseをアプリのcamelCaseに変換（通常の読み込み・管理者の仮登録読み込みで共通）
+function mapSpotRow(s) {
+  return {
       name: s.name,
       lat: s.lat,
       lng: s.lng,
@@ -4090,7 +4081,22 @@ async function fetchSpotsFromDB() {
       source_url: s.source_url || null,
       end_date: s.end_date || null,
       is_closed: s.is_closed === true,
-    }));
+      is_draft: s.is_draft === true,
+  };
+}
+
+async function fetchSpotsFromDB() {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/spots?select=*&order=created_at.asc`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      }
+    });
+    if (!res.ok) throw new Error('Supabase fetch failed');
+    const data = await res.json();
+    // DBのsnake_caseをアプリのcamelCaseに変換
+    return data.filter(s => s.is_draft !== true).map(mapSpotRow); // 仮登録は除外（管理者には後から別に読み込む）
   } catch(e) {
     console.warn('Supabase取得失敗、ローカルデータで起動:', e);
     return null;
@@ -4207,7 +4213,7 @@ async function loadFeed() {
   // ② 運営が登録したスポット（spotsテーブル）
   let spotItems = [];
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/spots?select=id,name,member,sub,image_url,source_url,created_at,no&order=created_at.desc,no.desc&limit=${FEED_MAX_ITEMS}`, { headers: authHeaders });
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/spots?select=id,name,member,sub,image_url,source_url,created_at,no&is_draft=not.is.true&order=created_at.desc,no.desc&limit=${FEED_MAX_ITEMS}`, { headers: authHeaders });
     const data = await res.json();
     if (Array.isArray(data)) {
       // ファンの投稿から承認されたスポットは①と重複するので除外
@@ -4344,11 +4350,11 @@ async function loadGallery() {
   if (!galleryCache) {
     grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-light);">読み込み中...</div>';
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/spot_media?select=id,spot_id,media_type,url,thumb_url,embed_provider,source_url,activity_date_manual,activity_date_precision,source_posted_at,created_at,sort_order,spots(name,member,no)&order=created_at.desc&limit=2000`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/spot_media?select=id,spot_id,media_type,url,thumb_url,embed_provider,source_url,activity_date_manual,activity_date_precision,source_posted_at,created_at,sort_order,spots(name,member,no,is_draft)&order=created_at.desc&limit=2000`, {
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
       });
       const data = await res.json();
-      galleryCache = Array.isArray(data) ? data.filter(m => m.spots).map(m => ({
+      galleryCache = Array.isArray(data) ? data.filter(m => m.spots && m.spots.is_draft !== true).map(m => ({
         ...m,
         spot_name: m.spots.name,
         member: m.spots.member || '全員',
@@ -5138,6 +5144,7 @@ function refreshAdminEditRow() {
 
 function spotStatusLabel(spot) {
   if (!spot) return '';
+  if (spot.is_draft) return '🚧 仮登録中（管理者のみ表示）';
   if (spot.is_closed) return '🚫 閉業・閉校';
   if (spot.end_date) {
     const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
@@ -5175,11 +5182,37 @@ function openAdminSpotEditor() {
     ${admLabel('期間限定の終了日（期間限定スポットのみ。過ぎると「開催終了」表示）')}
     <div style="display:flex;gap:6px;"><input id="adm-end" type="date" style="${ADM_INPUT}flex:1;" value="${escHtml(spot.end_date || '')}"><button type="button" onclick="document.getElementById('adm-end').value=''" style="flex-shrink:0;border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:0 12px;font-size:12px;cursor:pointer;">クリア</button></div>
     <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--text);"><input id="adm-closed" type="checkbox" ${spot.is_closed ? 'checked' : ''} style="width:20px;height:20px;"> 閉業・閉校している（カードに「🚫 閉業・閉校」と表示）</label>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:10px;padding:10px;border-radius:10px;background:#fff7e6;font-size:13px;color:var(--text);"><input id="adm-draft" type="checkbox" ${spot.is_draft ? 'checked' : ''} style="width:20px;height:20px;"> 🚧 仮登録（一般ユーザーには表示しない）<br><span style="font-size:11px;color:var(--text-light);">チェックを外して保存すると公開され、タイムラインに新スポットとして載ります</span></label>
     <div id="adm-msg" style="font-size:12px;color:#c0392b;margin-top:10px;min-height:16px;"></div>
     <div style="display:flex;gap:8px;margin-top:6px;">
       <button onclick="closeAdminSheet('admin-edit-modal')" style="flex:1;border:1.5px solid var(--border);background:#fff;color:var(--text-mid);border-radius:12px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;">キャンセル</button>
       <button id="adm-save-btn" onclick="saveAdminSpotEdit()" style="flex:2;border:none;background:#c0392b;color:#fff;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;">保存</button>
-    </div>`);
+    </div>
+    <button onclick="deleteAdminSpot()" style="width:100%;margin-top:22px;border:1.5px solid #c0392b;background:#fff;color:#c0392b;border-radius:12px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;">🗑 このスポットを削除</button>
+    <div style="font-size:11px;color:var(--text-light);margin-top:4px;line-height:1.5;">二重登録などの取り消し用です。写真・動画の登録も一緒に消えます（元に戻せません）。一時的に隠すだけなら「🚧 仮登録」を使ってください。</div>`);
+}
+async function deleteAdminSpot() {
+  const spot = currentSpot;
+  if (!spot || !spot.db_id) return;
+  if (!confirm(`「${spot.name}」${spot.no != null ? '（No.' + spot.no + '）' : ''}を削除しますか？`)) return;
+  if (!confirm('本当に削除しますか？元に戻せません。')) return;
+  const { data, error } = await getSupabaseClient().rpc('admin_delete_spot', { p_spot_id: spot.db_id });
+  if (error || data !== 1) { alert('削除できませんでした：' + ((error && error.message) || '')); return; }
+  const k = markers.findIndex(m => m.spotData === spot);
+  if (k >= 0) { markers[k].setMap(null); markers.splice(k, 1); }
+  const si = SPOTS.indexOf(spot);
+  if (si >= 0) SPOTS.splice(si, 1);
+  closeAdminSheet('admin-edit-modal');
+  const card = document.getElementById('map-card');
+  if (card) card.classList.remove('open');
+  cardOpen = false;
+  const closeBtn = document.getElementById('card-fixed-close-btn');
+  if (closeBtn) closeBtn.style.display = 'none';
+  currentSpot = null;
+  if (typeof galleryCache !== 'undefined') galleryCache = null;
+  try { applyFilters(); } catch(e) {}
+  try { renderSpotList(); } catch(e) {}
+  try { showEvalToast('🗑 削除しました'); } catch(e) {}
 }
 
 function toggleAdminMemberChip(btn) {
@@ -5216,26 +5249,28 @@ async function saveAdminSpotEdit() {
   const address = document.getElementById('adm-address').value.trim();
   const endDate = document.getElementById('adm-end').value || null;
   const closed = document.getElementById('adm-closed').checked;
+  const draft = document.getElementById('adm-draft').checked;
   if (source && !/^https?:\/\//.test(source)) { msg.textContent = '出典リンクは http から始まるURLにしてください'; return; }
   btn.disabled = true; msg.textContent = '保存中...';
-  const { data, error } = await getSupabaseClient().rpc('admin_update_spot_v2', {
+  const { data, error } = await getSupabaseClient().rpc('admin_update_spot_v3', {
     p_spot_id: spot.db_id, p_name: name, p_member: member, p_category: category, p_sub: sub,
-    p_source_url: source || null, p_address: address, p_end_date: endDate, p_is_closed: closed,
+    p_source_url: source || null, p_address: address, p_end_date: endDate, p_is_closed: closed, p_is_draft: draft,
   });
   if (error || data !== 1) {
     btn.disabled = false;
     msg.textContent = '保存できませんでした：' + ((error && error.message) || '対象のスポットが見つかりません');
     return;
   }
-  Object.assign(spot, { name, member, category, sub, source_url: source || null, address, end_date: endDate, is_closed: closed, badges: [category] });
+  const draftChanged = spot.is_draft !== draft;
+  Object.assign(spot, { name, member, category, sub, source_url: source || null, address, end_date: endDate, is_closed: closed, is_draft: draft, badges: [category] });
   const mk = markers.find(m => m.spotData === spot);
-  if (mk) mk.setTitle(name);
+  if (draftChanged) addSpotMarker(spot); else if (mk) mk.setTitle(name);
   closeAdminSheet('admin-edit-modal');
   openCard(spot);
   if (typeof galleryCache !== 'undefined') galleryCache = null;
   try { if (map) applyFilters(); } catch(e) {}
   try { renderSpotList(); } catch(e) {}
-  try { showEvalToast('✅ スポット情報を保存しました'); } catch(e) {}
+  try { showEvalToast(draftChanged && !draft ? '🎉 公開しました' : '✅ スポット情報を保存しました'); } catch(e) {}
 }
 
 // ── 管理者：X紹介文 ──
@@ -5364,6 +5399,7 @@ async function saveAdminPin() {
 // ── 管理者：写真・動画の追加／並べ替え／削除 ──
 let adminMediaItems = []; // { id|null, media_type, url, embed_provider, thumb, file(Blob)|null }
 let adminMediaBase = '';
+let adminMediaNewSource = '';
 function adminFileBase(spot, items) {
   const first = items.find(m => m.media_type === 'photo' && m.url && m.url.indexOf('/spot-photos/') !== -1);
   if (first) {
@@ -5378,20 +5414,21 @@ async function openAdminMediaEditor() {
   if (!spot || !spot.db_id) return;
   adminSheet('admin-media-modal', `${adminSheetHeader('🖼️ 写真・動画', 'admin-media-modal')}<div style="text-align:center;padding:30px;color:var(--text-light);">読み込み中...</div>`);
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/spot_media?select=id,media_type,url,thumb_url,embed_provider,sort_order,created_at&spot_id=eq.${spot.db_id}&order=sort_order.asc,created_at.asc`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/spot_media?select=id,media_type,url,thumb_url,embed_provider,source_url,sort_order,created_at&spot_id=eq.${spot.db_id}&order=sort_order.asc,created_at.asc`, {
       headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
     });
     const data = await res.json();
     adminMediaItems = (Array.isArray(data) ? data : []).map(m => ({
-      id: m.id, media_type: m.media_type, url: m.url, embed_provider: m.embed_provider,
+      id: m.id, media_type: m.media_type, url: m.url, embed_provider: m.embed_provider, source_url: m.source_url || '',
       thumb: m.thumb_url || (m.media_type === 'photo' ? m.url : videoThumbFor(m.url)), file: null,
     }));
     // spot_mediaに無い古い写真（image_url〜4）も拾う
     [spot.image_url, spot.image_url_2, spot.image_url_3, spot.image_url_4].forEach(u => {
-      if (u && !adminMediaItems.some(m => m.url === u)) adminMediaItems.push({ id: null, media_type: 'photo', url: u, thumb: u, file: null });
+      if (u && !adminMediaItems.some(m => m.url === u)) adminMediaItems.push({ id: null, media_type: 'photo', url: u, thumb: u, file: null, source_url: spot.source_url || '' });
     });
   } catch(e) { adminMediaItems = []; }
   adminMediaBase = adminFileBase(spot, adminMediaItems);
+  adminMediaNewSource = spot.source_url || '';
   renderAdminMediaEditor();
 }
 function renderAdminMediaEditor(msgText) {
@@ -5411,6 +5448,7 @@ function renderAdminMediaEditor(msgText) {
       <div style="flex:1;min-width:0;">
         ${tag}${m.file ? ' <span style="font-size:10px;color:#c0392b;font-weight:700;">新規</span>' : ''}
         <div style="font-size:11px;color:var(--text-light);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px;">${m.file ? '（保存時にアップロード）' : escHtml((m.url || '').split('/').pop())}</div>
+        <div onclick="editAdminMediaSource(${i})" style="font-size:11px;color:var(--purple-mid);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;cursor:pointer;text-decoration:underline;">🔗 ${m.source_url ? escHtml(m.source_url.replace(/^https?:\/\/(www\.)?/, '')) : '出典を設定'}</div>
       </div>
       ${btn('↑', `moveAdminMedia(${i},-1)`, i === 0)}${btn('↓', `moveAdminMedia(${i},1)`, i === adminMediaItems.length - 1)}${btn('🗑', `removeAdminMedia(${i})`, false)}
     </div>`;
@@ -5426,6 +5464,9 @@ function renderAdminMediaEditor(msgText) {
       <input id="adm-video-url" type="url" inputmode="url" placeholder="動画のURL（YouTube・X・Instagram・TikTok）" style="${inputCss}flex:1;">
       <button onclick="addAdminVideo()" style="flex-shrink:0;border:none;background:var(--purple-mid);color:#fff;border-radius:10px;padding:0 14px;font-size:13px;font-weight:700;cursor:pointer;">追加</button>
     </div>
+    <div style="font-size:12px;font-weight:700;color:var(--text-mid);margin:12px 0 5px;">これから追加する写真の出典（最初はスポットの出典）</div>
+    <input id="adm-new-source" type="url" inputmode="url" style="${'width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:10px;padding:10px;font-size:16px;background:#fff;color:var(--text);'}" value="${escHtml(adminMediaNewSource)}" oninput="adminMediaNewSource=this.value.trim()">
+    <div style="font-size:11px;color:var(--text-light);margin-top:4px;">X・TikTok・Instagramのリンクなら、保存時に活動日（投稿日）を自動で入れます。登録済みの写真の出典は、各写真の「🔗」を押すと変えられます。</div>
     <div style="font-size:12px;font-weight:700;color:var(--text-mid);margin:12px 0 5px;">新しい写真のファイル名（英数字とハイフン）</div>
     <input id="adm-file-base" type="text" autocapitalize="off" style="${inputCss}" value="${escHtml(adminMediaBase)}" oninput="adminMediaBase=this.value">
     <div style="font-size:11px;color:var(--text-light);margin-top:4px;">例：${escHtml(adminMediaBase)}_${String(adminNextPhotoNo()).padStart(2, '0')}.jpg（横1600px・JPEGに自動変換）</div>
@@ -5443,6 +5484,16 @@ function adminNextPhotoNo() {
     if (mm) n = Math.max(n, parseInt(mm[1], 10));
   });
   return n + 1;
+}
+function editAdminMediaSource(i) {
+  const m = adminMediaItems[i];
+  if (!m) return;
+  const v = prompt('この' + (m.media_type === 'video' ? '動画' : '写真') + 'の出典リンク（空にするとスポットの出典を使います）', m.source_url || '');
+  if (v === null) return;
+  const t = v.trim();
+  if (t && !/^https?:\/\//.test(t)) { alert('http から始まるURLを入れてください'); return; }
+  m.source_url = t;
+  renderAdminMediaEditor('出典を変えました（保存で反映）');
 }
 function moveAdminMedia(i, d) {
   const j = i + d;
@@ -5485,7 +5536,7 @@ async function addAdminPhotos(input) {
   for (const f of files) {
     try {
       const blob = await adminResizeToJpeg(f);
-      adminMediaItems.push({ id: null, media_type: 'photo', url: null, thumb: URL.createObjectURL(blob), file: blob });
+      adminMediaItems.push({ id: null, media_type: 'photo', url: null, thumb: URL.createObjectURL(blob), file: blob, source_url: adminMediaNewSource });
     } catch(e) { failed++; }
   }
   renderAdminMediaEditor(failed ? `${failed}枚は読み込めませんでした` : '');
@@ -5496,7 +5547,7 @@ function addAdminVideo() {
   if (!/^https?:\/\//.test(url)) { renderAdminMediaEditor('動画のURLを入力してください'); return; }
   const v = parseVideoUrl(url);
   if (adminMediaItems.some(m => m.url === url)) { renderAdminMediaEditor('この動画はすでに入っています'); return; }
-  adminMediaItems.unshift({ id: null, media_type: 'video', url, embed_provider: v ? v.provider : 'link', thumb: videoThumbFor(url), file: null });
+  adminMediaItems.unshift({ id: null, media_type: 'video', url, embed_provider: v ? v.provider : 'link', thumb: videoThumbFor(url), file: null, source_url: url });
   renderAdminMediaEditor();
 }
 async function saveAdminMedia() {
@@ -5529,8 +5580,8 @@ async function saveAdminMedia() {
     m.file = null;
   }
   msg.textContent = '保存中...';
-  const items = adminMediaItems.map(m => ({ id: m.id, media_type: m.media_type, url: m.url, embed_provider: m.embed_provider || null }));
-  const { data, error } = await client.rpc('admin_save_spot_media', { p_spot_id: spot.db_id, p_items: items });
+  const items = adminMediaItems.map(m => ({ id: m.id, media_type: m.media_type, url: m.url, embed_provider: m.embed_provider || null, source_url: m.source_url || '' }));
+  const { data, error } = await client.rpc('admin_save_spot_media_v2', { p_spot_id: spot.db_id, p_items: items });
   if (error) { btn.disabled = false; msg.textContent = '保存できませんでした：' + error.message; return; }
   const photos = adminMediaItems.filter(m => m.media_type === 'photo').map(m => m.url);
   spot.image_url = photos[0] || null; spot.image_url_2 = photos[1] || null; spot.image_url_3 = photos[2] || null; spot.image_url_4 = photos[3] || null;
@@ -5558,6 +5609,7 @@ function refreshAdminListCtl() {
   checkAdminEditor().then(async ok => {
     ctl.style.display = ok ? 'flex' : 'none';
     if (!ok) return;
+    loadAdminDrafts();
     const reports = await fetchAdminReports();
     let dot = document.getElementById('admin-report-dot');
     if (!dot) {
@@ -5576,6 +5628,7 @@ setInterval(() => { if (adminEditorFlag === true && document.visibilityState ===
 
 const ADMIN_LIST_DEFS = [
   { key: 'reports', label: '📮 報告' },
+  { key: 'draft', label: '🚧 仮登録', test: s => s.is_draft },
   { key: 'nophoto', label: '📷 写真なし', test: s => !s.image_url },
   { key: 'allmember', label: '👥 メンバー全員', test: s => !s.member || s.member === '全員' },
   { key: 'nosource', label: '🔗 出典なし', test: s => !s.source_url },
@@ -5584,7 +5637,7 @@ const ADMIN_LIST_DEFS = [
 async function openAdminListPanel(tab) {
   if (tab) adminListTab = tab;
   if (adminListTab === 'reports' && adminReportsCache === null) await fetchAdminReports();
-  const cur = ADMIN_LIST_DEFS.find(d => d.key === adminListTab) || ADMIN_LIST_DEFS[1];
+  const cur = ADMIN_LIST_DEFS.find(d => d.key === adminListTab) || ADMIN_LIST_DEFS[2];
   const tabs = ADMIN_LIST_DEFS.map(d => {
     const cnt = d.key === 'reports' ? (adminReportsCache ? adminReportsCache.length : '…') : SPOTS.filter(d.test).length;
     const on = d.key === cur.key;
@@ -5649,14 +5702,35 @@ async function applyAdminReportLocation(k) {
   try { showEvalToast('✅ ピンを移動しました。承認はダッシュボードで'); } catch(e) {}
 }
 
+// ── 管理者：仮登録スポット（一般ユーザーには見えない。管理者だけ地図に🚧で表示） ──
+let adminDraftsLoaded = false;
+async function loadAdminDrafts() {
+  if (adminDraftsLoaded || !map || !SPOTS.length) { if (!adminDraftsLoaded) setTimeout(loadAdminDrafts, 1500); return; }
+  adminDraftsLoaded = true;
+  try {
+    const { data, error } = await getSupabaseClient().from('spots').select('*').eq('is_draft', true).order('created_at', { ascending: true });
+    if (error || !Array.isArray(data)) { adminDraftsLoaded = false; return; }
+    data.forEach(row => {
+      if (SPOTS.some(s => s.db_id === row.id)) return;
+      const spot = mapSpotRow(row);
+      SPOTS.push(spot);
+      addSpotMarker(spot);
+    });
+    try { applyFilters(); } catch(e) {}
+    try { renderSpotList(); } catch(e) {}
+  } catch(e) { adminDraftsLoaded = false; }
+}
+
 // ── 管理者：新規スポット登録 ──
 let adminNewMap = null, adminNewMarker = null;
 function addSpotMarker(spot) {
   if (!map || typeof google === 'undefined') return;
+  const old = markers.findIndex(m => m.spotData === spot);
+  if (old >= 0) { markers[old].setMap(null); markers.splice(old, 1); }
   const marker = new google.maps.Marker({
     position: { lat: spot.lat, lng: spot.lng }, map: map, title: spot.name,
-    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 14, fillColor: spot.color, fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2.5 },
-    label: { text: spot.icon, fontSize: '14px' },
+    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 14, fillColor: spot.is_draft ? '#d9822b' : spot.color, fillOpacity: 1, strokeColor: spot.is_draft ? '#fff3c4' : '#ffffff', strokeWeight: spot.is_draft ? 3.5 : 2.5 },
+    label: { text: spot.is_draft ? '🚧' : spot.icon, fontSize: '14px' },
   });
   marker.spotData = spot;
   marker.addListener('click', () => { openCard(spot); map.panTo({ lat: spot.lat, lng: spot.lng }); });
@@ -5680,6 +5754,7 @@ function openAdminNewSpot() {
     ${admLabel('出典リンク')}<input id="adm-source" type="url" inputmode="url" style="${ADM_INPUT}">
     ${admLabel('住所')}<div style="display:flex;gap:6px;"><input id="adm-address" type="text" style="${ADM_INPUT}flex:1;"><button type="button" onclick="adminNewFillAddress()" style="flex-shrink:0;border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:0 10px;font-size:12px;cursor:pointer;">ピンから入力</button></div>
     ${admLabel('期間限定の終了日（任意）')}<input id="adm-end" type="date" style="${ADM_INPUT}">
+    <label style="display:flex;align-items:center;gap:8px;margin-top:12px;padding:10px;border-radius:10px;background:#fff7e6;font-size:13px;color:var(--text);"><input id="adm-draft" type="checkbox" checked style="width:20px;height:20px;"> 🚧 仮登録で保存（一般ユーザーには表示しない）</label>
     <div id="adm-msg" style="font-size:12px;color:#c0392b;margin-top:10px;min-height:16px;"></div>
     <div style="display:flex;gap:8px;margin-top:6px;">
       <button onclick="closeAdminSheet('admin-new-modal')" style="flex:1;border:1.5px solid var(--border);background:#fff;color:var(--text-mid);border-radius:12px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;">キャンセル</button>
@@ -5733,11 +5808,12 @@ async function saveAdminNewSpot() {
   const source = document.getElementById('adm-source').value.trim();
   const address = document.getElementById('adm-address').value.trim();
   const endDate = document.getElementById('adm-end').value || null;
+  const draft = document.getElementById('adm-draft').checked;
   if (source && !/^https?:\/\//.test(source)) { msg.textContent = '出典リンクは http から始まるURLにしてください'; return; }
   btn.disabled = true; msg.textContent = '登録中...';
-  const { data, error } = await getSupabaseClient().rpc('admin_create_spot', {
+  const { data, error } = await getSupabaseClient().rpc('admin_create_spot_v2', {
     p_name: name, p_lat: lat, p_lng: lng, p_member: member, p_category: category, p_sub: sub,
-    p_address: address, p_source_url: source || null, p_end_date: endDate,
+    p_address: address, p_source_url: source || null, p_end_date: endDate, p_is_draft: draft,
   });
   const row = Array.isArray(data) ? data[0] : data;
   if (error || !row || !row.id) {
@@ -5750,7 +5826,7 @@ async function saveAdminNewSpot() {
     badges: [category], color: '#1a1a1a', trustScore: 8, goodCount: 0, badCount: 0, adminLevel: 'reliable',
     db_id: row.id, no: row.no != null ? row.no : null,
     image_url: null, image_url_2: null, image_url_3: null, image_url_4: null, source_url: source || null,
-    end_date: endDate, is_closed: false,
+    end_date: endDate, is_closed: false, is_draft: draft,
   };
   SPOTS.push(spot);
   addSpotMarker(spot);
@@ -5759,7 +5835,7 @@ async function saveAdminNewSpot() {
   openCard(spot);
   try { if (map) applyFilters(); } catch(e) {}
   try { renderSpotList(); } catch(e) {}
-  try { showEvalToast(`✅ No.${spot.no != null ? spot.no : '?'} を登録しました`); } catch(e) {}
+  try { showEvalToast(`✅ No.${spot.no != null ? spot.no : '?'} を${draft ? '仮登録' : '登録'}しました`); } catch(e) {}
   if (confirm('続けて写真・動画を追加しますか？')) openAdminMediaEditor();
 }
 
@@ -7085,7 +7161,7 @@ function renderSpotList() {
       : '<div class="spot-list-icon">' + icon + '</div>';
     div.innerHTML = iconHtml
       + '<div class="spot-list-info">'
-      + '<div class="spot-list-name">' + (spotStatusLabel(s) ? '<span style="font-size:11px;color:#777;">［' + (s.is_closed ? '閉業' : '終了') + '］</span>' : '') + escHtml(s.name) + '</div>'
+      + '<div class="spot-list-name">' + (spotStatusLabel(s) ? '<span style="font-size:11px;color:' + (s.is_draft ? '#d9822b' : '#777') + ';">［' + (s.is_draft ? '仮登録' : s.is_closed ? '閉業' : '終了') + '］</span>' : '') + escHtml(s.name) + '</div>'
       + '<div class="spot-list-addr">' + escHtml(s.address || '') + '</div>'
       + '</div>' + distHtml;
     div.onclick = (function(spot) { return function() { selectSpotFromList(spot.db_id); }; })(s);
