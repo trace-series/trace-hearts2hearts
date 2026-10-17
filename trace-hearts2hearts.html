@@ -7892,29 +7892,15 @@ function jumpToSpot(name) {
 async function incrementSpotLikes(dbId) {
   if (!dbId) return;
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/spots?id=eq.${dbId}&select=likes_count`, {
-      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-    });
-    const [row] = await res.json();
-    const current = (row && row.likes_count) || 0;
-    const next = current + 1;
-    await fetch(`${SUPABASE_URL}/rest/v1/spots?id=eq.${dbId}`, {
-      method: 'PATCH',
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ likes_count: next })
-    });
+    // 件数の+1はSupabase側の関数で行う（スポットを直接書き換えられないようにしたため）
+    const { data: next, error } = await getSupabaseClient().rpc('increment_spot_likes', { p_spot_id: dbId });
+    if (error || typeof next !== 'number') return;
     if (currentSpot && currentSpot.db_id === dbId) {
       currentSpot.likes = next;
       const likesEl = document.getElementById('card-likes');
       if (likesEl) likesEl.textContent = next + ' 件の巡礼報告';
     }
-  } catch(e) {
-    console.warn('スポットlikes更新失敗:', e);
-  }
+  } catch(e) {}
 }
 
 // ── 巡礼報告 ──
@@ -8098,26 +8084,10 @@ function shareReferralLink() {
 
 function awardReferralBonus(referrerId) {
   if (!referrerId) return;
-  const client = getSupabaseClient();
-  client.from('profiles').select('points, referral_count, visited_spots').eq('id', referrerId).single().then(function(r) {
-    if (!r.data) return;
-    // 不正対策：紹介者自身が未活動（巡礼ゼロ）の場合はボーナスを見送る
-    const referrerVisited = r.data.visited_spots || [];
-    if (referrerVisited.length === 0) {
-      console.log('referral bonus skipped: referrer inactive');
-      return;
-    }
-    const newCount = (r.data.referral_count || 0) + 1;
-    let bonus = newCount <= 10 ? 50 : 30;
-    if (newCount === 5) bonus += 150;   // 称号「Scout」
-    if (newCount === 10) bonus += 400;  // 称号「Evangelist」
-    const newPts = (r.data.points || 0) + bonus;
-    client.from('profiles').update({ points: newPts, referral_count: newCount }).eq('id', referrerId).then().catch(function(e) {
-      console.warn('referral bonus update error:', e);
-    });
-  }).catch(function(e) {
-    console.warn('referral bonus fetch error:', e);
-  });
+  // 紹介者へのボーナスはSupabase側の関数で付与する（他人のプロフィールを直接書き換えられないようにしたため）
+  getSupabaseClient().rpc('award_referral_bonus').then(function(r) {
+    if (r && r.error) console.warn('referral bonus error:', r.error);
+  }).catch(function(e) { console.warn('referral bonus error:', e); });
 }
 
 // ── ビュー切り替え ──
