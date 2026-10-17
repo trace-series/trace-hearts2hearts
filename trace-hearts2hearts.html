@@ -2247,7 +2247,7 @@
       <div id="search-overlay" style="display:none;position:fixed;top:var(--content-top);left:0;right:0;bottom:0;z-index:1100;background:rgba(30,10,40,0.4);">
         <div style="background:#f9f7ff;border-radius:0 0 16px 16px;box-shadow:0 4px 16px rgba(0,0,0,0.15);max-height:80vh;max-height:80dvh;display:flex;flex-direction:column;">
           <div style="display:flex;align-items:center;gap:8px;padding:12px;background:white;border-bottom:1px solid var(--border);">
-            <input id="search-input" type="text" placeholder="スポット名・住所・説明で検索" oninput="renderSearchResults()" style="flex:1;border:1px solid var(--border);border-radius:20px;padding:10px 14px;font-size:14px;outline:none;">
+            <input id="search-input" type="text" placeholder="スポット名・住所・No.で検索" oninput="renderSearchResults()" style="flex:1;border:1px solid var(--border);border-radius:20px;padding:10px 14px;font-size:14px;outline:none;">
             <button onclick="toggleSearch()" aria-label="検索を閉じる" style="background:none;border:none;font-size:20px;color:#888;cursor:pointer;padding:4px 8px;">✕</button>
           </div>
           <div id="search-results" style="overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:8px 12px 16px;"></div>
@@ -2276,6 +2276,7 @@
           <button id="btn-navi" onclick="openNavi()" style="flex:1;background:linear-gradient(135deg,#ededed,#e6e6e6);border:2px solid #bfbfbf;border-radius:12px;padding:9px;font-size:13px;font-weight:700;color:#333333;cursor:pointer;">🗺️ ナビ</button>
           <button id="btn-set-origin" onclick="setOriginSpot()" style="flex:1;background:linear-gradient(135deg,#ededed,#e6e6e6);border:2px solid #bfbfbf;border-radius:12px;padding:9px;font-size:13px;font-weight:700;color:#333333;cursor:pointer;">📍 起点に設定</button>
         </div>
+        <button onclick="openShareCard()" style="width:100%;margin-top:8px;background:#fff;border:2px solid var(--purple-mid);border-radius:12px;padding:9px;font-size:13px;font-weight:700;color:var(--purple-deep);cursor:pointer;">🖼️ 巡礼シェア画像を作る（TikTok・インスタ用）</button>
         <!-- 管理者だけに表示：スポット情報の直接編集 -->
         <div id="admin-edit-row" style="display:none;margin-top:8px;">
           <div style="font-size:11px;font-weight:700;color:#c0392b;margin:0 2px 4px;">🔧 管理者メニュー</div>
@@ -2284,7 +2285,10 @@
             <button onclick="openAdminPinEditor()" style="flex:1;background:#fff4f4;border:1.5px dashed #e08a8a;border-radius:12px;padding:9px 4px;font-size:12px;font-weight:700;color:#c0392b;cursor:pointer;">📍 ピン</button>
             <button onclick="openAdminMediaEditor()" style="flex:1;background:#fff4f4;border:1.5px dashed #e08a8a;border-radius:12px;padding:9px 4px;font-size:12px;font-weight:700;color:#c0392b;cursor:pointer;">🖼️ 写真・動画</button>
             <button onclick="openAdminXText()" style="flex:1;background:#fff4f4;border:1.5px dashed #e08a8a;border-radius:12px;padding:9px 4px;font-size:12px;font-weight:700;color:#c0392b;cursor:pointer;">𝕏 紹介文を作る</button>
+            <button onclick="openAdminTikTok()" style="flex:1;background:#fff4f4;border:1.5px dashed #e08a8a;border-radius:12px;padding:9px 4px;font-size:12px;font-weight:700;color:#c0392b;cursor:pointer;">🎬 TikTok素材</button>
+            <button onclick="openAdminHistory(currentSpot && currentSpot.db_id)" style="flex:1;background:#fff4f4;border:1.5px dashed #e08a8a;border-radius:12px;padding:9px 4px;font-size:12px;font-weight:700;color:#c0392b;cursor:pointer;">🕘 変更履歴</button>
           </div>
+          <div id="admin-memo-box" onclick="openAdminSpotEditor()" style="display:none;margin-top:6px;background:#fffbe6;border:1px solid #f0d98a;border-radius:10px;padding:8px 10px;font-size:12px;color:#6b5500;line-height:1.5;white-space:pre-wrap;cursor:pointer;"></div>
         </div>
         <div class="card-detail" id="card-detail" style="display:none;">
           <div class="card-detail-row">
@@ -5018,6 +5022,7 @@ async function initMap() {
   adminListCtl.innerHTML = '<span style="font-size:17px;line-height:1;">🔧</span><span style="font-size:9px;font-weight:700;color:#c0392b;line-height:1;">管理</span>';
   adminListCtl.addEventListener('click', function() { openAdminListPanel(); });
   adminListCtl.index = -2;
+  window.adminListCtlEl = adminListCtl;
   map.controls[google.maps.ControlPosition.RIGHT_CENTER].push(adminListCtl);
   refreshAdminListCtl();
 
@@ -5082,6 +5087,9 @@ async function initMap() {
 
     markers.push(marker);
   });
+
+  // ?spot=No. で開いたらそのスポットへ。TikTokから来た人には案内を出す
+  if (!handleSpotDeepLink()) showTikTokWelcome();
 }
 
 // Google Maps API エラー時のフォールバック
@@ -5139,6 +5147,9 @@ function refreshAdminEditRow() {
   row.style.display = 'none';
   checkAdminEditor().then(ok => {
     if (ok && currentSpot && currentSpot.db_id) row.style.display = 'block';
+    const box = document.getElementById('admin-memo-box');
+    const memo = ok && currentSpot ? adminMemos[currentSpot.db_id] : '';
+    if (box) { box.textContent = memo ? '📝 ' + memo : ''; box.style.display = memo ? 'block' : 'none'; }
   });
 }
 
@@ -5183,11 +5194,13 @@ function openAdminSpotEditor() {
     <div style="display:flex;gap:6px;"><input id="adm-end" type="date" style="${ADM_INPUT}flex:1;" value="${escHtml(spot.end_date || '')}"><button type="button" onclick="document.getElementById('adm-end').value=''" style="flex-shrink:0;border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:0 12px;font-size:12px;cursor:pointer;">クリア</button></div>
     <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--text);"><input id="adm-closed" type="checkbox" ${spot.is_closed ? 'checked' : ''} style="width:20px;height:20px;"> 閉業・閉校している（カードに「🚫 閉業・閉校」と表示）</label>
     <label style="display:flex;align-items:center;gap:8px;margin-top:10px;padding:10px;border-radius:10px;background:#fff7e6;font-size:13px;color:var(--text);"><input id="adm-draft" type="checkbox" ${spot.is_draft ? 'checked' : ''} style="width:20px;height:20px;"> 🚧 仮登録（一般ユーザーには表示しない）<br><span style="font-size:11px;color:var(--text-light);">チェックを外して保存すると公開され、タイムラインに新スポットとして載ります</span></label>
+    ${admLabel('📝 管理メモ（自分だけに見える。「住所要確認」など）')}<textarea id="adm-memo" rows="2" style="${ADM_INPUT}resize:vertical;background:#fffbe6;">${escHtml(adminMemos[spot.db_id] || '')}</textarea>
     <div id="adm-msg" style="font-size:12px;color:#c0392b;margin-top:10px;min-height:16px;"></div>
     <div style="display:flex;gap:8px;margin-top:6px;">
       <button onclick="closeAdminSheet('admin-edit-modal')" style="flex:1;border:1.5px solid var(--border);background:#fff;color:var(--text-mid);border-radius:12px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;">キャンセル</button>
       <button id="adm-save-btn" onclick="saveAdminSpotEdit()" style="flex:2;border:none;background:#c0392b;color:#fff;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;">保存</button>
     </div>
+    <button onclick="closeAdminSheet('admin-edit-modal');openAdminHistory(currentSpot && currentSpot.db_id)" style="width:100%;margin-top:14px;border:1.5px solid var(--border);background:#fff;color:var(--purple-deep);border-radius:12px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;">🕘 このスポットの変更履歴</button>
     <button onclick="deleteAdminSpot()" style="width:100%;margin-top:22px;border:1.5px solid #c0392b;background:#fff;color:#c0392b;border-radius:12px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;">🗑 このスポットを削除</button>
     <div style="font-size:11px;color:var(--text-light);margin-top:4px;line-height:1.5;">二重登録などの取り消し用です。写真・動画の登録も一緒に消えます（元に戻せません）。一時的に隠すだけなら「🚧 仮登録」を使ってください。</div>`);
 }
@@ -5250,8 +5263,14 @@ async function saveAdminSpotEdit() {
   const endDate = document.getElementById('adm-end').value || null;
   const closed = document.getElementById('adm-closed').checked;
   const draft = document.getElementById('adm-draft').checked;
+  const memoEl = document.getElementById('adm-memo');
+  const memo = memoEl ? memoEl.value : null;
   if (source && !/^https?:\/\//.test(source)) { msg.textContent = '出典リンクは http から始まるURLにしてください'; return; }
   btn.disabled = true; msg.textContent = '保存中...';
+  if (memo !== null) {
+    const memoErr = await saveAdminMemo(spot.db_id, memo);
+    if (memoErr) { btn.disabled = false; msg.textContent = 'メモを保存できませんでした：' + memoErr.message; return; }
+  }
   const { data, error } = await getSupabaseClient().rpc('admin_update_spot_v3', {
     p_spot_id: spot.db_id, p_name: name, p_member: member, p_category: category, p_sub: sub,
     p_source_url: source || null, p_address: address, p_end_date: endDate, p_is_closed: closed, p_is_draft: draft,
@@ -5279,7 +5298,7 @@ function adminXText(spot) {
   const memberLine = (!names.length || names.includes('全員')) ? '全員' : names.join('・');
   const memberTags = GROUP_CONFIG.members.filter(m => names.includes(m.name)).map(m => m.tags[0]).join(' ');
   const tags = [memberTags, GROUP_CONFIG.hashtags.join(' ')].filter(Boolean).join(' ');
-  return `📍${spot.name}${spot.no != null ? '（No.' + spot.no + '）' : ''}\n👥 ${memberLine}\n${(spot.sub || '').trim()}\n\n${GROUP_CONFIG.appName}の地図で場所をチェック👇\nhttps://trace-series.github.io/trace-hearts2hearts/trace-hearts2hearts.html\n\n${tags}`.replace(/\n{3,}/g, '\n\n');
+  return `📍${spot.name}${spot.no != null ? '（No.' + spot.no + '）' : ''}\n👥 ${memberLine}\n${(spot.sub || '').trim()}\n\n${GROUP_CONFIG.appName}の地図で場所をチェック👇\n${spotShareUrl(spot, 'x')}\n\n${tags}`.replace(/\n{3,}/g, '\n\n');
 }
 function adminXCount(t) {
   // Xの文字数：URLは23、全角は2、半角は1として数える（目安）
@@ -5350,6 +5369,7 @@ function openAdminPinEditor() {
   adminPinMap = null; adminPinMarker = null;
   adminSheet('admin-pin-modal', `${adminSheetHeader('📍 ピンの位置を修正' + (spot.no != null ? '（No.' + spot.no + '）' : ''), 'admin-pin-modal')}
     <div style="font-size:12px;color:var(--text-mid);margin-bottom:8px;">ピンをドラッグして正しい位置に合わせ、「保存」を押してください。</div>
+    ${adminMapsUrlRowHtml('pin')}
     <div id="admin-pin-map" style="width:100%;height:320px;border-radius:12px;background:#ececec;"></div>
     <div id="admin-pin-coord" style="font-size:12px;color:var(--text-light);margin:8px 2px;">${spot.lat.toFixed(6)}, ${spot.lng.toFixed(6)}</div>
     <div id="admin-pin-msg" style="font-size:12px;color:#c0392b;min-height:16px;"></div>
@@ -5403,8 +5423,8 @@ let adminMediaNewSource = '';
 function adminFileBase(spot, items) {
   const first = items.find(m => m.media_type === 'photo' && m.url && m.url.indexOf('/spot-photos/') !== -1);
   if (first) {
-    const f = decodeURIComponent(first.url.split('/spot-photos/')[1].split('?')[0]).replace(/\.jpe?g$/i, '');
-    const b = f.replace(/_\d+$/, '').replace(/[^a-z0-9-]/gi, '').toLowerCase();
+    const f = decodeURIComponent(first.url.split('/spot-photos/')[1].split('?')[0]).split('/').pop().replace(/\.jpe?g$/i, '');
+    const b = f.replace(/-\d{10,}$/, '').replace(/_\d+$/, '').replace(/[^a-z0-9_-]/gi, '').toLowerCase();
     if (b && !/^spot$/.test(b)) return b;
   }
   return 'spot-no' + (spot.no != null ? spot.no : 'x');
@@ -5446,11 +5466,11 @@ function renderAdminMediaEditor(msgText) {
     return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
       ${thumb}
       <div style="flex:1;min-width:0;">
-        ${tag}${m.file ? ' <span style="font-size:10px;color:#c0392b;font-weight:700;">新規</span>' : ''}
+        ${tag}${m.file ? ` <span style="font-size:10px;color:#c0392b;font-weight:700;">${m.cropped ? '切り抜き済み' : '新規'}</span>` : ''}
         <div style="font-size:11px;color:var(--text-light);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px;">${m.file ? '（保存時にアップロード）' : escHtml((m.url || '').split('/').pop())}</div>
         <div onclick="editAdminMediaSource(${i})" style="font-size:11px;color:var(--purple-mid);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;cursor:pointer;text-decoration:underline;">🔗 ${m.source_url ? escHtml(m.source_url.replace(/^https?:\/\/(www\.)?/, '')) : '出典を設定'}</div>
       </div>
-      ${btn('↑', `moveAdminMedia(${i},-1)`, i === 0)}${btn('↓', `moveAdminMedia(${i},1)`, i === adminMediaItems.length - 1)}${btn('🗑', `removeAdminMedia(${i})`, false)}
+      ${isPhoto ? btn('✂️', `openAdminCrop(${i})`, false) : ''}${btn('↑', `moveAdminMedia(${i},-1)`, i === 0)}${btn('↓', `moveAdminMedia(${i},1)`, i === adminMediaItems.length - 1)}${btn('🗑', `removeAdminMedia(${i})`, false)}
     </div>`;
   };
   const inputCss = 'width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:10px;padding:10px;font-size:16px;background:#fff;color:var(--text);';
@@ -5467,8 +5487,8 @@ function renderAdminMediaEditor(msgText) {
     <div style="font-size:12px;font-weight:700;color:var(--text-mid);margin:12px 0 5px;">これから追加する写真の出典（最初はスポットの出典）</div>
     <input id="adm-new-source" type="url" inputmode="url" style="${'width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:10px;padding:10px;font-size:16px;background:#fff;color:var(--text);'}" value="${escHtml(adminMediaNewSource)}" oninput="adminMediaNewSource=this.value.trim()">
     <div style="font-size:11px;color:var(--text-light);margin-top:4px;">X・TikTok・Instagramのリンクなら、保存時に活動日（投稿日）を自動で入れます。登録済みの写真の出典は、各写真の「🔗」を押すと変えられます。</div>
-    <div style="font-size:12px;font-weight:700;color:var(--text-mid);margin:12px 0 5px;">新しい写真のファイル名（英数字とハイフン）</div>
-    <input id="adm-file-base" type="text" autocapitalize="off" style="${inputCss}" value="${escHtml(adminMediaBase)}" oninput="adminMediaBase=this.value">
+    <div style="font-size:12px;font-weight:700;color:var(--text-mid);margin:12px 0 5px;">新しい写真のファイル名（英数字・ハイフン・アンダーバー）</div>
+    <input id="adm-file-base" type="text" autocapitalize="off" autocorrect="off" spellcheck="false" style="${inputCss}" value="${escHtml(adminMediaBase)}" oninput="adminMediaBase=this.value">
     <div style="font-size:11px;color:var(--text-light);margin-top:4px;">例：${escHtml(adminMediaBase)}_${String(adminNextPhotoNo()).padStart(2, '0')}.jpg（横1600px・JPEGに自動変換）</div>
     <div id="adm-media-msg" style="font-size:12px;color:#c0392b;margin-top:10px;min-height:16px;">${msgText || ''}</div>
     <div style="display:flex;gap:8px;margin-top:6px;">
@@ -5477,11 +5497,13 @@ function renderAdminMediaEditor(msgText) {
     </div>`);
 }
 function adminNextPhotoNo() {
-  const base = (adminMediaBase || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+  const base = (adminMediaBase || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
   let n = 0;
   if (base) adminMediaItems.forEach(m => {
-    const mm = m.url && m.url.match(new RegExp('/' + base + '_(\\d+)\\.jpe?g', 'i'));
-    if (mm) n = Math.max(n, parseInt(mm[1], 10));
+    [m.url, m.replacedUrl].forEach(u => {
+      const mm = u && u.match(new RegExp('/' + base + '_(\\d+)(-\\d+)?\\.jpe?g', 'i'));
+      if (mm) n = Math.max(n, parseInt(mm[1], 10));
+    });
   });
   return n + 1;
 }
@@ -5536,7 +5558,7 @@ async function addAdminPhotos(input) {
   for (const f of files) {
     try {
       const blob = await adminResizeToJpeg(f);
-      adminMediaItems.push({ id: null, media_type: 'photo', url: null, thumb: URL.createObjectURL(blob), file: blob, source_url: adminMediaNewSource });
+      adminMediaItems.push({ id: null, media_type: 'photo', url: null, thumb: URL.createObjectURL(blob), file: blob, orig: f, source_url: adminMediaNewSource });
     } catch(e) { failed++; }
   }
   renderAdminMediaEditor(failed ? `${failed}枚は読み込めませんでした` : '');
@@ -5555,14 +5577,16 @@ async function saveAdminMedia() {
   if (!spot || !spot.db_id) return;
   const btn = document.getElementById('adm-media-save');
   const msg = document.getElementById('adm-media-msg');
-  const base = (adminMediaBase || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '') || ('spot-no' + (spot.no != null ? spot.no : 'x'));
+  const base = (adminMediaBase || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '') || ('spot-no' + (spot.no != null ? spot.no : 'x'));
   btn.disabled = true;
   const client = getSupabaseClient();
   // 使用済みの連番を調べて、続きの番号で保存する
   let n = 0;
   adminMediaItems.forEach(m => {
-    const mm = m.url && m.url.match(new RegExp('/' + base + '_(\\d+)\\.jpe?g', 'i'));
-    if (mm) n = Math.max(n, parseInt(mm[1], 10));
+    [m.url, m.replacedUrl].forEach(u => {
+      const mm = u && u.match(new RegExp('/' + base + '_(\\d+)(-\\d+)?\\.jpe?g', 'i'));
+      if (mm) n = Math.max(n, parseInt(mm[1], 10));
+    });
   });
   const newOnes = adminMediaItems.filter(m => m.file);
   for (let k = 0; k < newOnes.length; k++) {
@@ -5604,12 +5628,14 @@ async function fetchAdminReports() {
   return adminReportsCache;
 }
 function refreshAdminListCtl() {
-  const ctl = document.getElementById('admin-list-ctl');
+  // Googleマップはボタンを少し遅れて画面に入れるので、作ったときの要素を直接使う
+  const ctl = document.getElementById('admin-list-ctl') || window.adminListCtlEl;
   if (!ctl) return;
   checkAdminEditor().then(async ok => {
     ctl.style.display = ok ? 'flex' : 'none';
     if (!ok) return;
     loadAdminDrafts();
+    if (!adminMemosLoaded) loadAdminMemos();
     const reports = await fetchAdminReports();
     let dot = document.getElementById('admin-report-dot');
     if (!dot) {
@@ -5633,6 +5659,7 @@ const ADMIN_LIST_DEFS = [
   { key: 'allmember', label: '👥 メンバー全員', test: s => !s.member || s.member === '全員' },
   { key: 'nosource', label: '🔗 出典なし', test: s => !s.source_url },
   { key: 'flagged', label: '🔴 要確認', test: s => s.trustScore < 0 },
+  { key: 'memo', label: '📝 メモ', test: s => !!adminMemos[s.db_id] },
 ];
 async function openAdminListPanel(tab) {
   if (tab) adminListTab = tab;
@@ -5673,6 +5700,7 @@ async function openAdminListPanel(tab) {
       <div style="min-width:0;flex:1;">
         <div style="font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(s.name)}</div>
         <div style="font-size:11px;color:var(--text-light);">👥 ${escHtml(s.member || '全員')}</div>
+        ${cur.key === 'memo' ? `<div style="font-size:11px;color:#6b5500;background:#fffbe6;border-radius:6px;padding:2px 6px;margin-top:2px;white-space:pre-wrap;">📝 ${escHtml(adminMemos[s.db_id] || '')}</div>` : ''}
       </div>
       <div style="color:var(--text-light);">›</div>
     </div>`).join('') || '<div style="padding:24px;text-align:center;color:var(--text-light);font-size:13px;">該当するスポットはありません 🎉</div>';
@@ -5681,6 +5709,10 @@ async function openAdminListPanel(tab) {
     <div style="display:flex;gap:6px;margin-bottom:10px;">
       <button onclick="closeAdminSheet('admin-list-modal');openAdminNewSpot()" style="flex:1;border:none;background:#c0392b;color:#fff;border-radius:12px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;">➕ 新規スポット</button>
       <button onclick="closeAdminSheet('admin-list-modal');openAdminNotices()" style="flex:1;border:1.5px solid #c0392b;background:#fff;color:#c0392b;border-radius:12px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;">📢 お知らせ</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <button onclick="closeAdminSheet('admin-list-modal');openAdminVisits(7)" style="flex:1;border:1.5px solid var(--border);background:#fff;color:var(--purple-deep);border-radius:12px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;">📊 アクセス元</button>
+      <button onclick="closeAdminSheet('admin-list-modal');openAdminHistory(null)" style="flex:1;border:1.5px solid var(--border);background:#fff;color:var(--purple-deep);border-radius:12px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;">🕘 変更履歴</button>
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">${tabs}${cur.key === 'reports' ? `<button onclick="adminReportsCache=null;openAdminListPanel('reports');refreshAdminListCtl()" style="border:none;background:none;font-size:12px;color:var(--purple-mid);cursor:pointer;">↻ 更新</button>` : ''}</div>
     <div>${body}</div>`);
@@ -5745,6 +5777,7 @@ function openAdminNewSpot() {
       <input id="adm-new-search" type="search" placeholder="場所名・住所で検索（例：国立中央博物館）" style="${ADM_INPUT}flex:1;">
       <button type="button" onclick="adminNewSearch()" style="flex-shrink:0;border:none;background:var(--purple-mid);color:#fff;border-radius:10px;padding:0 12px;font-size:13px;font-weight:700;cursor:pointer;">検索</button>
     </div>
+    ${adminMapsUrlRowHtml('new')}
     <div id="adm-new-map" style="width:100%;height:260px;border-radius:12px;background:#ececec;"></div>
     <div id="adm-new-coord" style="font-size:11px;color:var(--text-light);margin:6px 2px;">${start.lat.toFixed(6)}, ${start.lng.toFixed(6)}</div>
     ${admLabel('スポット名')}<input id="adm-name" type="text" style="${ADM_INPUT}">
@@ -5904,6 +5937,607 @@ async function deleteAdminNotice(k) {
 function afterAdminNoticeChange(text) {
   try { loadNotices(); } catch(e) {}
   openAdminNotices(text);
+}
+
+// ── v5：アプリのリンク・アクセス元の記録 ──
+const APP_URL = 'https://trace-series.github.io/trace-hearts2hearts/trace-hearts2hearts.html';
+const APP_SHORT_NAME = 'Trace H2H';
+function spotShareUrl(spot, from) {
+  if (!spot || spot.no == null) return APP_URL + (from ? '?from=' + from : '');
+  return APP_URL + '?spot=' + spot.no + (from ? '&from=' + from : '');
+}
+function getUrlParam(name) {
+  try { return new URLSearchParams(window.location.search).get(name); } catch(e) { return null; }
+}
+// どこから来たか：?from= → アプリ内ブラウザの種類 → 参照元 の順で判定
+function getVisitSource() {
+  const alias = { tt: 'tiktok', tiktok: 'tiktok', x: 'x', tw: 'x', twitter: 'x', ig: 'instagram', insta: 'instagram', instagram: 'instagram', yt: 'youtube', youtube: 'youtube', line: 'line', threads: 'threads' };
+  const f = (getUrlParam('from') || getUrlParam('utm_source') || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 20);
+  if (f) return alias[f] || f;
+  const ua = navigator.userAgent || '';
+  if (/musical_ly|bytedance|tiktok/i.test(ua)) return 'tiktok';
+  if (/Instagram/i.test(ua)) return 'instagram';
+  if (/\bLine\//i.test(ua)) return 'line';
+  if (/Twitter/i.test(ua)) return 'x';
+  const ref = document.referrer || '';
+  if (!ref) return 'direct';
+  if (/tiktok\./i.test(ref)) return 'tiktok';
+  if (/(^|\/\/)(t\.co|x\.com|twitter\.com|mobile\.twitter\.com)/i.test(ref)) return 'x';
+  if (/instagram\./i.test(ref)) return 'instagram';
+  if (/youtube\.|youtu\.be/i.test(ref)) return 'youtube';
+  if (/threads\./i.test(ref)) return 'threads';
+  if (/google\.|yahoo\.|bing\.|duckduckgo\./i.test(ref)) return 'search';
+  if (ref.indexOf(location.host) !== -1) return 'direct';
+  return 'other';
+}
+const VISIT_SOURCE_LABEL = { tiktok: '🎵 TikTok', x: '𝕏 X', instagram: '📷 Instagram', youtube: '▶️ YouTube', line: '💬 LINE', threads: '🧵 Threads', search: '🔍 検索', direct: '🔖 直接・ブックマーク', other: '🌐 その他' };
+function logAppVisit() {
+  try {
+    if (sessionStorage.getItem('trace_visit_logged')) return;
+    sessionStorage.setItem('trace_visit_logged', '1');
+  } catch(e) {}
+  let isNew = false;
+  try { isNew = !localStorage.getItem('trace_seen'); localStorage.setItem('trace_seen', '1'); } catch(e) {}
+  const sp = getUrlParam('spot');
+  const spotNo = sp && /^\d{1,6}$/.test(sp) ? parseInt(sp, 10) : null;
+  try {
+    fetch(`${SUPABASE_URL}/rest/v1/app_visits`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ source: getVisitSource(), spot_no: spotNo, is_new: isNew }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch(e) {}
+}
+window.addEventListener('load', () => setTimeout(logAppVisit, 1200));
+
+// ?spot=46 で開いたら、そのスポットのカードを開く
+function handleSpotDeepLink() {
+  const v = getUrlParam('spot');
+  if (!v) return false;
+  const spot = /^\d+$/.test(v) ? SPOTS.find(s => s.no === parseInt(v, 10)) : SPOTS.find(s => s.name === v);
+  if (!spot || !map) return false;
+  setTimeout(() => {
+    map.setCenter({ lat: spot.lat, lng: spot.lng });
+    map.setZoom(16);
+    openCard(spot);
+  }, 300);
+  return true;
+}
+// TikTokから来た人への案内（スポット指定なしで来たとき）
+function showTikTokWelcome() {
+  if (getVisitSource() !== 'tiktok' || getUrlParam('spot')) return;
+  try { if (sessionStorage.getItem('trace_tt_welcome')) return; sessionStorage.setItem('trace_tt_welcome', '1'); } catch(e) {}
+  const el = document.createElement('div');
+  el.id = 'tt-welcome';
+  el.style.cssText = 'position:fixed;left:12px;right:12px;top:calc(var(--content-top, 60px) + 10px);z-index:1150;max-width:480px;margin:0 auto;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.25);padding:14px 14px 12px;';
+  el.innerHTML = `<button onclick="document.getElementById('tt-welcome').remove()" aria-label="閉じる" style="position:absolute;top:6px;right:8px;border:none;background:none;font-size:18px;color:#999;cursor:pointer;">✕</button>
+    <div style="font-size:14px;font-weight:700;color:var(--purple-deep);">👋 TikTokから来てくれてありがとう！</div>
+    <div style="font-size:12px;color:var(--text-mid);margin-top:4px;line-height:1.5;">動画に出てきた聖地は、動画の最後に出ている <b>No.</b> で探せます。</div>
+    <div style="display:flex;gap:6px;margin-top:10px;">
+      <input id="tt-welcome-no" type="number" inputmode="numeric" placeholder="No.（例：46）" style="flex:1;min-width:0;border:1.5px solid var(--border);border-radius:10px;padding:9px 10px;font-size:16px;">
+      <button onclick="ttWelcomeJump()" style="flex-shrink:0;border:none;background:var(--purple-mid);color:#fff;border-radius:10px;padding:0 16px;font-size:14px;font-weight:700;cursor:pointer;">探す</button>
+    </div>
+    <div id="tt-welcome-msg" style="font-size:11px;color:#c0392b;min-height:14px;margin-top:4px;"></div>`;
+  document.body.appendChild(el);
+}
+function ttWelcomeJump() {
+  const v = parseInt((document.getElementById('tt-welcome-no') || {}).value, 10);
+  const spot = SPOTS.find(s => s.no === v);
+  if (!spot) { document.getElementById('tt-welcome-msg').textContent = 'そのNo.のスポットは見つかりませんでした'; return; }
+  const el = document.getElementById('tt-welcome'); if (el) el.remove();
+  jumpToSpot(spot.name);
+}
+
+// ── v5：巡礼シェア画像（TikTok・インスタのストーリー用 1080×1920） ──
+function loadImageCors(url) {
+  return new Promise((resolve) => {
+    if (!url) return resolve(null);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 'cors=1';
+  });
+}
+function sourceLabel(url) {
+  if (!url) return '';
+  if (/youtu\.?be/i.test(url)) return 'YouTube';
+  if (/(x|twitter)\.com/i.test(url)) return 'X';
+  if (/instagram\./i.test(url)) return 'Instagram';
+  if (/tiktok\./i.test(url)) return 'TikTok';
+  if (/weverse\./i.test(url)) return 'Weverse';
+  try { return new URL(url).hostname.replace(/^www\./, ''); } catch(e) { return ''; }
+}
+function canvasWrapLines(ctx, text, maxW, maxLines) {
+  const lines = []; let cur = '';
+  for (const ch of String(text || '')) {
+    if (ch === '\n') { lines.push(cur); cur = ''; continue; }
+    if (ctx.measureText(cur + ch).width > maxW && cur) { lines.push(cur); cur = ch; } else cur += ch;
+  }
+  if (cur) lines.push(cur);
+  if (lines.length > maxLines) { lines.length = maxLines; lines[maxLines - 1] = lines[maxLines - 1].replace(/.$/, '…'); }
+  return lines;
+}
+function canvasRoundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+async function buildShareCardBlob(spot) {
+  const W = 1080, H = 1920;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  const FONT = '-apple-system, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Noto Sans CJK JP", sans-serif';
+  const img = await loadImageCors(spot.image_url);
+  // 背景：写真を小さくしてから引き伸ばしてぼかす（Safariでも動くやり方）
+  if (img) {
+    const t = document.createElement('canvas'); t.width = 27; t.height = 48;
+    const tc = t.getContext('2d');
+    const s = Math.max(27 / img.naturalWidth, 48 / img.naturalHeight);
+    tc.drawImage(img, (27 - img.naturalWidth * s) / 2, (48 - img.naturalHeight * s) / 2, img.naturalWidth * s, img.naturalHeight * s);
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(t, 0, 0, W, H);
+    ctx.fillStyle = 'rgba(15,10,25,0.55)'; ctx.fillRect(0, 0, W, H);
+  } else {
+    const g = ctx.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#2b1a3e'); g.addColorStop(1, '#7b1a3e');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+  // 上：ラベル・日付
+  const today = new Date(); const ds = `${today.getFullYear()}.${today.getMonth() + 1}.${today.getDate()}`;
+  ctx.fillStyle = '#fff'; ctx.textBaseline = 'top';
+  ctx.font = `700 40px ${FONT}`; ctx.globalAlpha = 0.9;
+  ctx.fillText('📍 聖地巡礼', 80, 190);
+  ctx.textAlign = 'right'; ctx.fillText(ds, W - 80, 190); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  // スポット名
+  ctx.font = `800 84px ${FONT}`;
+  const nameLines = canvasWrapLines(ctx, spot.name, W - 160, 2);
+  let y = 270;
+  nameLines.forEach(l => { ctx.fillText(l, 80, y); y += 104; });
+  // メンバー
+  const names = getSpotMemberList(spot.member);
+  const memberLine = (!names.length || names.includes('全員')) ? GROUP_CONFIG.groupName + ' 全員' : names.join('・');
+  ctx.font = `700 44px ${FONT}`; ctx.globalAlpha = 0.92;
+  ctx.fillText('👥 ' + memberLine, 80, y + 6); ctx.globalAlpha = 1;
+  // 写真
+  const areaTop = y + 100, maxH = 1440 - areaTop, boxW = W - 120;
+  if (img) {
+    const s = Math.min(boxW / img.naturalWidth, maxH / img.naturalHeight);
+    const w = img.naturalWidth * s, h = img.naturalHeight * s, x = (W - w) / 2;
+    const top = areaTop + Math.max(0, (maxH - h) / 2 - 20);
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 12;
+    canvasRoundRect(ctx, x, top, w, h, 36); ctx.fillStyle = '#000'; ctx.fill(); ctx.restore();
+    ctx.save(); canvasRoundRect(ctx, x, top, w, h, 36); ctx.clip(); ctx.drawImage(img, x, top, w, h); ctx.restore();
+    const cl = sourceLabel(spot.source_url);
+    if (cl) { ctx.font = `500 26px ${FONT}`; ctx.globalAlpha = 0.75; ctx.textAlign = 'right'; ctx.fillText('Photo: ' + cl, x + w - 10, top + h + 14); ctx.textAlign = 'left'; ctx.globalAlpha = 1; }
+  }
+  // 下：アプリ名・No.・ハッシュタグ（TikTokの文字が重なる一番下は空ける）
+  ctx.textAlign = 'center';
+  ctx.font = `800 54px ${FONT}`; ctx.fillText(APP_SHORT_NAME, W / 2, 1530);
+  ctx.font = `600 36px ${FONT}`; ctx.globalAlpha = 0.9;
+  ctx.fillText(spot.no != null ? `地図アプリで No.${spot.no} を検索` : '聖地巡礼マップアプリ', W / 2, 1602);
+  ctx.font = `700 36px ${FONT}`; ctx.globalAlpha = 1;
+  ctx.fillText(GROUP_CONFIG.pilgrimHashtag || '', W / 2, 1656);
+  ctx.textAlign = 'left';
+  return await new Promise(res => c.toBlob(b => res(b), 'image/jpeg', 0.9));
+}
+let shareCardBlob = null, shareCardUrl = null;
+async function openShareCard() {
+  const spot = currentSpot;
+  if (!spot) return;
+  adminSheet('share-card-modal', `${adminSheetHeader('🖼️ 巡礼シェア画像', 'share-card-modal')}<div style="text-align:center;padding:40px;color:var(--text-light);">画像を作っています...</div>`);
+  let blob = null;
+  try { blob = await buildShareCardBlob(spot); } catch(e) { blob = null; }
+  if (!blob) { adminSheet('share-card-modal', `${adminSheetHeader('🖼️ 巡礼シェア画像', 'share-card-modal')}<div style="padding:24px;text-align:center;color:#c0392b;">画像を作れませんでした</div>`); return; }
+  if (shareCardUrl) URL.revokeObjectURL(shareCardUrl);
+  shareCardBlob = blob; shareCardUrl = URL.createObjectURL(blob);
+  const fileName = `trace-${spot.no != null ? 'no' + spot.no : 'spot'}.jpg`;
+  const canShareFile = (() => { try { return !!(navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'image/jpeg' })] })); } catch(e) { return false; } })();
+  adminSheet('share-card-modal', `${adminSheetHeader('🖼️ 巡礼シェア画像', 'share-card-modal')}
+    <div style="font-size:12px;color:var(--text-mid);line-height:1.6;margin-bottom:8px;">TikTokやインスタのストーリーに使えるサイズ（縦長）です。投稿するときは <b>${escHtml(GROUP_CONFIG.pilgrimHashtag || '')}</b> を付けてね。</div>
+    <img src="${shareCardUrl}" alt="" style="display:block;width:62%;margin:0 auto;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.2);">
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      ${canShareFile ? `<button onclick="shareShareCard('${fileName}')" style="flex:1;border:none;background:var(--purple-mid);color:#fff;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;">📤 共有・保存</button>` : ''}
+      <a href="${shareCardUrl}" download="${fileName}" style="flex:1;text-align:center;text-decoration:none;border:1.5px solid var(--purple-mid);color:var(--purple-deep);border-radius:12px;padding:11px;font-size:14px;font-weight:700;">⬇️ ダウンロード</a>
+    </div>
+    <div style="font-size:11px;color:var(--text-light);margin-top:8px;text-align:center;">うまく保存できないときは、画像を長押しして「写真に追加」してください。</div>`);
+}
+async function shareShareCard(fileName) {
+  if (!shareCardBlob) return;
+  try {
+    await navigator.share({ files: [new File([shareCardBlob], fileName, { type: 'image/jpeg' })], text: `${GROUP_CONFIG.pilgrimHashtag || ''} ${currentSpot ? spotShareUrl(currentSpot) : APP_URL}` });
+  } catch(e) {}
+}
+
+// ── v5 管理者：メモ ──
+let adminMemos = {};
+let adminMemosLoaded = false;
+async function loadAdminMemos() {
+  try {
+    const { data, error } = await getSupabaseClient().from('spot_admin_notes').select('spot_id,memo');
+    if (error) return;
+    adminMemos = {};
+    (data || []).forEach(r => { if (r.memo) adminMemos[r.spot_id] = r.memo; });
+    adminMemosLoaded = true;
+    if (currentSpot) refreshAdminEditRow();
+  } catch(e) {}
+}
+async function saveAdminMemo(spotId, memo) {
+  const client = getSupabaseClient();
+  const t = (memo || '').trim();
+  if ((adminMemos[spotId] || '') === t) return null;
+  const { error } = t
+    ? await client.from('spot_admin_notes').upsert({ spot_id: spotId, memo: t, updated_at: new Date().toISOString() })
+    : await client.from('spot_admin_notes').delete().eq('spot_id', spotId);
+  if (error) return error;
+  if (t) adminMemos[spotId] = t; else delete adminMemos[spotId];
+  return null;
+}
+
+// ── v5 管理者：TikTok素材 ──
+async function openAdminTikTok() {
+  const spot = currentSpot;
+  if (!spot) return;
+  adminSheet('admin-tt-modal', `${adminSheetHeader('🎬 TikTok素材', 'admin-tt-modal')}<div style="text-align:center;padding:30px;color:var(--text-light);">読み込み中...</div>`);
+  let media = [];
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/spot_media?select=media_type,url,source_url&spot_id=eq.${spot.db_id}&order=sort_order.asc,created_at.asc`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+    });
+    const d = await res.json(); if (Array.isArray(d)) media = d;
+  } catch(e) {}
+  const photos = media.filter(m => m.media_type === 'photo').map(m => m.url);
+  [spot.image_url, spot.image_url_2, spot.image_url_3, spot.image_url_4].forEach(u => { if (u && !photos.includes(u)) photos.push(u); });
+  const videos = media.filter(m => m.media_type === 'video').map(m => m.url);
+  const names = getSpotMemberList(spot.member);
+  const memberLine = (!names.length || names.includes('全員')) ? '全員' : names.join('・');
+  const otherSources = Array.from(new Set(media.map(m => m.source_url).filter(u => u && u !== spot.source_url)));
+  const text = [
+    `【${APP_SHORT_NAME} TikTok素材】`,
+    `アプリ：${APP_SHORT_NAME}（${GROUP_CONFIG.appName}）`,
+    `No.${spot.no != null ? spot.no : '?'}　${spot.name}`,
+    `メンバー：${memberLine}`,
+    `カテゴリ：${spot.category || ''}`,
+    `説明：${(spot.sub || '').trim()}`,
+    `出典：${spot.source_url || 'なし'}`,
+    otherSources.length ? `ほかの出典：\n${otherSources.join('\n')}` : null,
+    `住所：${spot.address || ''}`,
+    `座標：${spot.lat}, ${spot.lng}`,
+    `写真：${photos.length}枚${photos.length ? '\n' + photos.join('\n') : ''}`,
+    videos.length ? `動画：\n${videos.join('\n')}` : null,
+    `アプリのリンク：${spotShareUrl(spot, 'tt')}`,
+    adminMemos[spot.db_id] ? `管理メモ：${adminMemos[spot.db_id]}` : null,
+    '',
+    '■ 入れ込みたいこと：',
+    '',
+    '■ 型（検索型／おすすめ型／おまかせ）：おまかせ',
+  ].filter(l => l !== null).join('\n');
+  adminSheet('admin-tt-modal', `${adminSheetHeader('🎬 TikTok素材' + (spot.no != null ? '（No.' + spot.no + '）' : ''), 'admin-tt-modal')}
+    <div style="font-size:12px;color:var(--text-mid);line-height:1.6;margin-bottom:6px;">「入れ込みたいこと」を書き足してからコピーし、Claudeのチャットに貼ってください。写真も一緒に送ると台本・スライド・説明文を作ります。</div>
+    <textarea id="adm-tt-text" rows="14" style="${ADM_INPUT}resize:vertical;line-height:1.5;font-size:14px;">${escHtml(text)}</textarea>
+    <div id="adm-tt-msg" style="font-size:12px;color:#1a7f3c;min-height:16px;margin-top:6px;"></div>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button onclick="copyAdminTextarea('adm-tt-text','adm-tt-msg')" style="flex:2;border:none;background:#111;color:#fff;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;">📋 コピー</button>
+      <button onclick="copyAdminPlain('${escHtml(spotShareUrl(spot, 'tt'))}','adm-tt-msg')" style="flex:1;border:1.5px solid var(--border);background:#fff;color:var(--text-mid);border-radius:12px;padding:12px;font-size:12px;font-weight:700;cursor:pointer;">🔗 リンクだけ</button>
+    </div>`);
+}
+async function copyAdminPlain(text, msgId) {
+  const msg = document.getElementById(msgId);
+  try { await navigator.clipboard.writeText(text); if (msg) msg.textContent = '✅ コピーしました'; }
+  catch(e) { prompt('コピーしてください', text); }
+}
+async function copyAdminTextarea(id, msgId) {
+  const el = document.getElementById(id);
+  const msg = document.getElementById(msgId);
+  try { await navigator.clipboard.writeText(el.value); msg.textContent = '✅ コピーしました'; }
+  catch(e) { el.focus(); el.select(); try { document.execCommand('copy'); msg.textContent = '✅ コピーしました'; } catch(e2) { msg.textContent = '長押しでコピーしてください'; } }
+}
+
+// ── v5 管理者：変更履歴 ──
+const EDIT_LOG_LABELS = { name: '名前', lat: '緯度', lng: '経度', sub: '説明', member: 'メンバー', category: 'カテゴリ', address: '住所', source_url: '出典', image_url: '写真1', image_url_2: '写真2', image_url_3: '写真3', image_url_4: '写真4', end_date: '終了日', is_closed: '閉業', is_draft: '仮登録', icon: 'アイコン' };
+let adminHistoryRows = [];
+function fmtLogVal(v) {
+  if (v === null || v === undefined || v === '') return '（なし）';
+  if (v === true) return 'はい'; if (v === false) return 'いいえ';
+  let s = String(v);
+  if (/^https?:\/\//.test(s)) s = s.replace(/^https?:\/\/(www\.)?/, '').split('/spot-photos/').pop();
+  return s.length > 60 ? s.slice(0, 60) + '…' : s;
+}
+async function openAdminHistory(spotId) {
+  const sid = spotId || null;
+  adminSheet('admin-history-modal', `${adminSheetHeader('🕘 変更履歴', 'admin-history-modal')}<div style="text-align:center;padding:30px;color:var(--text-light);">読み込み中...</div>`);
+  let q = getSupabaseClient().from('spot_edit_log').select('*').order('id', { ascending: false }).limit(sid ? 40 : 60);
+  if (sid) q = q.eq('spot_id', sid);
+  const { data, error } = await q;
+  if (error) {
+    adminSheet('admin-history-modal', `${adminSheetHeader('🕘 変更履歴', 'admin-history-modal')}<div style="padding:20px;font-size:13px;color:#c0392b;">読み込めませんでした（SQLを実行済みか確認してください）：${escHtml(error.message)}</div>`);
+    return;
+  }
+  adminHistoryRows = data || [];
+  const actLabel = { create: '➕ 登録', update: '✏️ 変更', delete: '🗑 削除' };
+  const rows = adminHistoryRows.map((r, k) => {
+    const when = new Date(r.created_at).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    let detail = '';
+    if (r.action === 'update') {
+      const keys = Object.keys(r.after || {});
+      const latlng = keys.includes('lat') || keys.includes('lng');
+      detail = keys.filter(k2 => !(latlng && (k2 === 'lat' || k2 === 'lng'))).map(k2 => `<div style="margin-top:3px;"><b>${EDIT_LOG_LABELS[k2] || k2}</b>：<span style="color:#999;text-decoration:line-through;">${escHtml(fmtLogVal(r.before[k2]))}</span> → ${escHtml(fmtLogVal(r.after[k2]))}</div>`).join('')
+        + (latlng ? '<div style="margin-top:3px;"><b>ピンの位置</b>を移動</div>' : '');
+    } else if (r.action === 'delete') {
+      const mc = r.before && Array.isArray(r.before._media) ? r.before._media.length : 0;
+      detail = `<div style="margin-top:3px;">スポットを削除${mc ? '（写真・動画 ' + mc + '件も）' : ''}</div>`;
+    }
+    const canUndo = r.action === 'update' || r.action === 'delete';
+    return `<div style="padding:10px 4px;border-bottom:1px solid var(--border);">
+      <div style="display:flex;gap:6px;align-items:center;">
+        <span style="font-size:11px;font-weight:700;color:#c0392b;">${actLabel[r.action] || escHtml(r.action)}</span>
+        <span style="font-size:11px;color:var(--text-light);margin-left:auto;">${escHtml(when)}</span>
+      </div>
+      ${sid ? '' : `<div style="font-size:13px;font-weight:700;color:var(--text);margin-top:2px;">${r.spot_no != null ? 'No.' + r.spot_no + ' ' : ''}${escHtml(r.spot_name || '')}</div>`}
+      <div style="font-size:12px;color:var(--text-mid);line-height:1.5;word-break:break-all;">${detail}</div>
+      ${canUndo ? `<button onclick="restoreAdminHistory(${k})" style="margin-top:6px;border:1.5px solid var(--border);background:#fff;color:var(--purple-deep);border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;">↩ ${r.action === 'delete' ? 'スポットを復元' : 'この変更を元に戻す'}</button>` : ''}
+    </div>`;
+  }).join('');
+  adminSheet('admin-history-modal', `${adminSheetHeader('🕘 変更履歴' + (sid && currentSpot && currentSpot.no != null ? '（No.' + currentSpot.no + '）' : ''), 'admin-history-modal')}
+    <div style="font-size:11px;color:var(--text-light);line-height:1.6;">アプリ・ダッシュボード・SQLでの変更をすべて自動で記録しています（${sid ? '最新40件' : '全スポットの最新60件'}）。</div>
+    <div>${rows || '<div style="padding:24px;text-align:center;color:var(--text-light);font-size:13px;">まだ記録がありません</div>'}</div>`);
+}
+async function restoreAdminHistory(k) {
+  const r = adminHistoryRows[k];
+  if (!r) return;
+  const q = r.action === 'delete' ? `「${r.spot_name}」を写真・動画ごと復元しますか？` : 'この変更を元に戻しますか？（戻したこと自体も履歴に残ります）';
+  if (!confirm(q)) return;
+  const { error } = await getSupabaseClient().rpc('admin_restore_spot_change', { p_log_id: r.id });
+  if (error) { alert('戻せませんでした：' + error.message); return; }
+  alert('戻しました。最新の状態を読み込み直します。');
+  location.reload();
+}
+
+// ── v5 管理者：アクセス元 ──
+async function openAdminVisits(days) {
+  const d = days || 7;
+  adminSheet('admin-visit-modal', `${adminSheetHeader('📊 アクセス元', 'admin-visit-modal')}<div style="text-align:center;padding:30px;color:var(--text-light);">読み込み中...</div>`);
+  const { data, error } = await getSupabaseClient().rpc('admin_visit_stats', { p_days: d });
+  if (error || !data) {
+    adminSheet('admin-visit-modal', `${adminSheetHeader('📊 アクセス元', 'admin-visit-modal')}<div style="padding:20px;font-size:13px;color:#c0392b;">読み込めませんでした（SQLを実行済みか確認してください）：${escHtml(error ? error.message : '')}</div>`);
+    return;
+  }
+  const bySource = data.by_source || [], bySpot = data.by_spot || [], byDay = data.by_day || [];
+  const total = bySource.reduce((a, r) => a + r.visits, 0);
+  const max = Math.max(1, ...bySource.map(r => r.visits));
+  const periodBtn = n => `<button onclick="openAdminVisits(${n})" style="border:1.5px solid ${n === d ? '#c0392b' : 'var(--border)'};background:${n === d ? '#c0392b' : '#fff'};color:${n === d ? '#fff' : 'var(--text-mid)'};border-radius:16px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">${n === 1 ? '24時間' : n + '日'}</button>`;
+  const srcRows = bySource.map(r => `<div style="margin:8px 0;">
+      <div style="display:flex;font-size:13px;"><span style="font-weight:700;">${VISIT_SOURCE_LABEL[r.source] || escHtml(r.source)}</span><span style="margin-left:auto;color:var(--text-mid);">${r.visits}回<span style="font-size:11px;color:var(--text-light);">（初めて ${r.new_visitors}）</span></span></div>
+      <div style="height:8px;background:#eee;border-radius:4px;margin-top:4px;"><div style="height:8px;width:${Math.round(r.visits / max * 100)}%;background:${r.source === 'tiktok' ? '#e0245e' : 'var(--purple-mid)'};border-radius:4px;"></div></div>
+    </div>`).join('');
+  const spotRows = bySpot.map(r => {
+    const s = SPOTS.find(x => x.no === r.spot_no);
+    return `<div style="display:flex;gap:8px;padding:6px 2px;border-bottom:1px solid var(--border);font-size:12px;"><span style="width:52px;font-weight:700;color:var(--purple-mid);">No.${r.spot_no}</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(s ? s.name : '')}</span><span>${r.visits}回${r.tiktok ? `<span style="color:#e0245e;">（TikTok ${r.tiktok}）</span>` : ''}</span></div>`;
+  }).join('');
+  const dayRows = byDay.slice(-14).map(r => `<div style="display:flex;padding:4px 2px;font-size:12px;border-bottom:1px solid var(--border);"><span style="width:60px;color:var(--text-mid);">${escHtml(r.day)}</span><span style="flex:1;">${r.visits}回</span><span style="color:#e0245e;">TikTok ${r.tiktok}</span></div>`).join('');
+  adminSheet('admin-visit-modal', `${adminSheetHeader('📊 アクセス元', 'admin-visit-modal')}
+    <div style="display:flex;gap:6px;margin-bottom:6px;">${[1, 7, 30].map(periodBtn).join('')}</div>
+    <div style="font-size:11px;color:var(--text-light);line-height:1.6;">アプリを開いた回数（同じ人が続けて開いた分は1回）。合計 <b>${total}</b> 回。自分で開いた分も含みます。</div>
+    ${srcRows || '<div style="padding:20px;text-align:center;color:var(--text-light);font-size:13px;">まだ記録がありません</div>'}
+    ${spotRows ? `<div style="font-size:12px;font-weight:700;color:var(--text-mid);margin:16px 0 4px;">No.リンクから開かれたスポット</div>${spotRows}` : ''}
+    ${dayRows ? `<div style="font-size:12px;font-weight:700;color:var(--text-mid);margin:16px 0 4px;">日ごと</div>${dayRows}` : ''}
+    <div style="font-size:11px;color:var(--text-light);line-height:1.6;margin-top:12px;">TikTokのプロフィールには <b>?from=tt</b> 付きのリンクを置くと確実に数えられます（TikTokのアプリ内ブラウザは自動でも判定します）。</div>
+    <button onclick="copyAdminPlain('${APP_URL}?from=tt','adm-visit-msg')" style="width:100%;margin-top:8px;border:1.5px solid var(--border);background:#fff;color:var(--purple-deep);border-radius:12px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;">🔗 TikTokプロフィール用のリンクをコピー</button>
+    <div id="adm-visit-msg" style="font-size:12px;color:#1a7f3c;min-height:16px;margin-top:4px;text-align:center;"></div>`);
+}
+
+// ── v5 管理者：GoogleマップのURL・座標の貼り付け ──
+function parseMapsInput(text) {
+  const t = (text || '').trim();
+  if (!t) return null;
+  if (/maps\.app\.goo\.gl|goo\.gl\/maps/i.test(t)) return { short: true };
+  let lat = null, lng = null, name = '';
+  let m = t.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
+  if (!m) m = t.match(/[?&](?:q|ll|query|destination|center|sll)=(-?\d+(?:\.\d+)?)(?:,|%2C)\s*(-?\d+(?:\.\d+)?)/i);
+  if (!m) m = t.match(/\/place\/(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
+  if (!m) m = t.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (!m) m = t.match(/^\s*\(?\s*(-?\d+\.\d+)\s*[, ]\s*(-?\d+\.\d+)\s*\)?\s*$/);
+  if (m) { lat = parseFloat(m[1]); lng = parseFloat(m[2]); }
+  const pm = t.match(/\/place\/([^/@?]+)/);
+  if (pm && !/^-?\d+\.\d+,/.test(pm[1])) { try { name = decodeURIComponent(pm[1].replace(/\+/g, ' ')); } catch(e) { name = pm[1]; } }
+  if (!name) { const qm = t.match(/[?&](?:q|query)=([^&]+)/); if (qm) { try { const v = decodeURIComponent(qm[1].replace(/\+/g, ' ')); if (!/^-?\d+\.\d+,/.test(v)) name = v; } catch(e) {} } }
+  if (lat !== null && (Math.abs(lat) > 90 || Math.abs(lng) > 180)) { lat = lng = null; }
+  if (lat === null && !name) return null;
+  return { lat, lng, name };
+}
+function adminMapsUrlRowHtml(target) {
+  return `<div style="display:flex;gap:6px;margin-bottom:6px;">
+      <input id="adm-maps-url-${target}" type="url" inputmode="url" placeholder="GoogleマップのURL・座標を貼る" style="${ADM_INPUT}flex:1;">
+      <button type="button" onclick="adminApplyMapsUrl('${target}')" style="flex-shrink:0;border:1.5px solid var(--purple-mid);background:#fff;color:var(--purple-deep);border-radius:10px;padding:0 12px;font-size:13px;font-weight:700;cursor:pointer;">反映</button>
+    </div>`;
+}
+function adminApplyMapsUrl(target) {
+  const isNew = target === 'new';
+  const input = document.getElementById('adm-maps-url-' + target);
+  const msg = document.getElementById(isNew ? 'adm-msg' : 'admin-pin-msg');
+  const gmap = isNew ? adminNewMap : adminPinMap, marker = isNew ? adminNewMarker : adminPinMarker;
+  const coordEl = document.getElementById(isNew ? 'adm-new-coord' : 'admin-pin-coord');
+  const r = parseMapsInput(input && input.value);
+  if (!r) { msg.textContent = '位置を読み取れませんでした。GoogleマップのURLか「35.68, 139.76」の形で貼ってください'; return; }
+  if (r.short) { msg.textContent = '短縮リンク（maps.app.goo.gl）は読み取れません。一度ブラウザで開いて、アドレスバーの長いURLを貼ってください'; return; }
+  if (!gmap || !marker) { msg.textContent = '地図が読み込めていません'; return; }
+  const apply = (pos, label) => {
+    gmap.setCenter(pos); gmap.setZoom(18); marker.setPosition(pos);
+    coordEl.textContent = (typeof pos.lat === 'function' ? pos.lat() : pos.lat).toFixed(6) + ', ' + (typeof pos.lng === 'function' ? pos.lng() : pos.lng).toFixed(6);
+    if (isNew && r.name) { const nm = document.getElementById('adm-name'); if (nm && !nm.value) nm.value = r.name; }
+    msg.style.color = '#1a7f3c'; msg.textContent = label; setTimeout(() => { msg.style.color = '#c0392b'; }, 4000);
+  };
+  if (r.lat !== null) { apply({ lat: r.lat, lng: r.lng }, '✅ URLの位置にピンを置きました。ずれていたら手で合わせてください'); return; }
+  new google.maps.Geocoder().geocode({ address: r.name }, (res, status) => {
+    if (status !== 'OK' || !res || !res[0]) { msg.textContent = '場所名「' + r.name + '」から位置を探せませんでした'; return; }
+    apply(res[0].geometry.location, '✅ 場所名「' + r.name + '」から位置を探しました。ずれていたら手で合わせてください');
+  });
+}
+
+// ── v5 管理者：写真の切り抜き ──
+let cropState = null;
+async function openAdminCrop(i) {
+  const m = adminMediaItems[i];
+  if (!m || m.media_type !== 'photo') return;
+  adminSheet('admin-crop-modal', `${adminSheetHeader('✂️ 写真を切り抜く', 'admin-crop-modal')}<div style="text-align:center;padding:30px;color:var(--text-light);">読み込み中...</div>`);
+  document.getElementById('admin-crop-modal').style.zIndex = '3100';
+  let blob = m.orig || m.file || null;
+  if (!blob && m.url) {
+    try { const res = await fetch(m.url, { mode: 'cors', cache: 'no-store' }); if (res.ok) blob = await res.blob(); } catch(e) {}
+  }
+  if (!blob) { adminSheet('admin-crop-modal', `${adminSheetHeader('✂️ 写真を切り抜く', 'admin-crop-modal')}<div style="padding:20px;color:#c0392b;font-size:13px;">この写真は読み込めませんでした</div>`); return; }
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.onload = () => {
+    cropState = { idx: i, blob, url, img, natW: img.naturalWidth, natH: img.naturalHeight, aspect: 0, box: null };
+    renderAdminCrop();
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); adminSheet('admin-crop-modal', `${adminSheetHeader('✂️ 写真を切り抜く', 'admin-crop-modal')}<div style="padding:20px;color:#c0392b;font-size:13px;">この写真は読み込めませんでした</div>`); };
+  img.src = url;
+}
+function renderAdminCrop() {
+  const st = cropState; if (!st) return;
+  const aspBtn = (v, label) => `<button type="button" onclick="setAdminCropAspect(${v})" style="border:1.5px solid ${st.aspect === v ? 'var(--purple-mid)' : 'var(--border)'};background:${st.aspect === v ? 'var(--purple-mid)' : '#fff'};color:${st.aspect === v ? '#fff' : 'var(--text-mid)'};border-radius:14px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;">${label}</button>`;
+  const h = (name, css) => `<div data-h="${name}" style="position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;${css}display:flex;align-items:center;justify-content:center;touch-action:none;"><div style="width:14px;height:14px;background:#fff;border:2px solid var(--purple-mid);border-radius:50%;pointer-events:none;"></div></div>`;
+  adminSheet('admin-crop-modal', `${adminSheetHeader('✂️ 写真を切り抜く', 'admin-crop-modal')}
+    <div style="font-size:12px;color:var(--text-mid);line-height:1.6;margin-bottom:8px;">枠の角や辺の●をドラッグして、字幕やボタンが入らない範囲に合わせてください。枠の中をドラッグすると移動します。</div>
+    <div style="padding:14px;overflow:hidden;background:#111;border-radius:10px;">
+    <div id="crop-stage" style="position:relative;width:100%;background:#000;touch-action:none;user-select:none;-webkit-user-select:none;">
+      <img src="${st.url}" draggable="false" style="display:block;width:100%;height:auto;pointer-events:none;">
+      <div id="crop-box" data-h="move" style="position:absolute;box-shadow:0 0 0 9999px rgba(0,0,0,0.55);outline:2px solid #fff;touch-action:none;cursor:move;">
+        <div style="position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,0.35),rgba(255,255,255,0.35)),linear-gradient(rgba(255,255,255,0.35),rgba(255,255,255,0.35)),linear-gradient(90deg,rgba(255,255,255,0.35),rgba(255,255,255,0.35)),linear-gradient(90deg,rgba(255,255,255,0.35),rgba(255,255,255,0.35));background-size:100% 1px,100% 1px,1px 100%,1px 100%;background-position:0 33.3%,0 66.6%,33.3% 0,66.6% 0;background-repeat:no-repeat;"></div>
+        ${h('nw', 'left:0;top:0;')}${h('ne', 'left:100%;top:0;')}${h('sw', 'left:0;top:100%;')}${h('se', 'left:100%;top:100%;')}
+        ${st.aspect ? '' : h('n', 'left:50%;top:0;') + h('s', 'left:50%;top:100%;') + h('w', 'left:0;top:50%;') + h('e', 'left:100%;top:50%;')}
+      </div>
+    </div>
+    </div>
+    <div id="crop-size" style="font-size:11px;color:var(--text-light);margin-top:6px;text-align:right;"></div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">${aspBtn(0, '自由')}${aspBtn(16 / 9, '16:9')}${aspBtn(4 / 3, '4:3')}${aspBtn(1, '1:1')}${aspBtn(3 / 4, '3:4')}</div>
+    <div style="display:flex;gap:6px;margin-top:8px;">
+      <button type="button" onclick="adminCropAutoTrim()" style="flex:1;border:1.5px solid var(--border);background:#fff;color:var(--text-mid);border-radius:10px;padding:9px;font-size:12px;font-weight:700;cursor:pointer;">⬛ 黒い余白を自動カット</button>
+      <button type="button" onclick="adminCropReset()" style="flex-shrink:0;border:1.5px solid var(--border);background:#fff;color:var(--text-mid);border-radius:10px;padding:9px 12px;font-size:12px;font-weight:700;cursor:pointer;">リセット</button>
+    </div>
+    <div id="crop-msg" style="font-size:12px;color:#c0392b;min-height:16px;margin-top:8px;"></div>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button onclick="cancelAdminCrop()" style="flex:1;border:1.5px solid var(--border);background:#fff;color:var(--text-mid);border-radius:12px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;">キャンセル</button>
+      <button id="crop-apply" onclick="applyAdminCrop()" style="flex:2;border:none;background:#c0392b;color:#fff;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;">この範囲で切り抜く</button>
+    </div>`);
+  document.getElementById('admin-crop-modal').style.zIndex = '3100';
+  requestAnimationFrame(() => {
+    const stage = document.getElementById('crop-stage');
+    if (!stage) return;
+    st.dispW = stage.clientWidth; st.dispH = stage.clientWidth * st.natH / st.natW;
+    if (!st.box) st.box = { x: 0, y: 0, w: st.dispW, h: st.dispH };
+    if (st.aspect) fitCropAspect();
+    drawCropBox();
+    stage.addEventListener('pointerdown', cropPointerDown);
+  });
+}
+function drawCropBox() {
+  const st = cropState, b = st && st.box, el = document.getElementById('crop-box');
+  if (!el || !b) return;
+  el.style.left = b.x + 'px'; el.style.top = b.y + 'px'; el.style.width = b.w + 'px'; el.style.height = b.h + 'px';
+  const r = st.natW / st.dispW;
+  const s = document.getElementById('crop-size');
+  if (s) s.textContent = `${Math.round(b.w * r)} × ${Math.round(b.h * r)} px`;
+}
+function fitCropAspect() {
+  const st = cropState, b = st.box, a = st.aspect;
+  if (!a) return;
+  let w = b.w, h = w / a;
+  if (h > b.h) { h = b.h; w = h * a; }
+  if (w > st.dispW) { w = st.dispW; h = w / a; }
+  if (h > st.dispH) { h = st.dispH; w = h * a; }
+  const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+  b.w = w; b.h = h;
+  b.x = Math.min(Math.max(0, cx - w / 2), st.dispW - w);
+  b.y = Math.min(Math.max(0, cy - h / 2), st.dispH - h);
+}
+function setAdminCropAspect(a) { if (!cropState) return; cropState.aspect = a; renderAdminCrop(); }
+function adminCropReset() { if (!cropState) return; cropState.aspect = 0; cropState.box = null; renderAdminCrop(); }
+function cropPointerDown(e) {
+  const t = e.target.closest('[data-h]');
+  if (!t || !cropState) return;
+  e.preventDefault();
+  const st = cropState;
+  const start = { px: e.clientX, py: e.clientY, b: Object.assign({}, st.box), h: t.dataset.h };
+  const MIN = 40;
+  const move = ev => {
+    ev.preventDefault();
+    const dx = ev.clientX - start.px, dy = ev.clientY - start.py, o = start.b;
+    let x1 = o.x, y1 = o.y, x2 = o.x + o.w, y2 = o.y + o.h;
+    if (start.h === 'move') {
+      const nx = Math.min(Math.max(0, o.x + dx), st.dispW - o.w), ny = Math.min(Math.max(0, o.y + dy), st.dispH - o.h);
+      st.box = { x: nx, y: ny, w: o.w, h: o.h }; drawCropBox(); return;
+    }
+    if (start.h.includes('w')) x1 = Math.min(Math.max(0, o.x + dx), x2 - MIN);
+    if (start.h.includes('e')) x2 = Math.max(Math.min(st.dispW, x2 + dx), x1 + MIN);
+    if (start.h.includes('n')) y1 = Math.min(Math.max(0, o.y + dy), y2 - MIN);
+    if (start.h.includes('s')) y2 = Math.max(Math.min(st.dispH, y2 + dy), y1 + MIN);
+    if (st.aspect && start.h.length === 2) {
+      let w = x2 - x1, h = w / st.aspect;
+      if (start.h.includes('n')) { y1 = y2 - h; if (y1 < 0) { y1 = 0; h = y2; w = h * st.aspect; } }
+      else { y2 = y1 + h; if (y2 > st.dispH) { y2 = st.dispH; h = y2 - y1; w = h * st.aspect; } }
+      if (start.h.includes('w')) x1 = x2 - w; else x2 = x1 + w;
+    }
+    st.box = { x: x1, y: y1, w: x2 - x1, h: y2 - y1 }; drawCropBox();
+  };
+  const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up); };
+  window.addEventListener('pointermove', move, { passive: false });
+  window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+}
+// 上下左右の黒い帯（スクショの余白など）を見つけて枠を合わせる
+function adminCropAutoTrim() {
+  const st = cropState; if (!st) return;
+  const sw = Math.min(400, st.natW), sh = Math.round(st.natH * sw / st.natW);
+  const c = document.createElement('canvas'); c.width = sw; c.height = sh;
+  const ctx = c.getContext('2d'); ctx.drawImage(st.img, 0, 0, sw, sh);
+  const d = ctx.getImageData(0, 0, sw, sh).data;
+  const lum = (x, y) => { const k = (y * sw + x) * 4; return 0.299 * d[k] + 0.587 * d[k + 1] + 0.114 * d[k + 2]; };
+  const darkRow = y => { let s = 0, mx = 0; for (let x = 0; x < sw; x += 2) { const l = lum(x, y); s += l; if (l > mx) mx = l; } return s / (sw / 2) < 28 && mx < 80; };
+  const darkCol = x => { let s = 0, mx = 0; for (let y = 0; y < sh; y += 2) { const l = lum(x, y); s += l; if (l > mx) mx = l; } return s / (sh / 2) < 28 && mx < 80; };
+  let t = 0, b = sh - 1, l = 0, r = sw - 1;
+  while (t < b && darkRow(t)) t++;
+  while (b > t && darkRow(b)) b--;
+  while (l < r && darkCol(l)) l++;
+  while (r > l && darkCol(r)) r--;
+  const msg = document.getElementById('crop-msg');
+  if (b - t < sh * 0.2 || r - l < sw * 0.2) { msg.textContent = 'うまく判定できませんでした。手で合わせてください'; return; }
+  if (t === 0 && b === sh - 1 && l === 0 && r === sw - 1) { msg.textContent = '黒い余白は見つかりませんでした'; return; }
+  const k = st.dispW / sw;
+  st.aspect = 0;
+  st.box = { x: l * k, y: t * k, w: (r - l + 1) * k, h: (b - t + 1) * k };
+  renderAdminCrop();
+  setTimeout(() => { const m2 = document.getElementById('crop-msg'); if (m2) { m2.style.color = '#1a7f3c'; m2.textContent = '✅ 黒い余白に合わせました。字幕があれば下の辺を上げてください'; } }, 50);
+}
+function cancelAdminCrop() {
+  if (cropState) URL.revokeObjectURL(cropState.url);
+  cropState = null;
+  closeAdminSheet('admin-crop-modal');
+}
+async function applyAdminCrop() {
+  const st = cropState; if (!st || !st.box) return;
+  const m = adminMediaItems[st.idx];
+  if (!m) { cancelAdminCrop(); return; }
+  const btn = document.getElementById('crop-apply'); btn.disabled = true;
+  const r = st.natW / st.dispW;
+  const sx = Math.round(st.box.x * r), sy = Math.round(st.box.y * r);
+  const sw = Math.min(st.natW - sx, Math.round(st.box.w * r)), sh = Math.min(st.natH - sy, Math.round(st.box.h * r));
+  const c = document.createElement('canvas'); c.width = sw; c.height = sh;
+  c.getContext('2d').drawImage(st.img, sx, sy, sw, sh, 0, 0, sw, sh);
+  const cut = await new Promise(res => c.toBlob(b => res(b), 'image/jpeg', 0.95));
+  let out;
+  try { out = await adminResizeToJpeg(cut); } catch(e) { btn.disabled = false; document.getElementById('crop-msg').textContent = '切り抜きに失敗しました'; return; }
+  if (!m.orig) m.orig = st.blob;
+  if (m.thumb && m.file) URL.revokeObjectURL(m.thumb);
+  m.file = out;
+  m.thumb = URL.createObjectURL(out);
+  if (m.id || m.url) { m.replacedUrl = m.url; m.id = null; m.url = null; }
+  m.cropped = true;
+  URL.revokeObjectURL(st.url);
+  cropState = null;
+  closeAdminSheet('admin-crop-modal');
+  renderAdminMediaEditor('✂️ 切り抜きました（保存で反映）');
 }
 
 function openCard(spot) {
@@ -6677,6 +7311,7 @@ async function submitNewSpot() {
   const ANON_FIRST_KEY = 'tracehearts2hearts_anon_first_v1';
 
   function checkOnboarding() {
+    if (getUrlParam('spot')) return; // スポットのリンクから来た人には、まずスポットを見せる
     const done = localStorage.getItem(OB_KEY);
     if (!done) {
       document.getElementById('onboarding-modal').style.display = 'block';
@@ -7409,7 +8044,7 @@ function shareX() {
   const spotMemberNames = getSpotMemberList(currentSpot.member);
   const memberTagList = GROUP_CONFIG.members.filter(m => spotMemberNames.includes(m.name)).map(m => m.tags.join(' '));
   const memberTags = memberTagList.length ? memberTagList.join(' ') + ' ' : '';
-  const text = encodeURIComponent(`【聖地巡礼】${currentSpot.name}\n${currentSpot.sub}\n\n${memberTags}${tags}`);
+  const text = encodeURIComponent(`【聖地巡礼】${currentSpot.name}\n${currentSpot.sub}\n${spotShareUrl(currentSpot, 'x')}\n\n${memberTags}${tags}`);
   window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
 
   // Xの投稿画面から戻ってきたタイミングで「投稿しましたか？」と確認（自動付与ではなく自己申告制）
