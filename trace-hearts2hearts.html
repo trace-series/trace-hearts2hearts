@@ -2268,6 +2268,8 @@
             </div>
           </div>
         </div>
+        <!-- 同じシリーズ・同じ出典のスポット（横スクロール） -->
+        <div id="card-series-wrap" style="display:none;margin-top:12px;"></div>
         <div class="card-actions" style="margin-top:14px;">
           <button class="btn-primary" onclick="reportVisit()">📸 巡礼した！</button>
           <button class="btn-primary" style="background:linear-gradient(135deg,#1a1a1a,#000);" onclick="shareX()">𝕏 シェア</button>
@@ -2344,9 +2346,6 @@
               <button class="eval-btn eval-bad" onclick="evalSpot('outdated')">⚠️ 情報が古い</button>
             </div>
           </div>
-
-          <!-- 同じシリーズ・同じ出典のスポット -->
-          <div id="card-series-wrap" style="display:none;margin-top:14px;"></div>
 
           <!-- 動画（埋め込み。タップで再生） -->
           <div id="card-video-wrap" style="display:none;margin-top:14px;">
@@ -5285,27 +5284,34 @@ function renderCardSeries(spot) {
   const g = seriesGroupFor(spot);
   if (g.list.length < 2) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
   const list = g.list.slice().sort((a, b) => (a.no ?? 99999) - (b.no ?? 99999));
-  const rows = list.map(s => {
+  const tiles = list.map(s => {
     const me = s === spot;
-    const names = getSpotMemberList(s.member);
-    const mem = (!names.length || names.includes('全員')) ? '全員' : names.join('・');
-    return `<div ${me ? '' : `onclick="openSeriesSpot('${escHtml(String(s.db_id))}')"`} style="display:flex;align-items:center;gap:8px;padding:9px 4px;border-top:1px solid var(--border);${me ? 'opacity:.55;' : 'cursor:pointer;'}">
-      <span style="flex-shrink:0;min-width:46px;font-size:11px;color:var(--text-light);">${s.no != null ? 'No.' + s.no : ''}</span>
-      <span style="flex:1;font-size:13px;color:var(--text);line-height:1.4;">${escHtml(s.name)}${me ? '（表示中）' : ''}<br><span style="font-size:11px;color:var(--text-light);">${escHtml(mem)}</span></span>
-      ${me ? '' : '<span style="flex-shrink:0;color:var(--purple-mid);font-size:14px;">›</span>'}
+    const img = s.image_url
+      ? `<img src="${escHtml(s.image_url)}" loading="lazy" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.replaceWith(document.createTextNode('${escHtml(s.icon || '📍')}'))">`
+      : escHtml(s.icon || '📍');
+    return `<div ${me ? '' : `onclick="openSeriesSpot('${escHtml(String(s.db_id))}')"`} style="flex:0 0 96px;scroll-snap-align:start;${me ? '' : 'cursor:pointer;'}">
+      <div style="position:relative;width:96px;height:72px;border-radius:10px;overflow:hidden;background:var(--purple-pale);display:flex;align-items:center;justify-content:center;font-size:26px;border:${me ? '3px solid var(--purple-mid)' : '1px solid var(--border)'};box-sizing:border-box;">
+        ${img}
+        ${me ? '<span style="position:absolute;left:0;right:0;bottom:0;background:var(--purple-mid);color:#fff;font-size:10px;font-weight:700;text-align:center;padding:2px 0;">表示中</span>' : (s.no != null ? `<span style="position:absolute;left:4px;top:4px;background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-weight:700;border-radius:6px;padding:1px 5px;">No.${s.no}</span>` : '')}
+      </div>
+      <div style="font-size:11px;line-height:1.35;color:var(--text);margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;${me ? 'font-weight:700;' : ''}">${escHtml(s.name)}</div>
     </div>`;
   }).join('');
   wrap.style.display = 'block';
-  wrap.innerHTML = `<div style="border:1.5px solid var(--purple-pale);border-radius:12px;overflow:hidden;">
-    <button type="button" onclick="const b=this.nextElementSibling;const o=b.style.display==='none';b.style.display=o?'block':'none';this.querySelector('.ser-arrow').textContent=o?'▲':'▼';" style="width:100%;display:flex;align-items:center;gap:6px;background:var(--purple-pale);border:none;padding:10px 12px;cursor:pointer;text-align:left;">
-      <span style="font-size:13px;font-weight:700;color:var(--purple-deep);flex:1;">${g.isSeries ? '📺 ' : '🔗 '}${escHtml(g.title)}（${list.length}か所）</span>
-      <span class="ser-arrow" style="font-size:11px;color:var(--purple-deep);">▼</span>
-    </button>
-    <div style="display:none;padding:0 10px 4px;">
-      <div style="font-size:11px;color:var(--text-light);padding:6px 4px;">${g.isSeries ? '同じ番組・旅行で訪れたスポットです。まとめて巡るときの参考にどうぞ。' : '同じ動画・投稿に登場するスポットです。'}</div>
-      ${rows}
+  wrap.innerHTML = `<div style="background:linear-gradient(135deg,var(--purple-pale),#fff);border:1.5px solid var(--purple-mid);border-radius:14px;padding:10px 0 10px 12px;">
+    <div style="display:flex;align-items:baseline;gap:6px;padding-right:12px;">
+      <span style="font-size:14px;font-weight:800;color:var(--purple-deep);line-height:1.3;">${g.isSeries ? '📺 ' : '🔗 '}${escHtml(g.title)}</span>
+      <span style="flex-shrink:0;margin-left:auto;font-size:12px;font-weight:700;color:#fff;background:var(--purple-mid);border-radius:10px;padding:2px 8px;">${list.length}か所</span>
     </div>
+    <div style="font-size:11px;color:var(--text-mid);margin:3px 12px 8px 0;">${g.isSeries ? 'この旅（番組）で訪れたスポット。まとめて巡れます →' : '同じ動画・投稿に登場するスポット →'}</div>
+    <div style="display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;padding-right:12px;padding-bottom:2px;">${tiles}</div>
   </div>`;
+  // 表示中のスポットが見える位置までスクロール
+  try {
+    const row = wrap.querySelector('div[style*="overflow-x:auto"]');
+    const idx = list.indexOf(spot);
+    if (row && idx > 0) row.scrollLeft = Math.max(0, idx * 104 - 40);
+  } catch(e) {}
 }
 function openSeriesSpot(dbId) {
   const spot = SPOTS.find(s => String(s.db_id) === String(dbId));
