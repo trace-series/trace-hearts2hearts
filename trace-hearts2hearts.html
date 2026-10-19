@@ -2238,6 +2238,7 @@
         <button id="vfbtn-visited" class="radius-btn" onclick="setVisitedFilter('visited', this)">✅ 訪問済み</button>
         <button id="vfbtn-unvisited" class="radius-btn" onclick="setVisitedFilter('unvisited', this)">⬜ 未訪問</button>
         <button id="search-toggle-btn" class="radius-btn" onclick="toggleSearch()" aria-label="スポット検索">🔍 検索</button>
+        <button id="series-btn" class="radius-btn" onclick="openSeriesPicker()">📺 旅</button>
         <button id="list-view-toggle" onclick="toggleListView()">📋 リスト</button>
       </div>
         <button id="nearest-spot-btn" onclick="goToNearestSpot()" style="position:fixed;bottom:90px;right:16px;z-index:1000;background:linear-gradient(135deg,#1a1a1a,#7b1a3e);color:#fff;border:none;border-radius:50px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);display:none;align-items:center;gap:6px;">📍 最寄りスポット</button>
@@ -4874,6 +4875,7 @@ let cardOpen = false;
 let activeMember = 'all';
 let activeCategory = 'all';
 let activeVisitedFilter = 'all'; // 'all' | 'visited' | 'unvisited'
+let activeSeries = null; // 旅・シリーズで絞り込み中のシリーズ名
 let myVisitedSpots = [];
 
 function setVisitedFilter(f, btn) {
@@ -4902,11 +4904,12 @@ function applyFilters() {
     const categoryMatch = activeCategory === 'all' || marker.spotData.category === activeCategory;
     const isVisited = myVisitedSpots.includes(marker.spotData.db_id);
     const visitedMatch = activeVisitedFilter === 'all' || (activeVisitedFilter === 'visited' && isVisited) || (activeVisitedFilter === 'unvisited' && !isVisited);
-    const show = memberMatch && categoryMatch && visitedMatch;
+    const seriesMatch = !activeSeries || marker.spotData.series === activeSeries;
+    const show = memberMatch && categoryMatch && visitedMatch && seriesMatch;
     marker.setVisible(show);
     if (show) catCount.all++;
     // メンバーフィルター適用時の各カテゴリ件数
-    if (memberMatch && visitedMatch) {
+    if (memberMatch && visitedMatch && seriesMatch) {
       const cat = marker.spotData.category;
       if (cat in catCount) catCount[cat]++;
     }
@@ -5305,7 +5308,10 @@ function renderCardSeries(spot) {
       <span style="font-size:14px;font-weight:800;color:var(--purple-deep);line-height:1.3;">${g.isSeries ? '📺 ' : '🔗 '}${escHtml(g.title)}</span>
       <span style="flex-shrink:0;margin-left:auto;font-size:12px;font-weight:700;color:#fff;background:var(--purple-mid);border-radius:10px;padding:2px 8px;">${list.length}か所</span>
     </div>
-    <div style="font-size:11px;color:var(--text-mid);margin:3px 12px 8px 0;">${g.isSeries ? 'この旅（番組）で訪れたスポット。まとめて巡れます →' : '同じ動画・投稿に登場するスポット →'}</div>
+    <div style="display:flex;align-items:center;gap:8px;margin:3px 12px 8px 0;">
+      <span style="flex:1;font-size:11px;color:var(--text-mid);">${g.isSeries ? 'この旅（番組）で訪れたスポット。まとめて巡れます →' : '同じ動画・投稿に登場するスポット →'}</span>
+      ${g.isSeries ? `<button type="button" onclick="selectSeries(currentSpot && currentSpot.series)" style="flex-shrink:0;border:1.5px solid var(--purple-mid);background:#fff;color:var(--purple-deep);border-radius:14px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;">🗺️ 地図で見る</button>` : ''}
+    </div>
     <div style="display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;padding-right:12px;padding-bottom:2px;">${tiles}</div>
   </div>`;
   // 表示中のスポットが見える位置までスクロール
@@ -5315,6 +5321,115 @@ function renderCardSeries(spot) {
     if (row && idx > 0) row.scrollLeft = Math.max(0, idx * 104 - 40);
   } catch(e) {}
 }
+// ── 旅・シリーズ一覧から選んで、その旅のスポットだけを地図に出す ──
+function seriesSummaries() {
+  const by = {};
+  SPOTS.forEach(s => { if (s.series) (by[s.series] = by[s.series] || []).push(s); });
+  return Object.entries(by).map(([name, list]) => {
+    const mem = new Set();
+    list.forEach(s => getSpotMemberList(s.member).forEach(m => mem.add(m)));
+    const members = mem.has('全員') || mem.size === 0 ? ['全員'] : GROUP_CONFIG.members.map(m => m.name).filter(n => mem.has(n));
+    const photo = (list.find(s => s.image_url) || {}).image_url || null;
+    const maxNo = Math.max(...list.map(s => s.no ?? 0));
+    return { name, list, members, photo, maxNo };
+  });
+}
+let seriesPickerSort = 'new';
+function openSeriesPicker() {
+  let el = document.getElementById('series-picker');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'series-picker';
+    el.style.cssText = 'position:fixed;inset:0;z-index:1300;background:rgba(20,10,40,.45);display:flex;align-items:flex-end;justify-content:center;';
+    el.onclick = e => { if (e.target === el) closeSeriesPicker(); };
+    document.body.appendChild(el);
+  }
+  const all = seriesSummaries();
+  const items = all.slice().sort((a, b) => seriesPickerSort === 'count' ? (b.list.length - a.list.length) || (b.maxNo - a.maxNo) : (b.maxNo - a.maxNo));
+  const sortBtn = (k, label) => `<button type="button" onclick="seriesPickerSort='${k}';openSeriesPicker()" style="border:1.5px solid ${seriesPickerSort === k ? 'var(--purple-mid)' : 'var(--border)'};background:${seriesPickerSort === k ? 'var(--purple-mid)' : '#fff'};color:${seriesPickerSort === k ? '#fff' : 'var(--text-mid)'};border-radius:14px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;">${label}</button>`;
+  const rows = items.map(it => `<div onclick="selectSeries(decodeURIComponent('${encodeURIComponent(it.name)}'))" style="display:flex;gap:10px;align-items:center;padding:10px 4px;border-top:1px solid var(--border);cursor:pointer;${activeSeries === it.name ? 'background:var(--purple-pale);' : ''}">
+      <div style="flex-shrink:0;width:64px;height:48px;border-radius:8px;overflow:hidden;background:var(--purple-pale);display:flex;align-items:center;justify-content:center;font-size:20px;">${it.photo ? `<img src="${escHtml(it.photo)}" loading="lazy" alt="" style="width:100%;height:100%;object-fit:cover;">` : '📺'}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:14px;font-weight:700;color:var(--purple-deep);line-height:1.35;">${escHtml(it.name)}</div>
+        <div style="font-size:11px;color:var(--text-light);margin-top:2px;">${escHtml(it.members.join('・'))}</div>
+      </div>
+      <span style="flex-shrink:0;font-size:12px;font-weight:700;color:#fff;background:var(--purple-mid);border-radius:10px;padding:2px 8px;">${it.list.length}か所</span>
+    </div>`).join('');
+  el.innerHTML = `<div style="background:#fff;width:100%;max-width:520px;max-height:80vh;max-height:80dvh;border-radius:18px 18px 0 0;display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;padding:14px 16px 6px;">
+      <div style="flex:1;font-size:16px;font-weight:800;color:var(--purple-deep);">📺 旅・番組から探す</div>
+      <button onclick="closeSeriesPicker()" aria-label="閉じる" style="border:none;background:none;font-size:22px;color:var(--text-light);cursor:pointer;">✕</button>
+    </div>
+    <div style="font-size:11px;color:var(--text-mid);padding:0 16px 8px;">選ぶと、その旅（番組）で訪れたスポットだけを地図に表示します。</div>
+    <div style="display:flex;gap:6px;padding:0 16px 8px;">${sortBtn('new', '🆕 新しい順')}${sortBtn('count', '📍 スポットが多い順')}${activeSeries ? `<button type="button" onclick="clearSeries();closeSeriesPicker()" style="margin-left:auto;border:1.5px solid #c0392b;background:#fff;color:#c0392b;border-radius:14px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✕ 解除</button>` : ''}</div>
+    <div style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 12px 20px;">${rows || '<div style="padding:24px;text-align:center;color:var(--text-light);font-size:13px;">まだシリーズがありません</div>'}</div>
+  </div>`;
+  el.style.display = 'flex';
+}
+function closeSeriesPicker() {
+  const el = document.getElementById('series-picker');
+  if (el) el.style.display = 'none';
+}
+function selectSeries(name) {
+  if (!name) return;
+  const list = SPOTS.filter(s => s.series === name);
+  if (!list.length) return;
+  activeSeries = name;
+  closeSeriesPicker();
+  try { if (typeof showView === 'function') showView('map'); } catch(e) {}
+  try { if (cardOpen) toggleCard(); } catch(e) {}
+  try { applyFilters(); } catch(e) {}
+  try { renderSpotList(); } catch(e) {}
+  const btn = document.getElementById('series-btn');
+  if (btn) btn.classList.add('active');
+  renderSeriesBanner(list.length);
+  if (map) {
+    if (list.length === 1) { map.panTo({ lat: list[0].lat, lng: list[0].lng }); map.setZoom(15); }
+    else {
+      const b = new google.maps.LatLngBounds();
+      list.forEach(s => b.extend({ lat: s.lat, lng: s.lng }));
+      map.fitBounds(b, { top: 150, bottom: 120, left: 40, right: 60 });
+    }
+  }
+}
+function clearSeries() {
+  activeSeries = null;
+  const btn = document.getElementById('series-btn');
+  if (btn) btn.classList.remove('active');
+  const ban = document.getElementById('series-banner');
+  if (ban) ban.remove();
+  try { applyFilters(); } catch(e) {}
+  try { renderSpotList(); } catch(e) {}
+}
+function seriesShareUrl(name) {
+  return APP_URL + '?series=' + encodeURIComponent(name);
+}
+async function shareSeriesLink() {
+  if (!activeSeries) return;
+  const url = seriesShareUrl(activeSeries);
+  const text = `📺 ${activeSeries} で訪れた場所をまとめて地図で見る｜${APP_SHORT_NAME}`;
+  try {
+    if (navigator.share) { await navigator.share({ title: activeSeries, text, url }); return; }
+  } catch(e) { return; }
+  try { await navigator.clipboard.writeText(url); showEvalToast('🔗 リンクをコピーしました'); }
+  catch(e) { prompt('このリンクをコピーしてください', url); }
+}
+function renderSeriesBanner(n) {
+  let ban = document.getElementById('series-banner');
+  if (!ban) {
+    ban = document.createElement('div');
+    ban.id = 'series-banner';
+    ban.style.cssText = 'position:fixed;left:12px;right:12px;top:calc(var(--content-top, 60px) + 96px);z-index:1050;max-width:520px;margin:0 auto;background:var(--purple-deep);color:#fff;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,.2);display:flex;align-items:center;gap:8px;padding:8px 8px 8px 12px;';
+    document.body.appendChild(ban);
+  }
+  ban.innerHTML = `<div onclick="openSeriesPicker()" style="flex:1;min-width:0;cursor:pointer;">
+      <div style="font-size:10px;opacity:.8;">表示中の旅・番組（タップで変更）</div>
+      <div style="font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">📺 ${escHtml(activeSeries)}（${n}か所）</div>
+    </div>
+    <button onclick="shareSeriesLink()" style="flex-shrink:0;border:none;background:rgba(255,255,255,.18);color:#fff;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;">🔗 共有</button>
+    <button onclick="clearSeries()" aria-label="解除" style="flex-shrink:0;border:none;background:#fff;color:var(--purple-deep);border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;">✕ 解除</button>`;
+}
+
 // ── 近くの聖地：出典が違っても、歩いて回れる距離のスポットを近い順に並べる ──
 const NEARBY_RADIUS_KM = 1.5;
 const NEARBY_MAX = 10;
@@ -6139,6 +6254,11 @@ window.addEventListener('load', () => setTimeout(logAppVisit, 1200));
 
 // ?spot=46 で開いたら、そのスポットのカードを開く
 function handleSpotDeepLink() {
+  const sv = getUrlParam('series');
+  if (sv && map && SPOTS.some(s => s.series === sv)) {
+    setTimeout(() => selectSeries(sv), 300);
+    return true;
+  }
   const v = getUrlParam('spot');
   if (!v) return false;
   const spot = /^\d+$/.test(v) ? SPOTS.find(s => s.no === parseInt(v, 10)) : SPOTS.find(s => s.name === v);
@@ -7903,6 +8023,7 @@ function renderSpotList() {
     if (activeMember !== 'all' && s.member !== '全員' && !getSpotMemberList(s.member).includes(activeMember)) return false;
     if (activeVisitedFilter === 'visited' && !myVisitedSpots.includes(s.db_id)) return false;
     if (activeVisitedFilter === 'unvisited' && myVisitedSpots.includes(s.db_id)) return false;
+    if (activeSeries && s.series !== activeSeries) return false;
     if (originSpot) {
       if (s.db_id === originSpot.db_id) return false;
       if (activeRadius > 0) {
@@ -8242,6 +8363,7 @@ function awardReferralBonus(referrerId) {
 let activeView = 'map';
 
 function showView(name) {
+  try { const sb = document.getElementById('series-banner'); if (sb) sb.style.display = name === 'map' ? 'flex' : 'none'; } catch(e) {}
   ['map','ranking','feed','post','profile','route','pointrules','terms','privacy','howto','settings'].forEach(v => {
     const el = document.getElementById('view-'+v);
     if (el) el.style.display = 'none';
