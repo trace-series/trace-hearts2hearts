@@ -5304,21 +5304,27 @@ function renderCardSeries(spot) {
       <div style="font-size:11px;line-height:1.35;color:var(--text);margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;${me ? 'font-weight:700;' : ''}">${escHtml(s.name)}</div>
     </div>`;
   }).join('');
+  const prog = seriesProgress(list);
+  const complete = g.isSeries && prog.total > 0 && prog.done === prog.total;
+  const btn = (onclick, label, solid) => `<button type="button" onclick="${onclick}" style="flex:1;border:${solid ? 'none' : '1.5px solid var(--purple-mid)'};background:${solid ? 'var(--purple-mid)' : '#fff'};color:${solid ? '#fff' : 'var(--purple-deep)'};border-radius:12px;padding:9px 6px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">${label}</button>`;
   wrap.style.display = 'block';
-  wrap.innerHTML = `<div style="background:linear-gradient(135deg,var(--purple-pale),#fff);border:1.5px solid var(--purple-mid);border-radius:14px;padding:10px 0 10px 12px;">
-    <div style="display:flex;align-items:baseline;gap:6px;padding-right:12px;">
-      <span style="font-size:14px;font-weight:800;color:var(--purple-deep);line-height:1.3;">${g.isSeries ? '📺 ' : '🔗 '}${escHtml(g.title)}</span>
-      <span style="flex-shrink:0;margin-left:auto;font-size:12px;font-weight:700;color:#fff;background:var(--purple-mid);border-radius:10px;padding:2px 8px;">${list.length}か所</span>
+  wrap.innerHTML = `<div style="background:#fff;border:1.5px solid var(--purple-mid);border-radius:16px;overflow:hidden;">
+    <div style="background:linear-gradient(135deg,var(--purple-pale),#fff);padding:11px 12px 10px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--text-light);">${g.isSeries ? '📺 この旅・番組で訪れたスポット' : '🔗 同じ動画・投稿のスポット'}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:3px;">
+        <div style="flex:1;min-width:0;font-size:15px;font-weight:800;color:var(--purple-deep);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(g.title)}</div>
+        <span style="flex-shrink:0;font-size:11px;font-weight:700;color:var(--purple-deep);background:#fff;border:1px solid var(--purple-mid);border-radius:10px;padding:1px 8px;">${list.length}か所</span>
+      </div>
+      ${g.isSeries ? `<div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+        <div style="flex:1;height:5px;border-radius:3px;background:rgba(0,0,0,.08);overflow:hidden;"><div style="width:${prog.pct}%;height:100%;background:${complete ? '#f2b705' : 'var(--purple-mid)'};border-radius:3px;"></div></div>
+        <span style="flex-shrink:0;font-size:11px;font-weight:700;color:${complete ? '#b8860b' : 'var(--text-mid)'};">${complete ? '🏆 コンプリート' : `巡礼 ${prog.done}/${prog.total}`}</span>
+      </div>` : ''}
     </div>
-    ${g.isSeries ? `<div style="margin:6px 12px 2px 0;">${seriesProgressHtml(list, false)}</div>` : ''}
-    <div style="display:flex;align-items:center;gap:8px;margin:3px 12px 8px 0;">
-      <span style="flex:1;font-size:11px;color:var(--text-mid);">${g.isSeries ? 'この旅（番組）で訪れたスポット。まとめて巡れます →' : '同じ動画・投稿に登場するスポット →'}</span>
-      ${g.isSeries ? `<button type="button" onclick="selectSeries(currentSpot && currentSpot.series, 'card')" style="flex-shrink:0;border:1.5px solid var(--purple-mid);background:#fff;color:var(--purple-deep);border-radius:14px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;">🗺️ 地図で見る</button>` : ''}
-    </div>
-    <div style="display:${g.isSeries ? 'flex' : 'none'};justify-content:flex-end;margin:-2px 12px 8px 0;">
-      <button type="button" onclick="addSeriesToRoute(currentSpot && currentSpot.series)" style="border:none;background:var(--purple-mid);color:#fff;border-radius:14px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;">📍 この旅でルートを作る</button>
-    </div>
-    <div style="display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;padding-right:12px;padding-bottom:2px;">${tiles}</div>
+    <div style="display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;padding:10px 12px 4px;scroll-padding:0 12px;">${tiles}</div>
+    ${g.isSeries ? `<div style="display:flex;gap:8px;padding:6px 12px 12px;">
+      ${btn("selectSeries(currentSpot && currentSpot.series, 'card')", '🗺️ 地図で見る', false)}
+      ${btn('addSeriesToRoute(currentSpot && currentSpot.series)', '📍 ルートを作る', true)}
+    </div>` : '<div style="height:8px;"></div>'}
   </div>`;
   // 表示中のスポットが見える位置までスクロール
   try {
