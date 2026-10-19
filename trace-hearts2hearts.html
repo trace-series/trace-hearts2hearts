@@ -5313,7 +5313,7 @@ function renderCardSeries(spot) {
     ${g.isSeries ? `<div style="margin:6px 12px 2px 0;">${seriesProgressHtml(list, false)}</div>` : ''}
     <div style="display:flex;align-items:center;gap:8px;margin:3px 12px 8px 0;">
       <span style="flex:1;font-size:11px;color:var(--text-mid);">${g.isSeries ? 'この旅（番組）で訪れたスポット。まとめて巡れます →' : '同じ動画・投稿に登場するスポット →'}</span>
-      ${g.isSeries ? `<button type="button" onclick="selectSeries(currentSpot && currentSpot.series)" style="flex-shrink:0;border:1.5px solid var(--purple-mid);background:#fff;color:var(--purple-deep);border-radius:14px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;">🗺️ 地図で見る</button>` : ''}
+      ${g.isSeries ? `<button type="button" onclick="selectSeries(currentSpot && currentSpot.series, 'card')" style="flex-shrink:0;border:1.5px solid var(--purple-mid);background:#fff;color:var(--purple-deep);border-radius:14px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;">🗺️ 地図で見る</button>` : ''}
     </div>
     <div style="display:${g.isSeries ? 'flex' : 'none'};justify-content:flex-end;margin:-2px 12px 8px 0;">
       <button type="button" onclick="addSeriesToRoute(currentSpot && currentSpot.series)" style="border:none;background:var(--purple-mid);color:#fff;border-radius:14px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;">📍 この旅でルートを作る</button>
@@ -5378,6 +5378,7 @@ function addSeriesToRoute(name) {
   picked.slice().reverse().forEach(el => container.prepend(el));
   const nameInput = document.getElementById('route-name-input');
   if (nameInput) nameInput.value = name;
+  logSeriesEvent('route', name, null);
   try { window.scrollTo(0, 0); container.scrollTop = 0; } catch(e) {}
   try { showEvalToast(`🗺 ${picked.length}か所を選びました。確認して保存してください`); } catch(e) {}
 }
@@ -5431,11 +5432,29 @@ function closeSeriesPicker() {
   const el = document.getElementById('series-picker');
   if (el) el.style.display = 'none';
 }
-function selectSeries(name) {
+// 旅・シリーズの利用を記録（BtoB向けの集計用。個人は特定しない。同じ操作は1セッション1回まで）
+function logSeriesEvent(event, series, via) {
+  if (!series) return;
+  try {
+    const key = 'trace_se_' + event + '_' + series;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+  } catch(e) {}
+  try {
+    fetch(`${SUPABASE_URL}/rest/v1/series_events`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ event, series: String(series).slice(0, 120), via: via || null, source: getVisitSource() }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch(e) {}
+}
+function selectSeries(name, via) {
   if (!name) return;
   const list = SPOTS.filter(s => s.series === name);
   if (!list.length) return;
   activeSeries = name;
+  logSeriesEvent('open', name, via || 'picker');
   closeSeriesPicker();
   try { if (typeof showView === 'function') showView('map'); } catch(e) {}
   try { if (cardOpen) toggleCard(); } catch(e) {}
@@ -5470,9 +5489,9 @@ async function shareSeriesLink() {
   const url = seriesShareUrl(activeSeries);
   const text = `📺 ${activeSeries} で訪れた場所をまとめて地図で見る｜${APP_SHORT_NAME}`;
   try {
-    if (navigator.share) { await navigator.share({ title: activeSeries, text, url }); return; }
+    if (navigator.share) { await navigator.share({ title: activeSeries, text, url }); logSeriesEvent('share', activeSeries, 'share_sheet'); return; }
   } catch(e) { return; }
-  try { await navigator.clipboard.writeText(url); showEvalToast('🔗 リンクをコピーしました'); }
+  try { await navigator.clipboard.writeText(url); logSeriesEvent('share', activeSeries, 'copy'); showEvalToast('🔗 リンクをコピーしました'); }
   catch(e) { prompt('このリンクをコピーしてください', url); }
 }
 function renderSeriesBanner(n) {
@@ -6319,7 +6338,7 @@ window.addEventListener('load', () => setTimeout(logAppVisit, 1200));
 function handleSpotDeepLink() {
   const sv = getUrlParam('series');
   if (sv && map && SPOTS.some(s => s.series === sv)) {
-    setTimeout(() => selectSeries(sv), 300);
+    setTimeout(() => selectSeries(sv, 'link'), 300);
     return true;
   }
   const v = getUrlParam('spot');
