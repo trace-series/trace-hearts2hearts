@@ -2345,6 +2345,9 @@
             </div>
           </div>
 
+          <!-- 同じシリーズ・同じ出典のスポット -->
+          <div id="card-series-wrap" style="display:none;margin-top:14px;"></div>
+
           <!-- 動画（埋め込み。タップで再生） -->
           <div id="card-video-wrap" style="display:none;margin-top:14px;">
             <div style="font-size:12px;font-weight:700;color:var(--text-light);margin-bottom:6px;">🎬 動画</div>
@@ -4086,6 +4089,7 @@ function mapSpotRow(s) {
       end_date: s.end_date || null,
       is_closed: s.is_closed === true,
       is_draft: s.is_draft === true,
+      series: s.series || null,
   };
 }
 
@@ -5189,6 +5193,7 @@ function openAdminSpotEditor() {
     ${admLabel('カテゴリ')}${admCategoryHtml(spot.category)}
     ${admLabel('説明文')}<textarea id="adm-sub" rows="4" style="${ADM_INPUT}resize:vertical;">${escHtml(spot.sub || '')}</textarea>
     ${admLabel('出典リンク（YouTube・X・Instagramなど）')}<input id="adm-source" type="url" inputmode="url" style="${ADM_INPUT}" value="${escHtml(spot.source_url || '')}">
+    ${admSeriesFieldHtml(spot.series)}
     ${admLabel('住所')}<input id="adm-address" type="text" style="${ADM_INPUT}" value="${escHtml(spot.address || '')}">
     ${admLabel('期間限定の終了日（期間限定スポットのみ。過ぎると「開催終了」表示）')}
     <div style="display:flex;gap:6px;"><input id="adm-end" type="date" style="${ADM_INPUT}flex:1;" value="${escHtml(spot.end_date || '')}"><button type="button" onclick="document.getElementById('adm-end').value=''" style="flex-shrink:0;border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:0 12px;font-size:12px;cursor:pointer;">クリア</button></div>
@@ -5248,6 +5253,87 @@ function toggleAdminMemberChip(btn) {
 
 function closeAdminSpotEditor() { closeAdminSheet('admin-edit-modal'); }
 
+// ── シリーズ（同じ番組・同じ旅行）と同じ出典のまとめ ──
+// 出典URLを「同じ動画・同じ投稿」なら同じ文字列になる形にそろえる（?si= や &t= などの違いを無視）
+function normSourceKey(url) {
+  if (!url) return null;
+  const u = String(url).trim();
+  let m = u.match(/(?:youtu\.be\/|[?&]v=|\/shorts\/|\/live\/|\/embed\/)([\w-]{11})/);
+  if (m) return 'yt:' + m[1];
+  m = u.match(/instagram\.com\/(?:[\w.]+\/)?(?:p|reel|reels|tv)\/([\w-]+)/);
+  if (m) return 'ig:' + m[1];
+  m = u.match(/(?:x|twitter)\.com\/[^/]+\/status\/(\d+)/);
+  if (m) return 'x:' + m[1];
+  m = u.match(/tiktok\.com\/.*\/video\/(\d+)/);
+  if (m) return 'tt:' + m[1];
+  m = u.match(/weverse\.io\/[^/]+\/(?:artist|fanpost|media|live)\/([\w-]+)/);
+  if (m) return 'wv:' + m[1];
+  return u.replace(/[?#].*$/, '').replace(/\/+$/, '');
+}
+function seriesGroupFor(spot) {
+  if (!spot) return { title: '', list: [] };
+  if (spot.series) {
+    return { title: spot.series, isSeries: true, list: SPOTS.filter(s => s.series === spot.series) };
+  }
+  const key = normSourceKey(spot.source_url);
+  if (!key) return { title: '', list: [] };
+  return { title: '同じ出典のスポット', isSeries: false, list: SPOTS.filter(s => !s.series && normSourceKey(s.source_url) === key) };
+}
+function renderCardSeries(spot) {
+  const wrap = document.getElementById('card-series-wrap');
+  if (!wrap) return;
+  const g = seriesGroupFor(spot);
+  if (g.list.length < 2) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+  const list = g.list.slice().sort((a, b) => (a.no ?? 99999) - (b.no ?? 99999));
+  const rows = list.map(s => {
+    const me = s === spot;
+    const names = getSpotMemberList(s.member);
+    const mem = (!names.length || names.includes('全員')) ? '全員' : names.join('・');
+    return `<div ${me ? '' : `onclick="openSeriesSpot('${escHtml(String(s.db_id))}')"`} style="display:flex;align-items:center;gap:8px;padding:9px 4px;border-top:1px solid var(--border);${me ? 'opacity:.55;' : 'cursor:pointer;'}">
+      <span style="flex-shrink:0;min-width:46px;font-size:11px;color:var(--text-light);">${s.no != null ? 'No.' + s.no : ''}</span>
+      <span style="flex:1;font-size:13px;color:var(--text);line-height:1.4;">${escHtml(s.name)}${me ? '（表示中）' : ''}<br><span style="font-size:11px;color:var(--text-light);">${escHtml(mem)}</span></span>
+      ${me ? '' : '<span style="flex-shrink:0;color:var(--purple-mid);font-size:14px;">›</span>'}
+    </div>`;
+  }).join('');
+  wrap.style.display = 'block';
+  wrap.innerHTML = `<div style="border:1.5px solid var(--purple-pale);border-radius:12px;overflow:hidden;">
+    <button type="button" onclick="const b=this.nextElementSibling;const o=b.style.display==='none';b.style.display=o?'block':'none';this.querySelector('.ser-arrow').textContent=o?'▲':'▼';" style="width:100%;display:flex;align-items:center;gap:6px;background:var(--purple-pale);border:none;padding:10px 12px;cursor:pointer;text-align:left;">
+      <span style="font-size:13px;font-weight:700;color:var(--purple-deep);flex:1;">${g.isSeries ? '📺 ' : '🔗 '}${escHtml(g.title)}（${list.length}か所）</span>
+      <span class="ser-arrow" style="font-size:11px;color:var(--purple-deep);">▼</span>
+    </button>
+    <div style="display:none;padding:0 10px 4px;">
+      <div style="font-size:11px;color:var(--text-light);padding:6px 4px;">${g.isSeries ? '同じ番組・旅行で訪れたスポットです。まとめて巡るときの参考にどうぞ。' : '同じ動画・投稿に登場するスポットです。'}</div>
+      ${rows}
+    </div>
+  </div>`;
+}
+function openSeriesSpot(dbId) {
+  const spot = SPOTS.find(s => String(s.db_id) === String(dbId));
+  if (!spot) return;
+  if (map) { map.panTo({ lat: spot.lat, lng: spot.lng }); map.setZoom(16); }
+  openCard(spot);
+  try { const c = document.getElementById('map-card'); if (c) c.scrollTop = 0; } catch(e) {}
+}
+// 管理者フォーム用：シリーズ名の入力欄（既にあるシリーズ名を候補に出す）
+function admSeriesFieldHtml(cur) {
+  const names = [...new Set(SPOTS.map(s => s.series).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ja'));
+  return `${admLabel('シリーズ名（任意。同じ番組・同じ旅行のスポットをまとめます）')}
+    <input id="adm-series" type="text" list="adm-series-list" placeholder="例：Berry Very Me グアム" style="${ADM_INPUT}" value="${escHtml(cur || '')}">
+    <datalist id="adm-series-list">${names.map(n => `<option value="${escHtml(n)}"></option>`).join('')}</datalist>
+    <div style="font-size:11px;color:var(--text-light);margin-top:4px;line-height:1.5;">「番組名＋行き先」の形で。候補から選ぶと表記ゆれを防げます。出典リンクが同じスポットは、空欄でも自動でまとまります。</div>`;
+}
+function admSeriesValue() {
+  const el = document.getElementById('adm-series');
+  const v = el ? el.value.replace(/\s+/g, ' ').trim() : '';
+  return v || null;
+}
+async function saveAdminSeries(spotId, series) {
+  const { data, error } = await getSupabaseClient().rpc('admin_set_spot_series', { p_spot_id: spotId, p_series: series });
+  if (error) return error;
+  if (data !== 1) return { message: '対象のスポットが見つかりません' };
+  return null;
+}
+
 async function saveAdminSpotEdit() {
   const spot = currentSpot;
   if (!spot || !spot.db_id) return;
@@ -5280,8 +5366,13 @@ async function saveAdminSpotEdit() {
     msg.textContent = '保存できませんでした：' + ((error && error.message) || '対象のスポットが見つかりません');
     return;
   }
+  const series = admSeriesValue();
+  if (series !== (spot.series || null)) {
+    const seriesErr = await saveAdminSeries(spot.db_id, series);
+    if (seriesErr) { btn.disabled = false; msg.textContent = 'シリーズ名を保存できませんでした：' + seriesErr.message; return; }
+  }
   const draftChanged = spot.is_draft !== draft;
-  Object.assign(spot, { name, member, category, sub, source_url: source || null, address, end_date: endDate, is_closed: closed, is_draft: draft, badges: [category] });
+  Object.assign(spot, { name, member, category, sub, source_url: source || null, address, end_date: endDate, is_closed: closed, is_draft: draft, series, badges: [category] });
   const mk = markers.find(m => m.spotData === spot);
   if (draftChanged) addSpotMarker(spot); else if (mk) mk.setTitle(name);
   closeAdminSheet('admin-edit-modal');
@@ -5785,6 +5876,7 @@ function openAdminNewSpot() {
     ${admLabel('カテゴリ')}${admCategoryHtml('観光・名所')}
     ${admLabel('説明文')}<textarea id="adm-sub" rows="3" style="${ADM_INPUT}resize:vertical;"></textarea>
     ${admLabel('出典リンク')}<input id="adm-source" type="url" inputmode="url" style="${ADM_INPUT}">
+    ${admSeriesFieldHtml('')}
     ${admLabel('住所')}<div style="display:flex;gap:6px;"><input id="adm-address" type="text" style="${ADM_INPUT}flex:1;"><button type="button" onclick="adminNewFillAddress()" style="flex-shrink:0;border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:0 10px;font-size:12px;cursor:pointer;">ピンから入力</button></div>
     ${admLabel('期間限定の終了日（任意）')}<input id="adm-end" type="date" style="${ADM_INPUT}">
     <label style="display:flex;align-items:center;gap:8px;margin-top:12px;padding:10px;border-radius:10px;background:#fff7e6;font-size:13px;color:var(--text);"><input id="adm-draft" type="checkbox" checked style="width:20px;height:20px;"> 🚧 仮登録で保存（一般ユーザーには表示しない）</label>
@@ -5859,8 +5951,14 @@ async function saveAdminNewSpot() {
     badges: [category], color: '#1a1a1a', trustScore: 8, goodCount: 0, badCount: 0, adminLevel: 'reliable',
     db_id: row.id, no: row.no != null ? row.no : null,
     image_url: null, image_url_2: null, image_url_3: null, image_url_4: null, source_url: source || null,
-    end_date: endDate, is_closed: false, is_draft: draft,
+    end_date: endDate, is_closed: false, is_draft: draft, series: null,
   };
+  const newSeries = admSeriesValue();
+  if (newSeries) {
+    const seriesErr = await saveAdminSeries(row.id, newSeries);
+    if (seriesErr) alert('スポットは登録しましたが、シリーズ名を保存できませんでした：' + seriesErr.message);
+    else spot.series = newSeries;
+  }
   SPOTS.push(spot);
   addSpotMarker(spot);
   closeAdminSheet('admin-new-modal');
@@ -6591,6 +6689,7 @@ function openCard(spot) {
           }
         }
         loadCardVideos(spot);
+        try { renderCardSeries(spot); } catch(e) { console.warn('シリーズ表示失敗:', e); }
         refreshAdminEditRow();
   document.getElementById('card-address').textContent = spot.address;
   document.getElementById('card-discoverer').textContent = spot.discoverer;
