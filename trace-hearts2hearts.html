@@ -2270,6 +2270,8 @@
         </div>
         <!-- 同じシリーズ・同じ出典のスポット（横スクロール） -->
         <div id="card-series-wrap" style="display:none;margin-top:12px;"></div>
+        <!-- 近くの聖地（出典に関係なく、近い順） -->
+        <div id="card-nearby-wrap" style="display:none;margin-top:10px;"></div>
         <div class="card-actions" style="margin-top:14px;">
           <button class="btn-primary" onclick="reportVisit()">📸 巡礼した！</button>
           <button class="btn-primary" style="background:linear-gradient(135deg,#1a1a1a,#000);" onclick="shareX()">𝕏 シェア</button>
@@ -5313,6 +5315,46 @@ function renderCardSeries(spot) {
     if (row && idx > 0) row.scrollLeft = Math.max(0, idx * 104 - 40);
   } catch(e) {}
 }
+// ── 近くの聖地：出典が違っても、歩いて回れる距離のスポットを近い順に並べる ──
+const NEARBY_RADIUS_KM = 1.5;
+const NEARBY_MAX = 10;
+function renderCardNearby(spot) {
+  const wrap = document.getElementById('card-nearby-wrap');
+  if (!wrap) return;
+  if (!spot || spot.lat == null || spot.lng == null) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+  // シリーズ欄に出ているスポットは重ねて出さない
+  const g = seriesGroupFor(spot);
+  const shown = new Set(g.list.length >= 2 ? g.list : []);
+  const list = SPOTS
+    .filter(s => s !== spot && !shown.has(s) && s.lat != null && s.lng != null)
+    .map(s => ({ s, km: haversineKm(spot.lat, spot.lng, s.lat, s.lng) }))
+    .filter(x => x.km <= NEARBY_RADIUS_KM)
+    .sort((a, b) => a.km - b.km)
+    .slice(0, NEARBY_MAX);
+  if (!list.length) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+  const tiles = list.map(({ s, km }) => {
+    const walk = Math.max(1, Math.round(km * 1000 / 80));
+    const img = s.image_url
+      ? `<img src="${escHtml(s.image_url)}" loading="lazy" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.replaceWith(document.createTextNode('${escHtml(s.icon || '📍')}'))">`
+      : escHtml(s.icon || '📍');
+    return `<div onclick="openSeriesSpot('${escHtml(String(s.db_id))}')" style="flex:0 0 96px;scroll-snap-align:start;cursor:pointer;">
+      <div style="position:relative;width:96px;height:72px;border-radius:10px;overflow:hidden;background:var(--purple-pale);display:flex;align-items:center;justify-content:center;font-size:26px;border:1px solid var(--border);box-sizing:border-box;">
+        ${img}
+        <span style="position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);color:#fff;font-size:10px;font-weight:700;text-align:center;padding:2px 0;">🚶 約${walk}分</span>
+      </div>
+      <div style="font-size:11px;line-height:1.35;color:var(--text);margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${escHtml(s.name)}</div>
+    </div>`;
+  }).join('');
+  wrap.style.display = 'block';
+  wrap.innerHTML = `<div style="border:1.5px solid var(--border);border-radius:14px;padding:10px 0 10px 12px;background:#fff;">
+    <div style="display:flex;align-items:baseline;gap:6px;padding-right:12px;">
+      <span style="font-size:14px;font-weight:800;color:var(--purple-deep);">📍 近くの聖地</span>
+      <span style="flex-shrink:0;margin-left:auto;font-size:12px;font-weight:700;color:var(--purple-deep);background:var(--purple-pale);border-radius:10px;padding:2px 8px;">${list.length}か所</span>
+    </div>
+    <div style="font-size:11px;color:var(--text-mid);margin:3px 12px 8px 0;">ここから歩いて回れる距離（${NEARBY_RADIUS_KM}km以内）のスポット →</div>
+    <div style="display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;padding-right:12px;padding-bottom:2px;">${tiles}</div>
+  </div>`;
+}
 function openSeriesSpot(dbId) {
   const spot = SPOTS.find(s => String(s.db_id) === String(dbId));
   if (!spot) return;
@@ -6696,6 +6738,7 @@ function openCard(spot) {
         }
         loadCardVideos(spot);
         try { renderCardSeries(spot); } catch(e) { console.warn('シリーズ表示失敗:', e); }
+        try { renderCardNearby(spot); } catch(e) { console.warn('近くの聖地表示失敗:', e); }
         refreshAdminEditRow();
   document.getElementById('card-address').textContent = spot.address;
   document.getElementById('card-discoverer').textContent = spot.discoverer;
