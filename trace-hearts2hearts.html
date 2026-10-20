@@ -175,6 +175,9 @@
   }
 
   .member-tab-icon { font-size: 18px; line-height: 1; }
+  /* 旅・番組の絞り込み中は、メンバーボタンの場所に旅のバーを出す（箱推しモード） */
+  #member-tabs.series-mode > .member-tab-item { display: none; }
+  #member-tabs > #series-banner { grid-column: 1 / -1; }
 
   .member-tab-name {
     font-size: 9px;
@@ -5460,6 +5463,13 @@ function selectSeries(name, via) {
   const list = SPOTS.filter(s => s.series === name);
   if (!list.length) return;
   activeSeries = name;
+  // 旅・番組はグループ全体で巡る想定なので、メンバー絞り込みは「全員」に戻す
+  activeMember = 'all';
+  try {
+    document.querySelectorAll('#member-tabs .member-tab-item').forEach(x => x.classList.remove('active'));
+    const allTab = document.querySelector('#member-tabs .member-tab-item[onclick*="\'all\'"]');
+    if (allTab) allTab.classList.add('active');
+  } catch(e) {}
   logSeriesEvent('open', name, via || 'picker');
   closeSeriesPicker();
   try { if (typeof showView === 'function') showView('map'); } catch(e) {}
@@ -5484,8 +5494,18 @@ function clearSeries() {
   if (btn) btn.classList.remove('active');
   const ban = document.getElementById('series-banner');
   if (ban) ban.remove();
+  setSeriesMode(false);
   try { applyFilters(); } catch(e) {}
   try { renderSpotList(); } catch(e) {}
+}
+// メンバーボタンを隠して、その場所に旅のバーを表示する（地図画面のときだけ）
+function setSeriesMode(on) {
+  const tabs = document.getElementById('member-tabs');
+  if (!tabs) return;
+  tabs.classList.toggle('series-mode', !!on);
+  const ban = document.getElementById('series-banner');
+  if (ban) ban.style.display = on ? 'flex' : 'none';
+  try { if (window.syncContentTop) window.syncContentTop(); } catch(e) {}
 }
 function seriesShareUrl(name) {
   return APP_URL + '?series=' + encodeURIComponent(name);
@@ -5505,9 +5525,12 @@ function renderSeriesBanner(n) {
   if (!ban) {
     ban = document.createElement('div');
     ban.id = 'series-banner';
-    ban.style.cssText = 'position:fixed;left:12px;right:12px;top:calc(var(--content-top, 60px) + 96px);z-index:1050;max-width:520px;margin:0 auto;background:var(--purple-deep);color:#fff;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,.2);display:flex;align-items:center;gap:8px;padding:8px 8px 8px 12px;';
-    document.body.appendChild(ban);
+    ban.style.cssText = 'background:var(--purple-deep);color:#fff;border-radius:12px;display:flex;align-items:center;gap:6px;padding:8px 8px 8px 12px;min-width:0;';
   }
+  const tabsEl = document.getElementById('member-tabs');
+  if (tabsEl && ban.parentNode !== tabsEl) tabsEl.appendChild(ban);
+  let onMap = true; try { onMap = activeView === 'map'; } catch(e) {}
+  setSeriesMode(onMap);
   ban.innerHTML = `<div onclick="openSeriesPicker()" style="flex:1;min-width:0;cursor:pointer;">
       <div style="font-size:10px;opacity:.8;">表示中の旅・番組（タップで変更）</div>
       <div style="font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">📺 ${escHtml(activeSeries)}（${n}か所）</div>
@@ -8451,7 +8474,7 @@ function awardReferralBonus(referrerId) {
 let activeView = 'map';
 
 function showView(name) {
-  try { const sb = document.getElementById('series-banner'); if (sb) sb.style.display = name === 'map' ? 'flex' : 'none'; } catch(e) {}
+  try { setSeriesMode(name === 'map' && !!activeSeries); } catch(e) {}
   ['map','ranking','feed','post','profile','route','pointrules','terms','privacy','howto','settings'].forEach(v => {
     const el = document.getElementById('view-'+v);
     if (el) el.style.display = 'none';
