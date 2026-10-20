@@ -5432,7 +5432,8 @@ function openSeriesPicker() {
       <button onclick="closeSeriesPicker()" aria-label="閉じる" style="border:none;background:none;font-size:22px;color:var(--text-light);cursor:pointer;">✕</button>
     </div>
     <div style="font-size:11px;color:var(--text-mid);padding:0 16px 8px;">選ぶと、その旅（番組）で訪れたスポットだけを地図に表示します。</div>
-    <div style="display:flex;gap:6px;padding:0 16px 8px;">${sortBtn('new', '🆕 新しい順')}${sortBtn('count', '📍 スポットが多い順')}${activeSeries ? `<button type="button" onclick="clearSeries();closeSeriesPicker()" style="margin-left:auto;border:1.5px solid #c0392b;background:#fff;color:#c0392b;border-radius:14px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✕ 解除</button>` : ''}</div>
+    <div style="display:flex;gap:6px;padding:0 16px 8px;">${sortBtn('new', '🆕 登録が新しい順')}${sortBtn('count', '📍 スポットが多い順')}${activeSeries ? `<button type="button" onclick="clearSeries();closeSeriesPicker()" style="margin-left:auto;border:1.5px solid #c0392b;background:#fff;color:#c0392b;border-radius:14px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✕ 解除</button>` : ''}</div>
+    ${seriesPickerSort === 'new' ? '<div style="font-size:11px;color:var(--text-mid);padding:0 16px 8px;line-height:1.5;">・アプリにスポットを登録した順です。過去の活動も順次追加しているため、<b style="color:#d9363e;">メンバーの活動が新しい順ではありません</b>。</div>' : ''}
     <div style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 12px 20px;">${rows || '<div style="padding:24px;text-align:center;color:var(--text-light);font-size:13px;">まだシリーズがありません</div>'}</div>
   </div>`;
   el.style.display = 'flex';
