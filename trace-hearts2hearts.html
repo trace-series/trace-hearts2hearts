@@ -4614,6 +4614,7 @@ async function saveGalleryDate(clear) {
       x.activity = galleryActivityDate(x);
     }
   });
+  seriesActivityMap = null; // 旅・番組の活動日順も次に開いたとき読み直す
   const box = document.getElementById('gallery-lightbox');
   if (box) box.style.display = 'none';
   renderGallery();
@@ -5235,7 +5236,7 @@ async function deleteAdminSpot() {
   const closeBtn = document.getElementById('card-fixed-close-btn');
   if (closeBtn) closeBtn.style.display = 'none';
   currentSpot = null;
-  if (typeof galleryCache !== 'undefined') galleryCache = null;
+  if (typeof galleryCache !== 'undefined') galleryCache = null; seriesActivityMap = null;
   try { applyFilters(); } catch(e) {}
   try { renderSpotList(); } catch(e) {}
   try { showEvalToast('🗑 削除しました'); } catch(e) {}
@@ -5401,10 +5402,44 @@ function seriesSummaries() {
     const members = mem.has('全員') || mem.size === 0 ? ['全員'] : GROUP_CONFIG.members.map(m => m.name).filter(n => mem.has(n));
     const photo = (list.find(s => s.image_url) || {}).image_url || null;
     const maxNo = Math.max(...list.map(s => s.no ?? 0));
-    return { name, list, members, photo, maxNo };
+    // 活動日：シリーズ内の写真の活動日のうち一番新しい日（未取得・不明はnull）
+    let activity = null;
+    if (seriesActivityMap) list.forEach(s => { const d = seriesActivityMap[s.db_id]; if (d && (!activity || d > activity)) activity = d; });
+    return { name, list, members, photo, maxNo, activity };
   });
 }
-let seriesPickerSort = 'new';
+let seriesPickerSort = 'activity'; // 'activity'（活動日順） | 'new'（登録が新しい順） | 'count'（スポットが多い順）
+var seriesActivityMap = null;   // spot_id → 写真の活動日（一番新しいもの、YYYY-MM-DD）
+var seriesActivityLoading = false;
+// 写真の活動日を読み込む（手入力の活動月を優先、なければ出典の公開日＝日本時間）
+async function loadSeriesActivity() {
+  if (seriesActivityMap || seriesActivityLoading) return;
+  seriesActivityLoading = true;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/spot_media?select=spot_id,activity_date_manual,source_posted_at&limit=5000`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+    });
+    const data = await res.json();
+    const map = {};
+    (Array.isArray(data) ? data : []).forEach(m => {
+      const d = galleryActivityDate(m);
+      if (d && (!map[m.spot_id] || d > map[m.spot_id])) map[m.spot_id] = d;
+    });
+    seriesActivityMap = map;
+  } catch(e) {
+    console.warn('活動日の取得失敗:', e);
+    seriesActivityMap = {};
+  } finally {
+    seriesActivityLoading = false;
+  }
+  const el = document.getElementById('series-picker');
+  if (el && el.style.display !== 'none') openSeriesPicker();
+}
+function seriesActivityLabel(ymd) {
+  if (!ymd) return '日付不明';
+  const p = ymd.split('-');
+  return `${p[0]}.${p[1]}`;
+}
 function openSeriesPicker() {
   let el = document.getElementById('series-picker');
   if (!el) {
@@ -5414,14 +5449,23 @@ function openSeriesPicker() {
     el.onclick = e => { if (e.target === el) closeSeriesPicker(); };
     document.body.appendChild(el);
   }
+  if (!seriesActivityMap) loadSeriesActivity();
   const all = seriesSummaries();
-  const items = all.slice().sort((a, b) => seriesPickerSort === 'count' ? (b.list.length - a.list.length) || (b.maxNo - a.maxNo) : (b.maxNo - a.maxNo));
+  const items = all.slice().sort((a, b) => {
+    if (seriesPickerSort === 'count') return (b.list.length - a.list.length) || (b.maxNo - a.maxNo);
+    if (seriesPickerSort === 'activity') {
+      if (a.activity && b.activity && a.activity !== b.activity) return a.activity < b.activity ? 1 : -1;
+      if (a.activity && !b.activity) return -1;
+      if (!a.activity && b.activity) return 1;
+    }
+    return b.maxNo - a.maxNo;
+  });
   const sortBtn = (k, label) => `<button type="button" onclick="seriesPickerSort='${k}';openSeriesPicker()" style="border:1.5px solid ${seriesPickerSort === k ? 'var(--purple-mid)' : 'var(--border)'};background:${seriesPickerSort === k ? 'var(--purple-mid)' : '#fff'};color:${seriesPickerSort === k ? '#fff' : 'var(--text-mid)'};border-radius:14px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;">${label}</button>`;
   const rows = items.map(it => `<div onclick="selectSeries(decodeURIComponent('${encodeURIComponent(it.name)}'))" style="display:flex;gap:10px;align-items:center;padding:10px 4px;border-top:1px solid var(--border);cursor:pointer;${activeSeries === it.name ? 'background:var(--purple-pale);' : ''}">
       <div style="flex-shrink:0;width:64px;height:48px;border-radius:8px;overflow:hidden;background:var(--purple-pale);display:flex;align-items:center;justify-content:center;font-size:20px;">${it.photo ? `<img src="${escHtml(it.photo)}" loading="lazy" alt="" style="width:100%;height:100%;object-fit:cover;">` : '📺'}</div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:14px;font-weight:700;color:var(--purple-deep);line-height:1.35;">${escHtml(it.name)}</div>
-        <div style="font-size:11px;color:var(--text-light);margin-top:2px;">${escHtml(it.members.join('・'))}</div>
+        <div style="font-size:11px;color:var(--text-light);margin-top:2px;">${seriesActivityMap ? `<span style="color:var(--text-mid);font-weight:700;margin-right:6px;">📅 ${seriesActivityLabel(it.activity)}</span>` : ''}${escHtml(it.members.join('・'))}</div>
         <div style="margin-top:5px;">${seriesProgressHtml(it.list, false)}</div>
       </div>
       <span style="flex-shrink:0;font-size:12px;font-weight:700;color:#fff;background:var(--purple-mid);border-radius:10px;padding:2px 8px;">${it.list.length}か所</span>
@@ -5432,7 +5476,8 @@ function openSeriesPicker() {
       <button onclick="closeSeriesPicker()" aria-label="閉じる" style="border:none;background:none;font-size:22px;color:var(--text-light);cursor:pointer;">✕</button>
     </div>
     <div style="font-size:11px;color:var(--text-mid);padding:0 16px 8px;">選ぶと、その旅（番組）で訪れたスポットだけを地図に表示します。</div>
-    <div style="display:flex;gap:6px;padding:0 16px 8px;">${sortBtn('new', '🆕 登録が新しい順')}${sortBtn('count', '📍 スポットが多い順')}${activeSeries ? `<button type="button" onclick="clearSeries();closeSeriesPicker()" style="margin-left:auto;border:1.5px solid #c0392b;background:#fff;color:#c0392b;border-radius:14px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✕ 解除</button>` : ''}</div>
+    <div style="display:flex;gap:6px;padding:0 16px 8px;flex-wrap:wrap;">${sortBtn('activity', '📅 活動日順')}${sortBtn('new', '🆕 登録が新しい順')}${sortBtn('count', '📍 スポットが多い順')}${activeSeries ? `<button type="button" onclick="clearSeries();closeSeriesPicker()" style="margin-left:auto;border:1.5px solid #c0392b;background:#fff;color:#c0392b;border-radius:14px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✕ 解除</button>` : ''}</div>
+    ${seriesPickerSort === 'activity' ? `<div style="font-size:11px;color:var(--text-mid);padding:0 16px 8px;line-height:1.5;">・活動日は、写真の出典（YouTube・Instagram・Xなど）の公開日、または手入力した活動月をもとにした目安です。日付が分からない旅は一番下に並びます。${seriesActivityMap ? '' : '<br>読み込み中...'}</div>` : ''}
     ${seriesPickerSort === 'new' ? '<div style="font-size:11px;color:var(--text-mid);padding:0 16px 8px;line-height:1.5;">・アプリにスポットを登録した順です。過去の活動も順次追加しているため、<b style="color:#d9363e;">メンバーの活動が新しい順ではありません</b>。</div>' : ''}
     <div style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 12px 20px;">${rows || '<div style="padding:24px;text-align:center;color:var(--text-light);font-size:13px;">まだシリーズがありません</div>'}</div>
   </div>`;
@@ -5652,7 +5697,7 @@ async function saveAdminSpotEdit() {
   if (draftChanged) addSpotMarker(spot); else if (mk) mk.setTitle(name);
   closeAdminSheet('admin-edit-modal');
   openCard(spot);
-  if (typeof galleryCache !== 'undefined') galleryCache = null;
+  if (typeof galleryCache !== 'undefined') galleryCache = null; seriesActivityMap = null;
   try { if (map) applyFilters(); } catch(e) {}
   try { renderSpotList(); } catch(e) {}
   try { showEvalToast(draftChanged && !draft ? '🎉 公開しました' : '✅ スポット情報を保存しました'); } catch(e) {}
@@ -5976,7 +6021,7 @@ async function saveAdminMedia() {
   const photos = adminMediaItems.filter(m => m.media_type === 'photo').map(m => m.url);
   spot.image_url = photos[0] || null; spot.image_url_2 = photos[1] || null; spot.image_url_3 = photos[2] || null; spot.image_url_4 = photos[3] || null;
   closeAdminSheet('admin-media-modal');
-  if (typeof galleryCache !== 'undefined') galleryCache = null;
+  if (typeof galleryCache !== 'undefined') galleryCache = null; seriesActivityMap = null;
   openCard(spot);
   try { renderSpotList(); } catch(e) {}
   try { showEvalToast('✅ 写真・動画を保存しました'); } catch(e) {}
