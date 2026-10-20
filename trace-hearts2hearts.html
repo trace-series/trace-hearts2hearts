@@ -5533,7 +5533,7 @@ function renderSeriesBanner(n) {
   setSeriesMode(onMap);
   ban.innerHTML = `<div onclick="openSeriesPicker()" style="flex:1;min-width:0;cursor:pointer;">
       <div style="font-size:10px;opacity:.8;">表示中の旅・番組（タップで変更）</div>
-      <div style="font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">📺 ${escHtml(activeSeries)}（${n}か所）</div>
+      <div style="font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">📺 ${escHtml(activeSeries)}</div>
       <div style="margin-top:4px;">${seriesProgressHtml(SPOTS.filter(s => s.series === activeSeries), true)}</div>
     </div>
     <button onclick="addSeriesToRoute()" style="flex-shrink:0;border:none;background:rgba(255,255,255,.18);color:#fff;border-radius:10px;padding:6px 8px;font-size:12px;font-weight:700;cursor:pointer;">🗺 ルート</button>
