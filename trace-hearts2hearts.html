@@ -1820,6 +1820,20 @@
   }
 
   .btn-optimize-sub { font-size: 11px; opacity: 0.8; font-weight: 400; }
+  /* ルート画面：スクロールしても操作ボタンを上に固定 */
+  #route-sticky-bar {
+    position: sticky; top: var(--content-top, 56px); z-index: 50;
+    display: flex; align-items: center; gap: 6px;
+    margin: 6px -4px 10px; padding: 8px 8px;
+    background: rgba(255,255,255,0.96); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+  #route-sticky-bar .rsb-count { flex: 1; min-width: 0; font-size: 12px; font-weight: 700; color: var(--purple-deep); white-space: nowrap; }
+  #route-sticky-bar .rsb-btn { flex-shrink: 0; border: none; border-radius: 10px; padding: 8px 10px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  #route-sticky-bar .rsb-opt { background: #2e7d4f; color: #fff; }
+  #route-sticky-bar .rsb-opt.off { background: #c9d3cc; color: #fff; }
+  #route-sticky-bar .rsb-save { background: linear-gradient(135deg, var(--purple-mid), var(--purple-deep)); color: #fff; }
+  #route-sticky-bar .rsb-print { background: #fff; border: 1.5px solid var(--border); color: var(--text-mid); }
 
   .route-result-card {
     background: white;
@@ -3457,6 +3471,14 @@
       <div class="region-tab" onclick="filterRouteRegion(this,'japan_other')">🌸 その他日本</div>
     </div>
 
+    <!-- 操作ボタン（スクロールしても上に固定） -->
+    <div id="route-sticky-bar">
+      <div class="rsb-count" id="rsb-count">0か所 選択中</div>
+      <button type="button" class="rsb-btn rsb-opt" id="rsb-opt" onclick="optimizeRoute()">✨ 最適化</button>
+      <button type="button" class="rsb-btn rsb-save" onclick="saveRoute()">💾 保存</button>
+      <button type="button" class="rsb-btn rsb-print" onclick="printRoute()" aria-label="印刷">🖨️</button>
+    </div>
+
     <div id="route-spot-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
       </div>
 
@@ -3480,28 +3502,16 @@
     </div>
 
     <div class="profile-section-title">📂 保存済みルート
-      <span class="route-save-limit" id="route-save-limit">5件まで保存可</span>
+      <span class="route-save-limit" id="route-save-limit">読み込み中</span>
     </div>
     <div id="saved-routes-list">
-      <div class="saved-route-item">
-        <div class="sri-left">
-          <div class="sri-icon">🗺️</div>
-          <div>
-            
-            
-          </div>
-        </div>
-        <div style="display:flex;gap:6px;">
-          <button class="btn-secondary" style="padding:6px 10px;font-size:11px;" onclick="printRoute()">🖨️</button>
-          <button class="btn-secondary" style="padding:6px 10px;font-size:11px;">𝕏</button>
-        </div>
-      </div>
+      <div id="saved-routes-empty" style="font-size:12px;color:var(--text-light);padding:14px 4px;">まだ保存したルートはありません</div>
     </div>
 
     <!-- ランクアップ促進バナー -->
     <div class="rankup-banner" id="rankup-banner" style="display:none;">
       <div class="rankup-title">🔒 最適化回数を増やすには</div>
-      <div class="rankup-desc">プラチナランク（1000pt）で月1回追加、ダイヤモンド（3000pt）で月2回に。</div>
+      <div class="rankup-desc">ゴールド（800pt）で月1回、ダイヤモンド（6000pt＋友達紹介5人）で月2回使えます。毎月1日にリセットされます。</div>
       <button class="rankup-btn" onclick="showView('pointrules')">ランクを確認する →</button>
     </div>
 
@@ -8050,7 +8060,7 @@ function renderRouteSpotList() {
         var isKorea2 = koreaKeys2.some(function(k){ return addr2.indexOf(k) !== -1; });
         var isTokyo2 = tokyoKeys2.some(function(k){ return addr2.indexOf(k) !== -1; });
         var spotRegion2 = isKorea2 ? 'korea' : (isTokyo2 ? 'tokyo' : 'japan_other');
-        html += '<div class="route-spot-check" data-spot="' + s.name + '" data-region="' + spotRegion2 + '" data-meta="' + meta + '" data-icon="' + icon + '" data-lat="' + s.lat + '" data-lng="' + s.lng + '" data-member="' + getSpotMemberList(s.member).join(',') + '">'
+        html += '<div class="route-spot-check" data-id="' + escHtml(String(s.db_id || '')) + '" data-spot="' + s.name + '" data-region="' + spotRegion2 + '" data-meta="' + meta + '" data-icon="' + icon + '" data-lat="' + s.lat + '" data-lng="' + s.lng + '" data-member="' + getSpotMemberList(s.member).join(',') + '">'
       + '<div class="rsc-left">'
       + '<div class="rsc-check" onclick="toggleRouteSpot(this)">□</div>'
       + (s.image_url
@@ -8247,7 +8257,10 @@ function renderSpotList() {
     if (spotListSort === 'activity' && !seriesActivityMap) loadSeriesActivity();
     var actOf = function(s) { return seriesActivityMap ? (seriesActivityMap[s.db_id] || null) : null; };
     filtered.sort(function(a, b) {
-      if (spotListSort === 'no') return (a.no == null ? 1e9 : a.no) - (b.no == null ? 1e9 : b.no);
+      if (spotListSort === 'no') {
+        if (a.no == null || b.no == null) return (a.no == null ? 1 : 0) - (b.no == null ? 1 : 0);
+        return spotListNoDesc ? b.no - a.no : a.no - b.no;
+      }
       if (spotListSort === 'activity') {
         var x = actOf(a), y = actOf(b);
         if (x && y && x !== y) return x < y ? 1 : -1;
@@ -8293,7 +8306,9 @@ function renderSpotList() {
   container.appendChild(frag);
 }
 var spotListSort = 'activity'; // 'activity'（活動日順） | 'no'（No.順） | 'new'（登録が新しい順）
+var spotListNoDesc = false;    // No.順のとき true=大きい番号から
 function setSpotListSort(k) {
+  if (k === 'no' && spotListSort === 'no') spotListNoDesc = !spotListNoDesc; // No.順をもう一度押すと逆順
   spotListSort = k;
   renderSpotList();
   try { document.getElementById('spot-list-container').scrollTop = 0; } catch(e) {}
@@ -8308,9 +8323,11 @@ function renderListSortBar() {
   } else if (spotListSort === 'new') {
     note = '・アプリにスポットを登録した順です。過去の活動も順次追加しているため、<b style="color:#d9363e;">メンバーの活動が新しい順ではありません</b>。';
   } else {
-    note = '・スポット番号の順です。TikTokやXで紹介した「No.○」を探すときに使えます。';
+    var nos = SPOTS.map(function(x) { return x.no; }).filter(function(n) { return n != null; });
+    var lo = nos.length ? Math.min.apply(null, nos) : 0, hi = nos.length ? Math.max.apply(null, nos) : 0;
+    note = '・いまは <b>No.' + (spotListNoDesc ? hi + ' → No.' + lo + '（大きい番号から）' : lo + ' → No.' + hi + '（小さい番号から）') + '</b>。もう一度押すと逆順になります。探したい番号が No.' + Math.round((lo + hi) / 2) + ' より大きければ「大きい番号から」が早く見つかります。';
   }
-  bar.innerHTML = '<div class="ls-row">' + btn('activity', '📅 活動日順') + btn('no', '🔢 No.順') + btn('new', '🆕 登録が新しい順') + '</div><div class="ls-note">' + note + '</div>';
+  bar.innerHTML = '<div class="ls-row">' + btn('activity', '📅 活動日順') + btn('no', spotListSort === 'no' ? (spotListNoDesc ? '🔢 No.順 ↓' : '🔢 No.順 ↑') : '🔢 No.順') + btn('new', '🆕 登録が新しい順') + '</div><div class="ls-note">' + note + '</div>';
   return bar;
 }
 function selectSpotFromList(dbId) {
@@ -8614,7 +8631,7 @@ function showView(name) {
   if (target) target.style.display = 'block';
   if (name === 'post') setTimeout(initPostForm, 50);
   if (name === 'feed') loadFeed();
-  if (name === 'route') renderRouteSpotList();
+  if (name === 'route') { renderRouteSpotList(); try { updateRouteStickyCount(); } catch(e) {} refreshRouteStatus().then(loadSavedRoutes); }
   if (name === 'ranking') {
     loadFounderCount();
     renderSpotRanking(currentRankingPeriod);
@@ -8706,6 +8723,11 @@ function toggleRouteSpot(checkEl) {
   const checked = item.classList.toggle('selected');
   checkEl.textContent = checked ? '☑' : '☐';
   checkEl.classList.toggle('checked', checked);
+  updateRouteStickyCount();
+}
+function updateRouteStickyCount() {
+  const el = document.getElementById('rsb-count');
+  if (el) el.textContent = document.querySelectorAll('.route-spot-check.selected').length + 'か所 選択中';
 }
 
 // ── ルート保存 ──
@@ -8715,62 +8737,173 @@ function escapeText(str) {
   return div.innerHTML;
 }
 
-function saveRoute() {
-  const name = document.getElementById('route-name-input').value.trim() || '名称未設定ルート';
-  const selected = [...document.querySelectorAll('.route-spot-check.selected')];
-  if (selected.length === 0) {
-    alert('スポットを1つ以上選択してください。');
+// ルートの保存・一覧（Supabase：saved_routes／get_route_status・save_route RPC）
+window.routeStatus = null;
+async function getRouteSession() {
+  try { const { data } = await getSupabaseClient().auth.getSession(); return data && data.session ? data.session : null; } catch(e) { return null; }
+}
+async function ensureRouteLogin(what) {
+  const st = window.routeStatus || await refreshRouteStatus();
+  if (st && st.login) return true;
+  alert('🔒 ' + what + 'は、X または Google でログインすると使えます。');
+  return false;
+}
+async function refreshRouteStatus() {
+  const session = await getRouteSession();
+  if (!session) { window.routeStatus = { login: false }; renderRouteStatus(); return window.routeStatus; }
+  try {
+    const { data, error } = await getSupabaseClient().rpc('get_route_status');
+    window.routeStatus = error ? { login: false, error: error.message } : data;
+  } catch(e) { window.routeStatus = { login: false }; }
+  if (window.routeStatus && window.routeStatus.login) optimizeUsedThisMonth = window.routeStatus.optimize_used || 0;
+  renderRouteStatus();
+  return window.routeStatus;
+}
+function renderRouteStatus() {
+  const st = window.routeStatus || {};
+  if (st.login) optimizeUsedThisMonth = st.optimize_used || 0; // 端末に残った古い回数より、サーバーの回数を優先
+  const limitEl = document.getElementById('route-save-limit');
+  if (limitEl) {
+    if (!st.login) limitEl.textContent = 'ログインで保存可';
+    else limitEl.textContent = st.save_max >= 999 ? `${st.saved}件（無制限）` : `${st.saved} / ${st.save_max}件`;
+  }
+  try { updateOptimizeBtn(); } catch(e) {}
+}
+function routeSpotsFromIds(ids) {
+  const byId = {};
+  SPOTS.forEach(s => { if (s.db_id) byId[s.db_id] = s; });
+  return (ids || []).map(id => byId[id]).filter(Boolean);
+}
+async function loadSavedRoutes() {
+  const box = document.getElementById('saved-routes-list');
+  if (!box) return;
+  const st = window.routeStatus || await refreshRouteStatus();
+  if (!st || !st.login) {
+    box.innerHTML = '<div style="font-size:12px;color:var(--text-light);padding:14px 4px;">ルートの保存は、X または Google でログインすると使えます。保存したルートはどの端末からでも見られます。</div>';
     return;
   }
-  const today = new Date().toLocaleDateString('ja-JP', { year:'numeric', month:'long' });
-
-  const newItem = document.createElement('div');
-  newItem.className = 'saved-route-item';
-
-  const left = document.createElement('div');
-  left.className = 'sri-left';
-
-  const icon = document.createElement('div');
-  icon.className = 'sri-icon';
-  icon.textContent = '🗺️';
-
-  const info = document.createElement('div');
-  const nameEl = document.createElement('div');
-  nameEl.className = 'sri-name';
-  nameEl.textContent = name;
-  const metaEl = document.createElement('div');
-  metaEl.className = 'sri-meta';
-  metaEl.textContent = `${selected.length}スポット · ${today}`;
-  info.appendChild(nameEl);
-  info.appendChild(metaEl);
-  left.appendChild(icon);
-  left.appendChild(info);
-
-  const btns = document.createElement('div');
-  btns.style.cssText = 'display:flex;gap:6px;';
-  const printBtn = document.createElement('button');
-  printBtn.className = 'btn-secondary';
-  printBtn.style.cssText = 'padding:6px 10px;font-size:11px;';
-  printBtn.textContent = '🖨️';
-  printBtn.onclick = printRoute;
-  const xBtn = document.createElement('button');
-  xBtn.className = 'btn-secondary';
-  xBtn.style.cssText = 'padding:6px 10px;font-size:11px;';
-  xBtn.textContent = '𝕏';
-  btns.appendChild(printBtn);
-  btns.appendChild(xBtn);
-
-  newItem.appendChild(left);
-  newItem.appendChild(btns);
-  document.getElementById('saved-routes-list').prepend(newItem);
-  alert(`「${name}」を保存しました！`);
+  box.innerHTML = '<div style="font-size:12px;color:var(--text-light);padding:14px 4px;">読み込み中...</div>';
+  const { data, error } = await getSupabaseClient().from('saved_routes')
+    .select('id,name,memo,spot_ids,spot_memos,optimized,created_at').order('created_at', { ascending: false });
+  if (error) { box.innerHTML = '<div style="font-size:12px;color:#c0392b;padding:14px 4px;">読み込めませんでした</div>'; return; }
+  window.savedRoutesCache = data || [];
+  if (!window.savedRoutesCache.length) {
+    box.innerHTML = '<div id="saved-routes-empty" style="font-size:12px;color:var(--text-light);padding:14px 4px;">まだ保存したルートはありません</div>';
+    return;
+  }
+  box.innerHTML = window.savedRoutesCache.map(r => {
+    const n = (r.spot_ids || []).length;
+    const d = new Date(r.created_at).toLocaleDateString('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric' });
+    const sb = 'class="btn-secondary" style="padding:6px 9px;font-size:12px;"';
+    return `<div class="saved-route-item">
+      <div class="sri-left" style="min-width:0;cursor:pointer;" onclick="openSavedRoute('${r.id}')">
+        <div class="sri-icon">🗺️</div>
+        <div style="min-width:0;"><div class="sri-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(r.name)}</div>
+        <div class="sri-meta">${n}スポット · ${d}${r.optimized ? ' · ✨最適化済み' : ''}</div></div>
+      </div>
+      <div style="display:flex;gap:5px;flex-shrink:0;">
+        <button ${sb} onclick="openSavedRoute('${r.id}')" aria-label="開く">📂</button>
+        <button ${sb} onclick="printSavedRoute('${r.id}')" aria-label="印刷">🖨️</button>
+        <button ${sb} onclick="shareSavedRoute('${r.id}')" aria-label="Xで共有">𝕏</button>
+        <button ${sb} onclick="deleteSavedRoute('${r.id}')" aria-label="削除">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function findSavedRoute(id) { return (window.savedRoutesCache || []).find(r => r.id === id); }
+function openSavedRoute(id) {
+  const r = findSavedRoute(id);
+  if (!r) return;
+  const container = document.getElementById('route-spot-list');
+  if (!container) return;
+  container.querySelectorAll('.route-spot-check').forEach(item => {
+    item.style.display = 'block';
+    const chk = item.querySelector('.rsc-check');
+    if (item.classList.contains('selected') && chk) toggleRouteSpot(chk);
+  });
+  const memos = r.spot_memos || {};
+  const picked = [];
+  (r.spot_ids || []).forEach(sid => {
+    const item = container.querySelector(`.route-spot-check[data-id="${sid}"]`);
+    if (!item) return;
+    const chk = item.querySelector('.rsc-check');
+    if (chk) toggleRouteSpot(chk);
+    const m = item.querySelector('.rsc-memo');
+    if (m) m.value = memos[sid] || '';
+    picked.push(item);
+  });
+  picked.slice().reverse().forEach(el => container.prepend(el));
+  const nameInput = document.getElementById('route-name-input');
+  if (nameInput) nameInput.value = r.name;
+  const memoInput = document.getElementById('route-memo-input');
+  if (memoInput) memoInput.value = r.memo || '';
+  window.routeOptimizedFlag = !!r.optimized;
+  updateRouteStickyCount();
+  try { window.scrollTo(0, 0); } catch(e) {}
+  try { showEvalToast(`📂「${r.name}」を開きました（${picked.length}か所）`); } catch(e) {}
+}
+function printSavedRoute(id) {
+  const r = findSavedRoute(id);
+  if (!r) return;
+  const memos = r.spot_memos || {};
+  const items = routeSpotsFromIds(r.spot_ids).map(s => ({
+    name: s.name, meta: (s.category || '') + (s.address ? ' · ' + s.address.substring(0, 10) : ''), memo: memos[s.db_id] || ''
+  }));
+  printRoute({ name: r.name, memo: r.memo || '', items });
+}
+function shareSavedRoute(id) {
+  const r = findSavedRoute(id);
+  if (!r) return;
+  const spots = routeSpotsFromIds(r.spot_ids);
+  const list = spots.slice(0, 5).map((s, i) => `${i + 1}. ${s.name}`).join('\n') + (spots.length > 5 ? `\n…ほか${spots.length - 5}か所` : '');
+  const text = `🗺 ${r.name}（${spots.length}か所）\n${list}\n\n#Hearts2Hearts #H2H #聖地巡礼 #TraceH2H`;
+  window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(APP_URL), '_blank', 'noopener');
+}
+async function deleteSavedRoute(id) {
+  const r = findSavedRoute(id);
+  if (!r || !confirm(`「${r.name}」を削除しますか？`)) return;
+  const { error } = await getSupabaseClient().from('saved_routes').delete().eq('id', id);
+  if (error) { alert('削除できませんでした：' + error.message); return; }
+  await refreshRouteStatus();
+  await loadSavedRoutes();
+}
+async function saveRoute() {
+  if (!(await ensureRouteLogin('ルートの保存'))) return;
+  const name = document.getElementById('route-name-input').value.trim() || '名称未設定ルート';
+  const memo = document.getElementById('route-memo-input').value.trim();
+  const selected = [...document.querySelectorAll('.route-spot-check.selected')];
+  if (selected.length === 0) { alert('スポットを1つ以上選択してください。'); return; }
+  const ids = [], memos = {};
+  selected.forEach(el => {
+    const id = el.getAttribute('data-id');
+    if (!id) return;
+    ids.push(id);
+    const m = el.querySelector('.rsc-memo');
+    if (m && m.value.trim()) memos[id] = m.value.trim();
+  });
+  if (!ids.length) { alert('保存できるスポットがありません'); return; }
+  const { error } = await getSupabaseClient().rpc('save_route', {
+    p_name: name, p_memo: memo || null, p_spot_ids: ids, p_spot_memos: memos, p_optimized: !!window.routeOptimizedFlag,
+  });
+  if (error) {
+    if (String(error.message).includes('save_limit')) {
+      const st = window.routeStatus || {};
+      alert(`保存できるのは${st.save_max || ''}件までです。保存済みルートを削除するか、ランクを上げると保存できる件数が増えます。`);
+    } else alert('保存できませんでした：' + error.message);
+    return;
+  }
+  await refreshRouteStatus();
+  await loadSavedRoutes();
+  try { showEvalToast(`💾「${name}」を保存しました`); } catch(e) { alert(`「${name}」を保存しました！`); }
 }
 
 // ── 印刷 ──
-function printRoute() {
-  const name = document.getElementById('route-name-input').value.trim() || 'Trace Hearts2Hearts 巡礼ルート';
-  const memo = document.getElementById('route-memo-input').value.trim();
-  const selected = [...document.querySelectorAll('.route-spot-check.selected')];
+function printRoute(data) {
+  // data（保存済みルート）があればそれを、なければ今選んでいるスポットを印刷
+  const isData = !!(data && Array.isArray(data.items));
+  const name = (isData ? data.name : document.getElementById('route-name-input').value.trim()) || 'Trace Hearts2Hearts 巡礼ルート';
+  const memo = isData ? (data.memo || '') : document.getElementById('route-memo-input').value.trim();
+  const selected = isData ? data.items : [...document.querySelectorAll('.route-spot-check.selected')];
   if (selected.length === 0) {
     alert('スポットを1つ以上選択してください。');
     return;
@@ -8784,9 +8917,9 @@ function printRoute() {
   const list = document.getElementById('print-spots-list');
   list.innerHTML = '';
   selected.forEach((item, i) => {
-    const spotName = item.querySelector('.rsc-name').textContent;
-    const spotMeta = item.querySelector('.rsc-meta').textContent;
-    const spotMemo = item.querySelector('.rsc-memo').value.trim();
+    const spotName = isData ? item.name : item.querySelector('.rsc-name').textContent;
+    const spotMeta = isData ? item.meta : item.querySelector('.rsc-meta').textContent;
+    const spotMemo = isData ? (item.memo || '') : item.querySelector('.rsc-memo').value.trim();
 
     const div = document.createElement('div');
     div.className = 'print-spot';
@@ -9263,6 +9396,10 @@ function filterRouteRegion(el, region) {
   let lastKnownReferralCount = 0;
 
   function getRouteLimit() {
+    // サーバー（get_route_status）の判定があればそれを正とする
+    if (window.routeStatus && window.routeStatus.login) {
+      return { optimizePerMonth: window.routeStatus.optimize_max, saveMax: window.routeStatus.save_max };
+    }
     return ROUTE_LIMITS[currentUserRank] || ROUTE_LIMITS.bronze;
   }
 
@@ -9300,7 +9437,15 @@ function filterRouteRegion(el, region) {
     const remEl = document.getElementById('route-opt-remaining');
     if (remEl) remEl.textContent = `${Math.max(0, remaining)} / ${limit.optimizePerMonth}回`;
     const rankNameEl = document.getElementById('route-rank-name');
-    if (rankNameEl) rankNameEl.textContent = RANK_DISPLAY[currentUserRank] || RANK_DISPLAY.bronze;
+    const rsRank = window.routeStatus && window.routeStatus.login ? window.routeStatus.rank : null;
+    if (rankNameEl) rankNameEl.textContent = rsRank === 'premium' ? '🌟 プレミアム' : (RANK_DISPLAY[rsRank || currentUserRank] || RANK_DISPLAY.bronze);
+    if (remEl && limit.optimizePerMonth >= 999) remEl.textContent = '無制限';
+    const rsb = document.getElementById('rsb-opt');
+    if (rsb) {
+      const off = limit.optimizePerMonth === 0 || remaining <= 0;
+      rsb.classList.toggle('off', off);
+      rsb.textContent = limit.optimizePerMonth === 0 ? '🔒 最適化' : `✨ 最適化（残${Math.max(0, remaining)}）`;
+    }
     if (!btn) return;
     if (limit.optimizePerMonth === 0) {
       btn.className = 'btn-optimize locked';
@@ -9316,7 +9461,8 @@ function filterRouteRegion(el, region) {
     }
   }
 
-  function optimizeRoute() {
+  async function optimizeRoute() {
+    if (!(await ensureRouteLogin('ルートの最適化'))) return;
     const limit = getRouteLimit();
     const remaining = limit.optimizePerMonth - optimizeUsedThisMonth;
     if (limit.optimizePerMonth === 0) {
@@ -9335,7 +9481,19 @@ function filterRouteRegion(el, region) {
       alert('2箇所以上のスポットを選択してください。');
       return;
     }
+    // 回数はデータベース側で数える（端末のデータを消しても戻らない）
+    try {
+      const { error } = await getSupabaseClient().rpc('use_route_optimize');
+      if (error) {
+        if (String(error.message).includes('optimize_limit')) alert('今月の最適化回数を使い切りました。来月1日にリセットされます。');
+        else alert('最適化できませんでした：' + error.message);
+        await refreshRouteStatus();
+        return;
+      }
+    } catch(e) { alert('通信エラーで最適化できませんでした'); return; }
     optimizeUsedThisMonth++;
+    if (window.routeStatus) window.routeStatus.optimize_used = optimizeUsedThisMonth;
+    window.routeOptimizedFlag = true;
     updateOptimizeBtn();
 
     const spots = selected.map(el => ({
@@ -9436,7 +9594,7 @@ function filterRouteRegion(el, region) {
     const limitEl = document.getElementById('route-save-limit');
     if (limitEl) {
       const limit = getRouteLimit();
-      limitEl.textContent = limit.saveMax === 999 ? '無制限' : `${limit.saveMax}件まで保存可`;
+      limitEl.textContent = '読み込み中';
     }
     // localStorage から復元
     try {
