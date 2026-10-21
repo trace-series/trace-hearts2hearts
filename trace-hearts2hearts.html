@@ -340,6 +340,20 @@
     margin-bottom: 2px;
   }
 
+  /* スポット番号（TikTok等の「No.○で検索」案内用） */
+  .card-no {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--purple-mid);
+    border-radius: 6px;
+    padding: 1px 6px;
+    margin-right: 6px;
+    vertical-align: 2px;
+    letter-spacing: 0.02em;
+  }
+
   .card-sub {
     font-size: 11px;
     color: var(--text-light);
@@ -2457,7 +2471,13 @@
       .gal-tile-ph { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:28px; }
       .gal-video-mark { position:absolute; right:4px; top:4px; font-size:12px; background:rgba(0,0,0,0.55); color:#fff; border-radius:6px; padding:1px 4px; }
       #gallery-lightbox { position:fixed; inset:0; z-index:3000; background:rgba(0,0,0,0.75); display:none; align-items:center; justify-content:center; padding:16px; }
-      #gallery-lightbox-body { background:#fff; border-radius:18px; padding:12px; width:100%; max-width:480px; max-height:90vh; overflow-y:auto; }
+      #gallery-lightbox-body { background:#fff; border-radius:18px; padding:12px; width:100%; max-width:480px; max-height:90vh; max-height:85dvh; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; box-sizing:border-box; }
+      /* 縦長の動画・写真でも下の情報や管理欄まで届くよう、メディアの高さを抑える */
+      #gallery-lightbox-body img { max-height:45vh !important; max-height:45dvh !important; }
+      #gallery-lightbox-body .video-embed-ph[data-ratio="9/16"],
+      #gallery-lightbox-body iframe[data-ratio="9/16"] { width:auto !important; height:50vh; height:50dvh; max-height:none !important; max-width:100%; margin:0 auto 8px !important; }
+      /* TikTokなど固定の高さ（740px）で埋め込む動画も画面の半分強に抑える */
+      #gallery-lightbox-body iframe:not([data-ratio]) { max-height:55vh; max-height:55dvh; }
     </style>
 
     <div class="feed-seg-wrap">
@@ -4533,6 +4553,7 @@ function openGalleryItem(el) {
     ? `<img src="${escHtml(m.url)}" style="width:100%;max-height:60vh;object-fit:contain;border-radius:12px;background:#000;display:block;">`
     : renderVideoBlock(m.url, m.thumb_url);
   body.innerHTML = `
+    ${galleryIsEditor ? `<div style="margin:-14px 0 10px;">${galleryEditorHtml(m)}</div>` : ''}
     ${media}
     <div style="padding:12px 4px 0;">
       <div style="font-size:15px;font-weight:700;color:var(--purple-deep);line-height:1.4;margin-bottom:4px;">${m.no != null ? 'No.' + m.no + ' ' : ''}${escHtml(m.spot_name)}</div>
@@ -4542,8 +4563,8 @@ function openGalleryItem(el) {
         <button data-spot-name="${escHtml(m.spot_name)}" onclick="closeGalleryLightbox();jumpToSpotFromFeed(this)" style="flex:1;min-width:140px;border:none;background:linear-gradient(135deg,var(--purple-mid),var(--purple-deep));color:#fff;border-radius:12px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;">📍 このスポットを見る</button>
         ${m.source_url ? `<a href="${escHtml(m.source_url)}" target="_blank" rel="noopener" style="flex:1;min-width:110px;text-align:center;border:1.5px solid var(--border);background:#fff;color:var(--purple-deep);border-radius:12px;padding:10px;font-size:13px;font-weight:700;text-decoration:none;">🔗 元ネタ</a>` : ''}
       </div>
-      ${galleryIsEditor ? galleryEditorHtml(m) : ''}
     </div>`;
+  body.scrollTop = 0;
   box.style.display = 'flex';
 }
 
@@ -4730,6 +4751,7 @@ function playVideoEmbed(el) {
   iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
   iframe.setAttribute('allowfullscreen', '');
   iframe.setAttribute('loading', 'lazy');
+  if (ratio) iframe.setAttribute('data-ratio', ratio);
   iframe.style.cssText = 'width:100%;border:0;border-radius:12px;display:block;background:#000;margin-bottom:8px;' +
     (ratio ? `aspect-ratio:${ratio};${ratio === '9/16' ? 'max-height:70vh;' : ''}` : `height:${h || 600}px;background:#fff;`);
   el.replaceWith(iframe);
@@ -5477,7 +5499,7 @@ function openSeriesPicker() {
     </div>
     <div style="font-size:11px;color:var(--text-mid);padding:0 16px 8px;">選ぶと、その旅（番組）で訪れたスポットだけを地図に表示します。</div>
     <div style="display:flex;gap:6px;padding:0 16px 8px;flex-wrap:wrap;">${sortBtn('activity', '📅 活動日順')}${sortBtn('new', '🆕 登録が新しい順')}${sortBtn('count', '📍 スポットが多い順')}${activeSeries ? `<button type="button" onclick="clearSeries();closeSeriesPicker()" style="margin-left:auto;border:1.5px solid #c0392b;background:#fff;color:#c0392b;border-radius:14px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✕ 解除</button>` : ''}</div>
-    ${seriesPickerSort === 'activity' ? `<div style="font-size:11px;color:var(--text-mid);padding:0 16px 8px;line-height:1.5;">・活動日は、写真の出典（YouTube・Instagram・Xなど）の公開日、または手入力した活動月をもとにした目安です。日付が分からない旅は一番下に並びます。${seriesActivityMap ? '' : '<br>読み込み中...'}</div>` : ''}
+    ${seriesPickerSort === 'activity' ? `<div style="font-size:11px;color:var(--text-mid);padding:0 16px 8px;line-height:1.5;">・活動日は、写真の出典（YouTube・Instagram・Xなど）の公開日、または手入力した活動月をもとにした目安で、<b style="color:#d9363e;">実際の活動日を保証するものではありません</b>。日付が分からない旅は一番下に並びます。${seriesActivityMap ? '' : '<br>読み込み中...'}</div>` : ''}
     ${seriesPickerSort === 'new' ? '<div style="font-size:11px;color:var(--text-mid);padding:0 16px 8px;line-height:1.5;">・アプリにスポットを登録した順です。過去の活動も順次追加しているため、<b style="color:#d9363e;">メンバーの活動が新しい順ではありません</b>。</div>' : ''}
     <div style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 12px 20px;">${rows || '<div style="padding:24px;text-align:center;color:var(--text-light);font-size:13px;">まだシリーズがありません</div>'}</div>
   </div>`;
@@ -6965,7 +6987,14 @@ async function applyAdminCrop() {
 
 function openCard(spot) {
   currentSpot = spot;
-  document.getElementById('card-title').textContent = spot.name;
+  const cardTitleEl = document.getElementById('card-title');
+  cardTitleEl.textContent = spot.name;
+  if (spot.no != null) {
+    const noEl = document.createElement('span');
+    noEl.className = 'card-no';
+    noEl.textContent = 'No.' + spot.no;
+    cardTitleEl.prepend(noEl);
+  }
   document.getElementById('card-sub').innerHTML = linkifyText(spot.sub);
         if (spot.image_url) {
           const thumb = document.getElementById('card-thumb');
