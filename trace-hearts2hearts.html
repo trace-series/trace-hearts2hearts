@@ -1386,7 +1386,10 @@
     main { padding-top: 0 !important; padding-bottom: 0 !important; }
     #view-map, #view-ranking, #view-feed, #view-post, #view-profile, #view-route, #view-terms, #view-privacy, #view-pointrules { display: none !important; }
     #print-area { display: block !important; }
+    #app-footer, #map-back-btn, #route-sticky-bar { display: none !important; }
   }
+  .print-leg { margin: -2px 0 8px 18px; padding: 2px 0 2px 14px; border-left: 2px dashed #bbb; font-size: 11px; color: #555; }
+  .print-route-summary { font-size: 12px; color: #333; margin: 0 0 12px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; }
 
   #print-area {
     display: none;
@@ -2023,6 +2026,14 @@
 
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* リスト表示中に、下中央に出す「地図に戻る」ボタン */
+  #map-back-btn {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px)); z-index: 120;
+    border: none; border-radius: 22px; padding: 11px 22px;
+    background: linear-gradient(135deg, var(--purple-mid), var(--purple-deep)); color: #fff;
+    font-size: 14px; font-weight: 700; box-shadow: 0 6px 16px rgba(0,0,0,0.22); cursor: pointer;
+  }
   #list-view-toggle {
     flex-shrink: 0;
     white-space: nowrap;
@@ -2051,6 +2062,7 @@
   .map-container.list-mode { background: #f9f7ff; }
   .map-container.list-mode #google-map { visibility: hidden; }
   .map-container.list-mode #spot-list-container { top: 88px; }
+  #spot-list-container { padding-bottom: 90px; box-sizing: border-box; } /* 「地図に戻る」ボタンに最後の1件が隠れないように */
   #origin-bar {
     display: none;
     background: linear-gradient(135deg,#333333,#333333);
@@ -2227,6 +2239,7 @@
 
   <!-- MAP VIEW -->
   <div id="view-map">
+    <button type="button" id="map-back-btn" onclick="toggleListView()" style="display:none;">🗺️ 地図に戻る</button>
   <!-- お知らせバナー -->
   <div id="notice-banner-wrap" style="display:none;margin:8px 8px 0;border-radius:12px;overflow:hidden;background:#1a6fa8;border:1px solid rgba(94,195,230,0.3);">
     <div id="notice-banner-header" onclick="toggleNoticeBanner()" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;">
@@ -4983,6 +4996,15 @@ function applyFilters() {
 let cachedUserLat = null;
 let cachedUserLng = null;
 
+// 2地点間の移動の目安（直線距離から）。近ければ徒歩、遠ければ交通手段の案内にする
+function routeLegInfo(a, b) {
+  if (!a || !b || a.lat == null || b.lat == null || isNaN(a.lat) || isNaN(b.lat)) return null;
+  const km = haversineKm(a.lat, a.lng, b.lat, b.lng);
+  const kmTxt = km < 1 ? Math.round(km * 1000) + 'm' : (Math.round(km * 10) / 10) + 'km';
+  if (km <= 2) return { km, walkMin: Math.max(1, Math.round(km * 1000 / 80)), text: `🚶 徒歩 約${Math.max(1, Math.round(km * 1000 / 80))}分（${kmTxt}）` };
+  if (km <= 100) return { km, walkMin: null, text: `🚃 直線 約${kmTxt}（電車・車などで移動）` };
+  return { km, walkMin: null, text: `✈️ 直線 約${kmTxt}（新幹線・飛行機などで移動）` };
+}
 function haversineKm(lat1, lng1, lat2, lng2) {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -8156,6 +8178,8 @@ function updateFloatingButtons() {
   if (nearBtn) nearBtn.style.display = (!isCardOpen && !listViewOpen && !noticeOpen) ? 'flex' : 'none';
   if (listBtn) listBtn.style.display = isCardOpen ? 'none' : '';
   if (mc) mc.classList.toggle('list-mode', listViewOpen);
+  var backBtn = document.getElementById('map-back-btn');
+  if (backBtn) backBtn.style.display = listViewOpen ? 'block' : 'none';
 }
 document.addEventListener('DOMContentLoaded', function() { updateFloatingButtons(); });
 // ── 写真ビューア（一覧・ルート保存リストの小さな写真をタップで拡大表示） ──
@@ -8723,6 +8747,7 @@ function toggleRouteSpot(checkEl) {
   const checked = item.classList.toggle('selected');
   checkEl.textContent = checked ? '☑' : '☐';
   checkEl.classList.toggle('checked', checked);
+  window.routeOptimizedFlag = false; // 選び直したら最適化はやり直し
   updateRouteStickyCount();
 }
 function updateRouteStickyCount() {
@@ -8847,9 +8872,10 @@ function printSavedRoute(id) {
   if (!r) return;
   const memos = r.spot_memos || {};
   const items = routeSpotsFromIds(r.spot_ids).map(s => ({
-    name: s.name, meta: (s.category || '') + (s.address ? ' · ' + s.address.substring(0, 10) : ''), memo: memos[s.db_id] || ''
+    name: s.name, meta: (s.category || '') + (s.address ? ' · ' + s.address.substring(0, 10) : ''), memo: memos[s.db_id] || '',
+    lat: s.lat, lng: s.lng
   }));
-  printRoute({ name: r.name, memo: r.memo || '', items });
+  printRoute({ name: r.name, memo: r.memo || '', items, optimized: !!r.optimized });
 }
 function shareSavedRoute(id) {
   const r = findSavedRoute(id);
@@ -8916,6 +8942,21 @@ function printRoute(data) {
   memoBox.style.display = memo ? 'block' : 'none';
   const list = document.getElementById('print-spots-list');
   list.innerHTML = '';
+  const optimizedPrint = isData ? !!data.optimized : !!window.routeOptimizedFlag;
+  const pos = selected.map(it => isData ? { lat: it.lat, lng: it.lng }
+    : { lat: parseFloat(it.getAttribute('data-lat')), lng: parseFloat(it.getAttribute('data-lng')) });
+  let sumKm = 0, sumWalk = 0, allWalk = true;
+  for (let k = 0; k < pos.length - 1; k++) {
+    const lg = routeLegInfo(pos[k], pos[k + 1]);
+    if (!lg) { allWalk = false; continue; }
+    sumKm += lg.km;
+    if (lg.walkMin != null) sumWalk += lg.walkMin; else allWalk = false;
+  }
+  const summary = document.createElement('div');
+  summary.className = 'print-route-summary';
+  summary.textContent = `${selected.length}か所` + (selected.length > 1 ? `・直線距離の合計 約${Math.round(sumKm * 10) / 10}km` + (allWalk ? `・徒歩の目安 約${sumWalk}分` : '・徒歩以外の移動あり') : '')
+    + (optimizedPrint ? '　✨ 最適化した順番' : '　（選んだ順番）');
+  list.appendChild(summary);
   selected.forEach((item, i) => {
     const spotName = isData ? item.name : item.querySelector('.rsc-name').textContent;
     const spotMeta = isData ? item.meta : item.querySelector('.rsc-meta').textContent;
@@ -8959,7 +9000,21 @@ function printRoute(data) {
     }
 
     list.appendChild(div);
+    if (i < selected.length - 1) {
+      const lg = routeLegInfo(pos[i], pos[i + 1]);
+      if (lg) {
+        const legEl = document.createElement('div');
+        legEl.className = 'print-leg';
+        legEl.textContent = '↓ ' + lg.text;
+        list.appendChild(legEl);
+      }
+    }
   });
+  const note = document.createElement('div');
+  note.className = 'print-leg';
+  note.style.cssText = 'border:none;margin:10px 0 0;padding:0;color:#888;';
+  note.textContent = '※距離は2地点の直線距離、徒歩は分速80mで計算した目安です。実際の道のり・乗り換えは地図アプリで確認してください。';
+  list.appendChild(note);
   window.print();
 }
 
@@ -9497,15 +9552,25 @@ function filterRouteRegion(el, region) {
     updateOptimizeBtn();
 
     const spots = selected.map(el => ({
+      el,
       name: el.querySelector('.rsc-name').textContent,
       meta: el.querySelector('.rsc-meta').textContent,
       lat: parseFloat(el.getAttribute('data-lat') || '35.67'),
       lng: parseFloat(el.getAttribute('data-lng') || '139.70'),
     }));
     const optimized = greedyRoute(spots);
-    const totalDist = estimateDistance(optimized);
-    const totalMin = Math.round(totalDist * 12 + optimized.length * 15);
-    showOptimizeResult(optimized, totalDist, totalMin);
+    // 選んだスポットを最適化した順番で一覧の先頭に並べ直す（保存・印刷もこの順番になる）
+    const listEl = document.getElementById('route-spot-list');
+    if (listEl) optimized.slice().reverse().forEach(sp => listEl.prepend(sp.el));
+    window.routeOptimizedFlag = true;
+    let totalDist = 0, walkMin = 0, allWalk = true;
+    for (let i = 0; i < optimized.length - 1; i++) {
+      const leg = routeLegInfo(optimized[i], optimized[i + 1]);
+      if (!leg) continue;
+      totalDist += leg.km;
+      if (leg.walkMin != null) walkMin += leg.walkMin; else allWalk = false;
+    }
+    showOptimizeResult(optimized, Math.round(totalDist * 10) / 10, allWalk ? walkMin : null);
   }
 
   function greedyRoute(spots) {
@@ -9541,8 +9606,10 @@ function filterRouteRegion(el, region) {
     stats.innerHTML = '';
     const statData = [
       { num: spots.length + '箇所', label: '巡礼スポット' },
-      { num: distKm + 'km', label: '総移動距離' },
-      { num: Math.floor(minutes/60) + 'h' + (minutes%60) + 'm', label: '目安所要時間' },
+      { num: distKm + 'km', label: '直線距離の合計' },
+      minutes != null
+        ? { num: (minutes >= 60 ? Math.floor(minutes/60) + '時間' : '') + (minutes%60) + '分', label: '徒歩の目安' }
+        : { num: '交通機関', label: '徒歩以外の移動あり' },
     ];
     statData.forEach(s => {
       const item = document.createElement('div');
@@ -9572,11 +9639,8 @@ function filterRouteRegion(el, region) {
       const transit = document.createElement('div');
       transit.className = 'route-step-transit';
       if (i < spots.length - 1) {
-        const dx = (spots[i+1].lng - spot.lng) * 91;
-        const dy = (spots[i+1].lat - spot.lat) * 111;
-        const d = Math.round(Math.sqrt(dx*dx + dy*dy) * 10) / 10;
-        const t = Math.round(d * 12);
-        transit.textContent = `↓ 次まで約${d}km・約${t}分`;
+        const leg = routeLegInfo(spot, spots[i + 1]);
+        transit.textContent = leg ? '↓ ' + leg.text : '';
       }
       info.appendChild(name);
       info.appendChild(transit);
