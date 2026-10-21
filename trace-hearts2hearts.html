@@ -5089,17 +5089,29 @@ async function initMap() {
   galleryCtl.index = -1; // マイナス値でズームボタンより上に配置
   map.controls[google.maps.ControlPosition.RIGHT_CENTER].push(galleryCtl);
 
-  // 管理者だけ：未整備スポットの一覧ボタン（写真ボタンの上）
+  // リスト（スポット一覧）ボタン：写真ボタンの上。TikTokの「No.○で探す」導線として目立つ場所に置く
+  const listCtl = document.createElement('button');
+  listCtl.type = 'button';
+  listCtl.id = 'list-map-ctl';
+  listCtl.title = 'スポット一覧';
+  listCtl.setAttribute('aria-label', 'スポット一覧を開く');
+  listCtl.style.cssText = 'width:40px;height:48px;margin:0 10px 8px 0;background:#fff;border:none;border-radius:8px;box-shadow:rgba(0,0,0,0.3) 0 1px 4px -1px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:0;';
+  listCtl.innerHTML = '<span style="font-size:18px;line-height:1;">📋</span><span style="font-size:9px;font-weight:700;color:#555;line-height:1;">リスト</span>';
+  listCtl.addEventListener('click', function() { if (!listViewOpen) toggleListView(); });
+  listCtl.index = -2; // 写真ボタン（-1）より上
+  map.controls[google.maps.ControlPosition.RIGHT_CENTER].push(listCtl);
+
+  // 管理者だけ：未整備スポットの一覧ボタン（左側に固定）
   const adminListCtl = document.createElement('button');
   adminListCtl.type = 'button';
   adminListCtl.id = 'admin-list-ctl';
   adminListCtl.title = '管理一覧';
-  adminListCtl.style.cssText = 'width:40px;height:48px;margin:0 10px 8px 0;background:#fff4f4;border:1.5px dashed #e08a8a;border-radius:8px;box-shadow:rgba(0,0,0,0.3) 0 1px 4px -1px;cursor:pointer;display:none;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:0;';
+  adminListCtl.style.cssText = 'width:40px;height:48px;margin:0 0 8px 10px;background:#fff4f4;border:1.5px dashed #e08a8a;border-radius:8px;box-shadow:rgba(0,0,0,0.3) 0 1px 4px -1px;cursor:pointer;display:none;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:0;';
   adminListCtl.innerHTML = '<span style="font-size:17px;line-height:1;">🔧</span><span style="font-size:9px;font-weight:700;color:#c0392b;line-height:1;">管理</span>';
   adminListCtl.addEventListener('click', function() { openAdminListPanel(); });
-  adminListCtl.index = -2;
+  adminListCtl.index = 1;
   window.adminListCtlEl = adminListCtl;
-  map.controls[google.maps.ControlPosition.RIGHT_CENTER].push(adminListCtl);
+  map.controls[google.maps.ControlPosition.LEFT_CENTER].push(adminListCtl);
   refreshAdminListCtl();
 
   // ローディング非表示
@@ -8176,7 +8188,7 @@ function updateFloatingButtons() {
   var noticeOpen = !!(nWrap && nBody && nWrap.style.display !== 'none' && nBody.style.display !== 'none');
   var isCardOpen = (typeof cardOpen !== 'undefined') && cardOpen;
   if (nearBtn) nearBtn.style.display = (!isCardOpen && !listViewOpen && !noticeOpen) ? 'flex' : 'none';
-  if (listBtn) listBtn.style.display = isCardOpen ? 'none' : '';
+  if (listBtn) listBtn.style.display = 'none'; // リストボタンは地図右側（写真ボタンの上）に移動
   if (mc) mc.classList.toggle('list-mode', listViewOpen);
   var backBtn = document.getElementById('map-back-btn');
   if (backBtn) backBtn.style.display = listViewOpen ? 'block' : 'none';
