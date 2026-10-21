@@ -6375,6 +6375,12 @@ async function openAdminNotices(msgText) {
   adminSheet('admin-notice-modal', `${adminSheetHeader('📢 お知らせ', 'admin-notice-modal')}<div style="text-align:center;padding:24px;color:var(--text-light);">読み込み中...</div>`);
   const { data, error } = await getSupabaseClient().rpc('admin_list_notices');
   adminNoticeList = error ? [] : (data || []);
+  // 地図の上の「お知らせ」帯と同じ並び（sort_orderの小さい順、未設定は後ろ、同じなら新しい順）
+  adminNoticeList.sort((a, b) => {
+    const x = a.sort_order == null ? 1e9 : a.sort_order, y = b.sort_order == null ? 1e9 : b.sort_order;
+    if (x !== y) return x - y;
+    return String(b.created_at || '').localeCompare(String(a.created_at || ''));
+  });
   const rows = adminNoticeList.map((n, k) => `<div style="padding:10px 4px;border-bottom:1px solid var(--border);">
       <div style="display:flex;align-items:center;gap:6px;">
         <span style="font-size:10px;font-weight:700;border-radius:6px;padding:1px 6px;color:#fff;background:${n.is_active ? '#1a7f3c' : '#999'};">${n.is_active ? '公開中' : '非表示'}</span>
@@ -6385,6 +6391,8 @@ async function openAdminNotices(msgText) {
       <div style="display:flex;gap:6px;margin-top:8px;">
         <button onclick="toggleAdminNotice(${k})" style="border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text-mid);">${n.is_active ? '非表示にする' : '公開する'}</button>
         <button onclick="editAdminNotice(${k})" style="border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;color:var(--purple-deep);">編集</button>
+        <button onclick="moveAdminNotice(${k},-1)" ${k === 0 ? 'disabled' : ''} aria-label="上へ" style="border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text-mid);${k === 0 ? 'opacity:.35;' : ''}">▲</button>
+        <button onclick="moveAdminNotice(${k},1)" ${k === adminNoticeList.length - 1 ? 'disabled' : ''} aria-label="下へ" style="border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text-mid);${k === adminNoticeList.length - 1 ? 'opacity:.35;' : ''}">▼</button>
         <button onclick="deleteAdminNotice(${k})" style="border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:6px 10px;font-size:12px;cursor:pointer;margin-left:auto;">🗑</button>
       </div>
     </div>`).join('');
@@ -6395,7 +6403,7 @@ async function openAdminNotices(msgText) {
     ${admLabel('本文（任意）')}<textarea id="adm-notice-body" rows="3" style="${ADM_INPUT}resize:vertical;"></textarea>
     <div id="adm-msg" style="font-size:12px;color:#c0392b;margin-top:8px;min-height:16px;">${msgText || ''}</div>
     <button id="adm-save-btn" onclick="saveAdminNotice()" style="width:100%;border:none;background:#c0392b;color:#fff;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;">公開する</button>
-    <div style="font-size:12px;font-weight:700;color:var(--text-mid);margin:16px 0 4px;">これまでのお知らせ</div>
+    <div style="font-size:12px;font-weight:700;color:var(--text-mid);margin:16px 0 4px;">これまでのお知らせ <span style="font-weight:400;color:var(--text-light);">（上から順に「お知らせ」帯に並びます。▲▼で入れ替え）</span></div>
     <div>${rows || '<div style="padding:16px;text-align:center;color:var(--text-light);font-size:13px;">まだありません</div>'}</div>`);
 }
 function editAdminNotice(k) {
@@ -6430,6 +6438,15 @@ async function deleteAdminNotice(k) {
   const { error } = await getSupabaseClient().rpc('admin_delete_notice', { p_id: String(n.id) });
   if (error) { alert('削除できませんでした：' + error.message); return; }
   afterAdminNoticeChange('削除しました');
+}
+async function moveAdminNotice(k, dir) {
+  const j = k + dir;
+  if (j < 0 || j >= adminNoticeList.length) return;
+  const list = adminNoticeList.slice();
+  [list[k], list[j]] = [list[j], list[k]];
+  const { error } = await getSupabaseClient().rpc('admin_reorder_notices', { p_ids: list.map(n => String(n.id)) });
+  if (error) { alert('並び替えできませんでした：' + error.message); return; }
+  afterAdminNoticeChange('↕ 並び順を変えました');
 }
 function afterAdminNoticeChange(text) {
   try { loadNotices(); } catch(e) {}
