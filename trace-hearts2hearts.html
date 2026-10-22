@@ -3818,6 +3818,26 @@ const GROUP_CONFIG = {
   activeEvents: [
   ],
 
+  // — スポット限定のポイントアップ（イルミネーションなど）—
+  //   spotNos：対象スポットのNo.／spotNamePattern：スポット名で対象を決める（あとから追加するスポット用）
+  //   announceStart〜start前日：予告ポップアップ／start〜end：開催中ポップアップ＆倍率が付く
+  spotBoosts: [
+    // スポットごとに点灯期間が違うので、spots に1か所ずつ期間を書く（ポップアップは1枚にまとめて表示）
+    { id: 'illumi2026', emoji: '🎄', name: 'イルミネーション聖地 ポイントアップ',
+      label: '🎄イルミ', announceStart: '2026-11-01', multiplier: 1.5,
+      desc: '点灯期間中のイルミネーション聖地への巡礼報告・評価が',
+      spots: [
+        { no: 137, name: 'けやき坂（六本木ヒルズ）', start: '2026-11-05', end: '2026-12-25' },
+        { no: 19,  name: '麻布台ヒルズ',             start: '2026-11-21', end: '2026-12-25' },  // クリスマスマーケット期間（イルミ期間は未発表）
+        { no: 12,  name: '東京ミッドタウン',         start: '2026-11-26', end: '2026-12-25' },
+        { no: 73,  name: '東急プラザ表参道',         start: '2026-11-18', end: '2027-01-12' },  // 2026年は未発表のため昨年と同じ期間で仮置き
+      ] },
+    { id: 'usj20261128', emoji: '🎢', name: 'USJ 特別ポイントアップ',
+      label: '🎢USJ', spotNamePattern: 'ユニバーサル|USJ',
+      announceStart: '2026-11-01', start: '2026-11-28', end: '2026-11-28', multiplier: 1.5,
+      desc: '11/28限定で、USJのスポットへの巡礼報告・評価が' },
+  ],
+
   // — バージョン管理 —
   appVersion: '1.0.0',
   updateNotes: [
@@ -3948,12 +3968,17 @@ function buildPopupQueue() {
     const key = 'event_' + activeEv.id;
     if (!hasDismissedPopupToday(key)) queue.push({ kind: 'event', data: activeEv, key });
   }
+  for (const item of getSpotBoostPopups()) {
+    const key = 'boost_' + item.boost.id + '_' + item.phase;
+    if (!hasDismissedPopupToday(key)) queue.push({ kind: 'boost', data: item, key });
+  }
   return queue;
 }
 function showNextPopupInQueue() {
   if (!_popupQueue.length) return;
   const next = _popupQueue.shift();
   if (next.kind === 'birthday') showBirthdayPopup(next.data, next.key);
+  else if (next.kind === 'boost') showBoostPopup(next.data, next.key);
   else showEventPopup(next.data, next.key);
 }
 
@@ -3965,6 +3990,91 @@ function getActiveEvent() {
     if (todayStr >= ev.start && todayStr <= ev.end) return ev;
   }
   return null;
+}
+
+// ── スポット限定ポイントアップ（イルミネーションなど）──
+function _todayStr() {
+  const now = new Date();
+  return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+}
+// spots（スポットごとの期間）がある場合は、グループ全体の start/end を自動で出す
+function _boostRange(b) {
+  if (!b.spots || !b.spots.length) return { start: b.start, end: b.end };
+  return { start: b.spots.map(x => x.start).sort()[0], end: b.spots.map(x => x.end).sort().slice(-1)[0] };
+}
+function _boostMatchesSpot(b, spot) {
+  if (!spot) return false;
+  if (b.spotNos && spot.no != null && b.spotNos.includes(Number(spot.no))) return true;
+  if (b.spotNamePattern) { try { if (new RegExp(b.spotNamePattern, 'i').test(spot.name || '')) return true; } catch (e) {} }
+  return false;
+}
+// 今日開催中で、このスポットが対象のポイントアップのうち最大のもの
+function getSpotBoost(spot) {
+  const t = _todayStr();
+  let best = null;
+  for (const b of (GROUP_CONFIG.spotBoosts || [])) {
+    if (b.spots && b.spots.length) {
+      const hit = spot && spot.no != null && b.spots.find(x => x.no === Number(spot.no) && t >= x.start && t <= x.end);
+      if (hit && (!best || b.multiplier > best.multiplier)) best = b;
+      continue;
+    }
+    if (t >= b.start && t <= b.end && _boostMatchesSpot(b, spot)) {
+      if (!best || b.multiplier > best.multiplier) best = b;
+    }
+  }
+  return best;
+}
+// ポップアップに出すもの（予告期間 or 開催中）
+function getSpotBoostPopups() {
+  const t = _todayStr();
+  const list = [];
+  for (const b of (GROUP_CONFIG.spotBoosts || [])) {
+    const r = _boostRange(b);
+    const anyLive = b.spots && b.spots.length ? b.spots.some(x => t >= x.start && t <= x.end) : (t >= r.start && t <= r.end);
+    if (anyLive) list.push({ boost: b, phase: 'live' });
+    else if (b.announceStart && t >= b.announceStart && t < r.start) list.push({ boost: b, phase: 'pre' });
+  }
+  return list;
+}
+function _fmtMD(d) { const p = d.split('-'); return Number(p[1]) + '/' + Number(p[2]); }
+function closeBoostPopup(dismiss, key) {
+  if (dismiss) dismissPopupToday(key);
+  const el = document.getElementById('boost-overlay');
+  if (el) el.remove();
+  showNextPopupInQueue();
+}
+function showBoostPopup(item, dismissKey) {
+  const b = item.boost;
+  const isPre = item.phase === 'pre';
+  const r = _boostRange(b);
+  const t = _todayStr();
+  let periodHtml;
+  if (b.spots && b.spots.length) {
+    periodHtml = b.spots.slice().sort((x, y) => x.start < y.start ? -1 : 1).map(x => {
+      const st = (t >= x.start && t <= x.end) ? '<span style="color:#ffd700;font-weight:700;">点灯中</span>' : (t > x.end ? '<span style="opacity:.5;">終了</span>' : '');
+      return `<div style="display:flex;justify-content:space-between;gap:8px;padding:2px 0;"><span style="text-align:left;">${x.name}</span><span style="white-space:nowrap;">${_fmtMD(x.start)}〜${_fmtMD(x.end)} ${st}</span></div>`;
+    }).join('');
+  } else {
+    periodHtml = (isPre ? 'スタート：' : '') + (r.start === r.end ? _fmtMD(r.start) + ' 限定' : _fmtMD(r.start) + ' 〜 ' + _fmtMD(r.end));
+  }
+  const overlay = document.createElement('div');
+  overlay.id = 'boost-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(61,26,94,0.85);display:flex;align-items:center;justify-content:center;animation:fadeInBd 0.4s ease;';
+  overlay.innerHTML = `
+    <div style="background:linear-gradient(135deg,#0f1b3d,#7b1a3e);border-radius:24px;padding:32px 28px;max-width:320px;width:90%;text-align:center;color:#fff;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+      <button onclick="closeBoostPopup(false,'${dismissKey}')" style="position:absolute;top:14px;right:16px;background:none;border:none;color:rgba(255,255,255,0.6);font-size:22px;cursor:pointer;">×</button>
+      <div style="font-size:40px;margin-bottom:8px;">${b.emoji || '✨'}</div>
+      <div style="font-size:13px;font-weight:700;color:#ffd700;margin-bottom:4px;">${isPre ? '📣 予告' : '✨ 開催中 ✨'}</div>
+      <div style="font-size:19px;font-weight:700;margin-bottom:14px;">${b.name}</div>
+      <div style="background:rgba(255,255,255,0.15);border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:13px;line-height:1.6;">
+        ${b.desc}<br>
+        <span style="font-size:20px;font-weight:700;color:#ffd700;">${b.multiplier}倍</span> ポイント！
+      </div>
+      <div style="background:rgba(255,255,255,0.1);border-radius:10px;padding:8px 12px;font-size:12px;color:#ececec;line-height:1.6;">${periodHtml}</div>
+      <div onclick="closeBoostPopup(true,'${dismissKey}')" style="margin-top:14px;font-size:12px;color:rgba(255,255,255,0.5);cursor:pointer;text-decoration:underline;">今日は表示しない</div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeBoostPopup(false, dismissKey); });
 }
 
 function getEventMultiplier() {
@@ -6148,6 +6258,7 @@ const ADMIN_LIST_DEFS = [
   { key: 'nophoto', label: '📷 写真なし', test: s => !s.image_url },
   { key: 'allmember', label: '👥 メンバー全員', test: s => !s.member || s.member === '全員' },
   { key: 'nosource', label: '🔗 出典なし', test: s => !s.source_url },
+  { key: 'hassource', label: '✅ 出典あり', test: s => !!s.source_url },
   { key: 'flagged', label: '🔴 要確認', test: s => s.trustScore < 0 },
   { key: 'memo', label: '📝 メモ', test: s => !!adminMemos[s.db_id] },
 ];
@@ -7076,6 +7187,14 @@ function openCard(spot) {
     noEl.className = 'card-no';
     noEl.textContent = 'No.' + spot.no;
     cardTitleEl.prepend(noEl);
+  }
+  const boostNow = (typeof getSpotBoost === 'function') ? getSpotBoost(spot) : null;
+  if (boostNow) {
+    const bEl = document.createElement('span');
+    bEl.className = 'card-no';
+    bEl.style.cssText = 'background:#c9a227;margin-left:6px;margin-right:0;';
+    bEl.textContent = (boostNow.label || boostNow.emoji) + ' ' + boostNow.multiplier + '倍';
+    cardTitleEl.appendChild(bEl);
   }
   document.getElementById('card-sub').innerHTML = linkifyText(spot.sub);
         if (spot.image_url) {
@@ -8551,7 +8670,9 @@ async function incrementSpotLikes(dbId) {
       const eventMultiplier = (typeof getEventMultiplier === 'function') ? getEventMultiplier() : 1;
       const oshiMultiplier = (typeof getOshiMultiplier === 'function') ? getOshiMultiplier(currentSpot.member) : 1;
       const basePoints = 100;
-      const earned = Math.round(basePoints * multiplier * eventMultiplier * oshiMultiplier);
+      const spotBoostForVisit = (typeof getSpotBoost === 'function') ? getSpotBoost(currentSpot) : null;
+      const spotBoostMultiplier = spotBoostForVisit ? spotBoostForVisit.multiplier : 1;
+      const earned = Math.round(basePoints * multiplier * eventMultiplier * oshiMultiplier * spotBoostMultiplier);
       const newPoints = (profile.points || 0) + earned;
       const newVisited = [...visited, spotId];
       const { error: updateError } = await client.from('profiles').update({ points: newPoints, visited_spots: newVisited }).eq('id', userId);
@@ -9364,12 +9485,17 @@ function showLangComingSoon() {
     const oshiMult = getOshiMultiplier(currentSpot.member);
     multiplier *= oshiMult;
 
+    // スポット限定ポイントアップ（イルミネーションなど）
+    const spotBoost = getSpotBoost(currentSpot);
+    if (spotBoost) multiplier *= spotBoost.multiplier;
+
     const finalPt = Math.round(basePt * multiplier);
     const notes = [];
     if (isBdMember) {
       notes.push(`誕生${bdEvent.type === 'day' ? '日' : '日前'}`);
     }
     if (oshiMult > 1) notes.push((oshi1 && spotMembers.includes(oshi1)) ? '💜1推し' : '🩷2推し');
+    if (spotBoost) notes.push(spotBoost.label || spotBoost.emoji);
     const multiplierNote = multiplier > 1 ? ` (×${multiplier.toFixed(1)} ${notes.join('・')})` : '';
     // 現地系（GPS確認済み）は即時付与。リモート確認・誤情報報告系は引き続き確定待ち。
     addPendingPoint(currentSpot.name, labelMap[type] + multiplierNote, finalPt, ONSITE_TYPES.has(type));
