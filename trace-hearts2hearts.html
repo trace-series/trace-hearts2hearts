@@ -4250,6 +4250,8 @@ function mapSpotRow(s) {
       is_draft: s.is_draft === true,
       series: s.series || null,
       created_at: s.created_at || null,
+      is_trace_original: s.is_trace_original === true, // Traceが自分で特定したスポット（バッジ表示用）
+      identified_at: s.identified_at || null,
   };
 }
 
@@ -7808,6 +7810,13 @@ function openCard(spot) {
     noEl.className = 'card-no';
     noEl.textContent = 'No.' + spot.no;
     cardTitleEl.prepend(noEl);
+  }
+  if (spot.is_trace_original) {
+    const oEl = document.createElement('span');
+    oEl.className = 'card-no';
+    oEl.style.cssText = 'background:linear-gradient(135deg,#ff7a59,#e0245e);margin-left:6px;margin-right:0;';
+    oEl.textContent = '🔍 Trace独自特定';
+    cardTitleEl.appendChild(oEl);
   }
   const boostNow = (typeof getSpotBoost === 'function') ? getSpotBoost(spot) : null;
   if (boostNow) {
