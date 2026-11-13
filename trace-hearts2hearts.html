@@ -2295,6 +2295,7 @@
         <button id="vfbtn-unvisited" class="radius-btn" onclick="setVisitedFilter('unvisited', this)">⬜ 未訪問</button>
         <button id="search-toggle-btn" class="radius-btn" onclick="toggleSearch()" aria-label="スポット検索">🔍 検索</button>
         <button id="series-btn" class="radius-btn" onclick="openSeriesPicker()">📺 旅</button>
+        <button id="area-btn" class="radius-btn" onclick="onAreaButton()">🗾 エリア</button>
         <button id="list-view-toggle" onclick="toggleListView()">📋 リスト</button>
       </div>
         <button id="nearest-spot-btn" onclick="goToNearestSpot()" style="position:fixed;bottom:90px;right:16px;z-index:1000;background:linear-gradient(135deg,#1a1a1a,#7b1a3e);color:#fff;border:none;border-radius:50px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);display:none;align-items:center;gap:6px;">📍 最寄りスポット</button>
@@ -5071,11 +5072,12 @@ function applyFilters() {
     const isVisited = myVisitedSpots.includes(marker.spotData.db_id);
     const visitedMatch = activeVisitedFilter === 'all' || (activeVisitedFilter === 'visited' && isVisited) || (activeVisitedFilter === 'unvisited' && !isVisited);
     const seriesMatch = !activeSeries || marker.spotData.series === activeSeries;
-    const show = memberMatch && categoryMatch && visitedMatch && seriesMatch;
+    const areaMatch = spotInActiveArea(marker.spotData);
+    const show = memberMatch && categoryMatch && visitedMatch && seriesMatch && areaMatch;
     marker.setVisible(show);
     if (show) catCount.all++;
     // メンバーフィルター適用時の各カテゴリ件数
-    if (memberMatch && visitedMatch && seriesMatch) {
+    if (memberMatch && visitedMatch && seriesMatch && areaMatch) {
       const cat = marker.spotData.category;
       if (cat in catCount) catCount[cat]++;
     }
@@ -5739,6 +5741,7 @@ function selectSeries(name, via) {
   const list = SPOTS.filter(s => s.series === name);
   if (!list.length) return;
   activeSeries = name;
+  try { if (activeArea) { activeArea = null; updateAreaButton(); } } catch(e) {}
   // 旅・番組はグループ全体で巡る想定なので、メンバー絞り込みは「全員」に戻す
   activeMember = 'all';
   try {
@@ -5774,6 +5777,181 @@ function clearSeries() {
   try { applyFilters(); } catch(e) {}
   try { renderSpotList(); } catch(e) {}
 }
+// ── エリア（日本は都道府県、海外は国）で探す ──
+// 住所と座標から自動で判定する（Supabaseの列は使わない）
+let activeArea = null; // null | { type: 'jp' | 'pref' | 'overseas' | 'country', value, label }
+const JP_PREFS = [
+  ['北海道',43.06,141.35],['青森県',40.82,140.74],['岩手県',39.70,141.15],['宮城県',38.27,140.87],['秋田県',39.72,140.10],
+  ['山形県',38.24,140.36],['福島県',37.75,140.47],['茨城県',36.34,140.45],['栃木県',36.57,139.88],['群馬県',36.39,139.06],
+  ['埼玉県',35.86,139.65],['千葉県',35.61,140.12],['東京都',35.69,139.69],['神奈川県',35.45,139.64],['新潟県',37.90,139.02],
+  ['富山県',36.70,137.21],['石川県',36.59,136.63],['福井県',36.07,136.22],['山梨県',35.66,138.57],['長野県',36.65,138.18],
+  ['岐阜県',35.39,136.72],['静岡県',34.98,138.38],['愛知県',35.18,136.91],['三重県',34.73,136.51],['滋賀県',35.00,135.87],
+  ['京都府',35.02,135.76],['大阪府',34.69,135.52],['兵庫県',34.69,135.18],['奈良県',34.69,135.83],['和歌山県',34.23,135.17],
+  ['鳥取県',35.50,134.24],['島根県',35.47,133.05],['岡山県',34.66,133.93],['広島県',34.40,132.46],['山口県',34.19,131.47],
+  ['徳島県',34.07,134.56],['香川県',34.34,134.04],['愛媛県',33.84,132.77],['高知県',33.56,133.53],['福岡県',33.61,130.42],
+  ['佐賀県',33.25,130.30],['長崎県',32.74,129.87],['熊本県',32.79,130.74],['大分県',33.24,131.61],['宮崎県',31.91,131.42],
+  ['鹿児島県',31.56,130.56],['沖縄県',26.21,127.68]
+];
+// 海外の国・地域（上から順に判定。住所の言葉 → なければ座標の範囲）
+const AREA_COUNTRIES = [
+  { name: '香港',       flag: '🇭🇰', words: ['香港', 'Hong Kong'],               box: [22.15, 22.57, 113.83, 114.45] },
+  { name: 'マカオ',     flag: '🇲🇴', words: ['マカオ', 'Macau', 'Macao', '澳門'],  box: [22.10, 22.22, 113.52, 113.60] },
+  { name: 'グアム',     flag: '🇬🇺', words: ['グアム', 'Guam'],                  box: [13.2, 13.7, 144.6, 145.0] },
+  { name: '韓国',       flag: '🇰🇷', words: ['韓国', 'Korea', '서울', '경기도', '강원', '부산', '제주', 'Seoul', 'Busan', 'Jeju', '済州'], box: [33.0, 38.7, 124.5, 130.0] },
+  { name: '台湾',       flag: '🇹🇼', words: ['台湾', 'Taiwan', '臺灣'],          box: [21.8, 25.4, 119.9, 122.1] },
+  { name: '中国',       flag: '🇨🇳', words: ['中国', 'China'],                   box: [18, 53.6, 73.5, 134.8] },
+  { name: 'タイ',       flag: '🇹🇭', words: ['タイ', 'Thailand'],                box: [5.6, 20.5, 97.3, 105.7] },
+  { name: 'ベトナム',   flag: '🇻🇳', words: ['ベトナム', 'Vietnam', 'Việt Nam'], box: [8.4, 23.4, 102.1, 109.5] },
+  { name: 'フィリピン', flag: '🇵🇭', words: ['フィリピン', 'Philippines'],       box: [4.5, 21.2, 116.9, 126.7] },
+  { name: 'シンガポール', flag: '🇸🇬', words: ['シンガポール', 'Singapore'],    box: [1.15, 1.48, 103.6, 104.1] },
+  { name: 'マレーシア', flag: '🇲🇾', words: ['マレーシア', 'Malaysia'],          box: [0.8, 7.4, 99.6, 119.3] },
+  { name: 'インドネシア', flag: '🇮🇩', words: ['インドネシア', 'Indonesia', 'Bali', 'Jakarta'], box: [-11.1, 6.1, 95.0, 141.1] },
+  { name: 'オーストラリア', flag: '🇦🇺', words: ['オーストラリア', 'Australia'], box: [-44, -10, 112, 154] },
+  { name: 'アメリカ',   flag: '🇺🇸', words: ['アメリカ', 'USA', 'United States', ', NY', ', CA'], box: [24.4, 49.4, -125, -66.9] },
+  { name: 'ハワイ',     flag: '🌺', words: ['ハワイ', 'Hawaii', ', HI'],         box: [18.8, 22.3, -160.4, -154.7] },
+  { name: 'カナダ',     flag: '🇨🇦', words: ['カナダ', 'Canada'],                box: [41.6, 70, -141, -52.6] },
+  { name: 'メキシコ',   flag: '🇲🇽', words: ['メキシコ', 'Mexico', 'México'],    box: [14.5, 32.7, -118.4, -86.7] },
+  { name: 'イギリス',   flag: '🇬🇧', words: ['イギリス', 'United Kingdom', 'London', ' UK'], box: [49.9, 58.7, -8.2, 1.8] },
+  { name: 'フランス',   flag: '🇫🇷', words: ['フランス', 'France', 'Paris'],     box: [42.3, 51.1, -4.8, 8.2] },
+];
+// 1件のスポットのエリアを返す { jp: true/false, pref, country, flag }
+function spotArea(s) {
+  const addr = (s && s.address) || '';
+  const lat = Number(s && s.lat), lng = Number(s && s.lng);
+  // 住所に都道府県名があれば日本（対馬など韓国に近い場所も正しく日本になる）
+  const prefHit = JP_PREFS.find(p => addr.includes(p[0]));
+  if (prefHit && !/韓国|Korea/.test(addr)) return { jp: true, pref: prefHit[0] };
+  // 住所の言葉で海外の国を判定
+  for (const c of AREA_COUNTRIES) {
+    if (c.words.some(w => addr.includes(w))) {
+      // ハワイ・グアムはアメリカの住所表記でもこちらを優先
+      if (c.name === 'アメリカ' && !isNaN(lat)) {
+        const special = AREA_COUNTRIES.find(x => (x.name === 'ハワイ' || x.name === 'グアム') && inAreaBox(lat, lng, x.box));
+        if (special) return { jp: false, country: special.name, flag: special.flag };
+      }
+      return { jp: false, country: c.name, flag: c.flag };
+    }
+  }
+  if (isNaN(lat) || isNaN(lng)) return { jp: false, country: 'その他', flag: '🌏' };
+  // 座標で判定（日本の範囲から韓国の範囲を除く）
+  const inJapan = lat >= 24 && lat <= 46 && lng >= 122.9 && lng <= 146 && !(lat >= 33 && lat <= 38.7 && lng >= 124.5 && lng < 129.6);
+  if (inJapan) {
+    let best = null, bd = Infinity;
+    JP_PREFS.forEach(p => { const d = haversineKm(lat, lng, p[1], p[2]); if (d < bd) { bd = d; best = p[0]; } });
+    return { jp: true, pref: best || '日本（その他）' };
+  }
+  for (const c of AREA_COUNTRIES) {
+    if (inAreaBox(lat, lng, c.box)) return { jp: false, country: c.name, flag: c.flag };
+  }
+  return { jp: false, country: 'その他', flag: '🌏' };
+}
+function inAreaBox(lat, lng, b) { return lat >= b[0] && lat <= b[1] && lng >= b[2] && lng <= b[3]; }
+function spotInActiveArea(s) {
+  if (!activeArea) return true;
+  const a = spotArea(s);
+  if (activeArea.type === 'jp') return a.jp;
+  if (activeArea.type === 'overseas') return !a.jp;
+  if (activeArea.type === 'pref') return a.jp && a.pref === activeArea.value;
+  if (activeArea.type === 'country') return !a.jp && a.country === activeArea.value;
+  return true;
+}
+// メンバー絞り込みだけを反映して数える（エリアごとの件数）
+function areaSummaries() {
+  const prefCount = {}, countryCount = {}, countryFlag = {};
+  let jp = 0, overseas = 0;
+  SPOTS.forEach(s => {
+    if (s.is_draft) return;
+    if (activeMember !== 'all' && s.member !== '全員' && !getSpotMemberList(s.member).includes(activeMember)) return;
+    const a = spotArea(s);
+    if (a.jp) { jp++; prefCount[a.pref] = (prefCount[a.pref] || 0) + 1; }
+    else { overseas++; countryCount[a.country] = (countryCount[a.country] || 0) + 1; countryFlag[a.country] = a.flag; }
+  });
+  const prefs = JP_PREFS.map(p => p[0]).filter(n => prefCount[n]).map(n => ({ name: n, n: prefCount[n] }));
+  if (prefCount['日本（その他）']) prefs.push({ name: '日本（その他）', n: prefCount['日本（その他）'] });
+  const countries = Object.keys(countryCount).map(n => ({ name: n, n: countryCount[n], flag: countryFlag[n] }))
+    .sort((a, b) => (b.n - a.n) || (a.name === 'その他' ? 1 : b.name === 'その他' ? -1 : 0));
+  return { jp, overseas, prefs, countries };
+}
+function openAreaPicker() {
+  let el = document.getElementById('area-picker');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'area-picker';
+    el.style.cssText = 'position:fixed;inset:0;z-index:1300;background:rgba(20,10,40,.45);display:flex;align-items:flex-end;justify-content:center;';
+    el.onclick = e => { if (e.target === el) closeAreaPicker(); };
+    document.body.appendChild(el);
+  }
+  const sum = areaSummaries();
+  const isOn = (type, value) => activeArea && activeArea.type === type && (value == null || activeArea.value === value);
+  const row = (type, value, icon, label, n, sub) => `<div onclick="selectArea('${type}', decodeURIComponent('${encodeURIComponent(value || '')}'))" style="display:flex;align-items:center;gap:10px;padding:11px ${sub ? '8px 11px 28px' : '8px'};border-top:1px solid var(--border);cursor:pointer;${isOn(type, value || null) ? 'background:var(--purple-pale);' : ''}">
+      <span style="font-size:${sub ? 16 : 20}px;flex-shrink:0;">${icon}</span>
+      <span style="flex:1;font-size:${sub ? 14 : 15}px;font-weight:${sub ? 600 : 800};color:var(--purple-deep);">${escHtml(label)}</span>
+      <span style="flex-shrink:0;font-size:12px;font-weight:700;color:#fff;background:${sub ? 'var(--purple-mid)' : 'var(--purple-deep)'};border-radius:10px;padding:2px 9px;">${n}件</span>
+    </div>`;
+  const jpRows = sum.prefs.map(p => row('pref', p.name, '📍', p.name, p.n, true)).join('');
+  const osRows = sum.countries.map(c => row('country', c.name, c.flag || '🌏', c.name, c.n, true)).join('');
+  const memberNote = activeMember !== 'all' ? `<b>${escHtml(activeMember)}</b>（「全員」で登録したスポットを含む）の件数です。` : '';
+  el.innerHTML = `<div style="background:#fff;width:100%;max-width:520px;max-height:80vh;max-height:80dvh;border-radius:18px 18px 0 0;display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;padding:14px 16px 6px;">
+      <div style="flex:1;font-size:16px;font-weight:800;color:var(--purple-deep);">🗾 エリアから探す</div>
+      <button onclick="closeAreaPicker()" aria-label="閉じる" style="border:none;background:none;font-size:22px;color:var(--text-light);cursor:pointer;">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-mid);padding:0 16px 8px;line-height:1.5;">
+      <span style="flex:1;">選ぶと、そのエリアのスポットだけを地図に表示します。${memberNote}</span>
+      ${activeArea ? `<button type="button" onclick="clearArea();closeAreaPicker()" style="flex-shrink:0;border:1.5px solid #c0392b;background:#fff;color:#c0392b;border-radius:14px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✕ 解除</button>` : ''}
+    </div>
+    <div style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 12px 20px;">
+      ${sum.jp ? row('jp', '', '🇯🇵', '日本（すべて）', sum.jp, false) + jpRows : ''}
+      ${sum.overseas ? row('overseas', '', '🌏', '海外（すべて）', sum.overseas, false) + osRows : ''}
+      ${!sum.jp && !sum.overseas ? '<div style="padding:24px;text-align:center;color:var(--text-light);font-size:13px;">スポットがありません</div>' : ''}
+    </div>
+  </div>`;
+  el.style.display = 'flex';
+}
+function closeAreaPicker() {
+  const el = document.getElementById('area-picker');
+  if (el) el.style.display = 'none';
+}
+function selectArea(type, value) {
+  const labels = { jp: '日本', overseas: '海外' };
+  activeArea = { type, value: value || null, label: labels[type] || value };
+  // 旅・番組の絞り込みとは同時に使わない（ピンが0件になるのを防ぐ）
+  try { if (activeSeries) clearSeries(); } catch(e) {}
+  closeAreaPicker();
+  try { if (typeof showView === 'function') showView('map'); } catch(e) {}
+  try { if (cardOpen) toggleCard(); } catch(e) {}
+  updateAreaButton();
+  try { applyFilters(); } catch(e) {}
+  try { renderSpotList(); } catch(e) {}
+  const list = SPOTS.filter(s => !s.is_draft && spotInActiveArea(s) &&
+    (activeMember === 'all' || s.member === '全員' || getSpotMemberList(s.member).includes(activeMember)));
+  if (map && list.length) {
+    if (list.length === 1) { map.panTo({ lat: list[0].lat, lng: list[0].lng }); map.setZoom(15); }
+    else {
+      const b = new google.maps.LatLngBounds();
+      list.forEach(s => b.extend({ lat: s.lat, lng: s.lng }));
+      map.fitBounds(b, { top: 150, bottom: 120, left: 40, right: 60 });
+    }
+  }
+  try { if (typeof gtag === 'function') gtag('event', 'area_select', { area_type: type, area_value: value || type }); } catch(e) {}
+}
+function clearArea() {
+  activeArea = null;
+  updateAreaButton();
+  try { applyFilters(); } catch(e) {}
+  try { renderSpotList(); } catch(e) {}
+}
+function updateAreaButton() {
+  const btn = document.getElementById('area-btn');
+  if (!btn) return;
+  btn.classList.toggle('active', !!activeArea);
+  btn.textContent = activeArea ? `🗾 ${activeArea.label}` : '🗾 エリア';
+}
+// ボタン：いつでも一覧を開く（絞り込み中は一覧の「✕ 解除」で戻せる）
+function onAreaButton() {
+  openAreaPicker();
+}
+
 // メンバーボタンを隠して、その場所に旅のバーを表示する（地図画面のときだけ）
 function setSeriesMode(on) {
   const tabs = document.getElementById('member-tabs');
@@ -9132,6 +9310,7 @@ function renderSpotList() {
     if (activeVisitedFilter === 'visited' && !myVisitedSpots.includes(s.db_id)) return false;
     if (activeVisitedFilter === 'unvisited' && myVisitedSpots.includes(s.db_id)) return false;
     if (activeSeries && s.series !== activeSeries) return false;
+    if (!spotInActiveArea(s)) return false;
     if (originSpot) {
       if (s.db_id === originSpot.db_id) return false;
       if (activeRadius > 0) {
