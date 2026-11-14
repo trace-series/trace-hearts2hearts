@@ -32,7 +32,7 @@
 <meta name="twitter:image" content="https://trace-series.github.io/trace-hearts2hearts/ogp.png">
 
 
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@600;800&display=swap" rel="stylesheet">
 <style>
   :root {
     --cream: #eaf6fb;
@@ -2141,6 +2141,192 @@
     flex-shrink: 0;
   }
 
+
+  /* ===== 巡礼プランナー（Muse版ベース） ===== */
+.tp {
+--bg: #f6f1e7;
+--surface: #fffdf7;
+--surface-2: #efe8d8;
+--ink: #26211a;
+--ink-soft: #57503f;
+--muted: #8a8171;
+--line: #ddd2bd;
+--accent: #b8402a;
+--accent-ink: #ffffff;
+--accent-soft: #f7e3dc;
+--navy: #2e4a66;
+--ok: #3d7a4a;
+--shadow: 0 1px 2px rgba(60, 45, 20,.08), 0 8px 24px rgba(60, 45, 20,.06);
+}
+.tp {
+margin: 0;
+background: var(--bg);
+color: var(--ink);
+font-family: "Noto Sans JP", system-ui, -apple-system, "Hiragino Kaku Gothic ProN", sans-serif;
+font-size: 15px;
+line-height: 1.65;
+-webkit-text-size-adjust: 100%;
+}
+.tp .wrap { max-width: 1060px; margin: 0 auto; padding: 20px 16px 64px;}
+.tp h1, .tp h2, .tp h3 { font-family: "Noto Serif JP", "Hiragino Mincho ProN", serif;}
+.tp h1 { font-size: 26px; font-weight: 800; margin: 4px 0 6px; letter-spacing:.02em;}
+.tp .lead { color: var(--ink-soft); margin: 0 0 4px; max-width: 44em;}
+.tp .datastatus { color: var(--muted); font-size: 12.5px; margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center;}
+.tp .datastatus button {
+font: inherit; font-size: 12.5px; background: none; border: 1px solid var(--line);
+color: var(--navy); border-radius: 999px; padding: 2px 12px; cursor: pointer; min-height: 32px;
+}
+.tp .panel {
+background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+box-shadow: var(--shadow); padding: 18px; margin-top: 18px;
+}
+.tp .panel h2 { font-size: 17px; margin: 0 0 12px; display: flex; align-items: baseline; gap: 10px;}
+.tp .panel h2 .step {
+font-family: "Noto Sans JP", sans-serif; font-size: 11px; font-weight: 700; color: var(--accent-ink);
+background: var(--accent); border-radius: 999px; padding: 2px 9px; letter-spacing:.08em;
+}
+.tp .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px 18px;}
+.tp .field label, .tp .field .flabel { display: block; font-size: 12.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px;}
+.tp .seg { display: flex; flex-wrap: wrap; gap: 6px;}
+.tp .seg button {
+font: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
+background: var(--surface-2); color: var(--ink); border: 1px solid var(--line);
+border-radius: 999px; padding: 6px 14px; min-height: 38px;
+}
+.tp .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); font-weight: 700;}
+.tp .seg button:focus-visible, .tp button:focus-visible, .tp a:focus-visible, .tp input:focus-visible, .tp select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px;}
+.tp input[type="date"], .tp input[type="time"], .tp select {
+font: inherit; font-size: 15px; color: var(--ink); background: var(--surface);
+border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; width: 100%; min-height: 40px;
+}
+.tp .chips { display: flex; flex-wrap: wrap; gap: 6px;}
+.tp .chips button {
+font: inherit; font-size: 13.5px; cursor: pointer; background: var(--surface);
+border: 1px solid var(--line); color: var(--ink); border-radius: 999px; padding: 5px 12px; min-height: 36px;
+}
+.tp .chips button .n { color: var(--muted); font-size: 12px; margin-left: 4px;}
+.tp .chips button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700;}
+.tp .chips button[aria-pressed="true"] .n { color: inherit; opacity:.75;}
+.tp .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px;}
+.tp .toolbar .count { margin-left: auto; font-size: 13px; color: var(--ink-soft);}
+.tp .toolbar button {
+font: inherit; font-size: 13px; cursor: pointer; background: var(--surface-2);
+border: 1px solid var(--line); color: var(--ink); border-radius: 8px; padding: 5px 12px; min-height: 36px;
+}
+.tp .spots { display: grid; grid-template-columns: repeat(auto-fill, minmax(228px, 1fr)); gap: 12px;}
+.tp .spot {
+display: block; cursor: pointer; border: 1px solid var(--line); border-radius: 12px;
+background: var(--surface); overflow: hidden; position: relative; transition: border-color .15s;
+}
+.tp .spot:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent);}
+.tp .spot input { position: absolute; top: 10px; left: 10px; width: 22px; height: 22px; accent-color: var(--accent); z-index: 2; margin: 0;}
+.tp .spot .ph { aspect-ratio: 16 / 9; background: var(--surface-2); display: block; overflow: hidden;}
+.tp .spot .ph img { width: 100%; height: 100%; object-fit: cover; display: block;}
+.tp .spot .ph .nophoto {
+height: 100%; display: flex; align-items: center; justify-content: center; text-align: center;
+font-family: "Noto Serif JP", serif; font-weight: 600; color: var(--muted); padding: 10px; font-size: 14px;
+}
+.tp .spot .body { padding: 9px 12px 11px; display: block;}
+.tp .spot .no { font-size: 11px; font-weight: 700; color: var(--accent); letter-spacing:.06em;}
+.tp .spot .name { font-weight: 700; font-size: 14.5px; line-height: 1.45; display: block;}
+.tp .spot .meta { font-size: 12px; color: var(--muted); display: block; margin-top: 2px;}
+.tp .badge {
+display: inline-block; font-size: 10.5px; font-weight: 700; border-radius: 4px; padding: 0 6px;
+background: var(--accent-soft); color: var(--accent); margin-left: 6px; vertical-align: 1px;
+}
+.tp .badge.gray { background: var(--surface-2); color: var(--muted);}
+.tp .go {
+display: block; width: 100%; margin-top: 18px; font: inherit; font-size: 17px; font-weight: 700;
+background: var(--accent); color: var(--accent-ink); border: none; border-radius: 12px;
+padding: 14px; cursor: pointer; min-height: 54px; box-shadow: var(--shadow);
+}
+.tp .go:disabled { opacity:.45; cursor: not-allowed;}
+.tp .hint { font-size: 12.5px; color: var(--muted); margin-top: 8px;}
+.tp /* timeline */
+.summary { display: flex; flex-wrap: wrap; gap: 8px 22px; padding: 12px 14px; background: var(--surface-2); border-radius: 10px; margin-bottom: 6px;}
+.tp .summary div { font-size: 13px; color: var(--ink-soft);}
+.tp .summary b { font-size: 16px; color: var(--ink); display: block; line-height: 1.3;}
+.tp .tl { list-style: none; margin: 6px 0 0; padding: 0;}
+.tp .tl .stop { display: grid; grid-template-columns: 86px 22px 1fr; gap: 0 10px;}
+.tp .tl .time { text-align: right; font-variant-numeric: tabular-nums; padding-top: 12px;}
+.tp .tl .time b { font-size: 15px; display: block; line-height: 1.35;}
+.tp .tl .time span { font-size: 11.5px; color: var(--muted);}
+.tp .tl .rail { position: relative;}
+.tp .tl .rail::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; transform: translateX(-50%); background: var(--line);}
+.tp .tl .dot {
+position: absolute; left: 50%; top: 16px; transform: translateX(-50%); width: 13px; height: 13px;
+border-radius: 50%; background: var(--surface); border: 3px solid var(--accent); z-index: 1;
+}
+.tp .tl .card { padding: 10px 0 16px; min-width: 0;}
+.tp .tl .card .ttl { font-weight: 700; font-size: 15.5px;}
+.tp .tl .card .sub { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px;}
+.tp .tl .card .addr { font-size: 12.5px; color: var(--muted); margin-top: 2px; overflow-wrap: anywhere;}
+.tp .tl .card .links { margin-top: 5px; font-size: 13px; display: flex; flex-wrap: wrap; gap: 4px 16px;}
+.tp .tl .card .links a { color: var(--navy); text-decoration: none; padding: 4px 0; display: inline-block;}
+.tp .tl .card .links a:hover { text-decoration: underline;}
+.tp .tl .thumb { float: right; width: 92px; height: 62px; object-fit: cover; border-radius: 8px; margin: 2px 0 6px 10px;}
+.tp .tl .leg { display: grid; grid-template-columns: 86px 22px 1fr; gap: 0 10px;}
+.tp .tl .leg .ltime { text-align: right; font-size: 12px; color: var(--muted); padding-top: 3px; font-variant-numeric: tabular-nums;}
+.tp .tl .leg .lbody { padding: 1px 0 12px; font-size: 13px; color: var(--ink-soft);}
+.tp .tl .leg .lbody .verified { color: var(--ok); font-weight: 700; font-size: 11.5px;}
+.tp .tl .start .dot, .tp .tl .goal .dot { border-color: var(--ink);}
+.tp .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px;}
+.tp .actions a, .tp .actions button {
+font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; text-decoration: none;
+border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; align-items: center;
+}
+.tp .actions .primary { background: var(--ink); color: var(--bg); border-color: var(--ink);}
+.tp .dropped { margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 12px;}
+.tp .dropped h3 { font-size: 14px; margin: 0 0 6px;}
+.tp .dropped ul { margin: 0; padding-left: 1.2em; font-size: 13.5px; color: var(--ink-soft);}
+.tp .notes { font-size: 12.5px; color: var(--muted); margin-top: 16px;}
+.tp .notes li { margin-bottom: 3px;}
+.tp footer { margin-top: 34px; font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px;}
+.tp footer a { color: var(--navy);}
+.tp .empty { color: var(--muted); padding: 18px 4px;}
+@media (max-width: 560px) {
+.tp .wrap { padding: 14px 12px 48px;}
+.tp h1 { font-size: 22px;}
+.tp .panel { padding: 14px;}
+.tp .tl .stop, .tp .tl .leg { grid-template-columns: 64px 18px 1fr; gap: 0 7px;}
+.tp .tl .thumb { width: 74px; height: 52px;}
+.tp .spots { grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));}
+}/* ===== Trace組み込み用の追加 ===== */
+#view-route { padding: 0; }
+.tp { min-height: calc(100vh - var(--content-top, 56px)); }
+.tp .wrap { padding-bottom: 110px; }
+.tp .tp-head { margin-bottom: 4px; }
+.tp .tp-rank-row { display: flex; flex-wrap: wrap; gap: 10px 26px; align-items: flex-end; }
+.tp .tp-rank-row b { display: block; font-size: 17px; line-height: 1.35; }
+.tp .tp-small { display: block; font-size: 11.5px; color: var(--muted); }
+.tp .tp-link { font: inherit; font-size: 13px; background: none; border: none; color: var(--navy); padding: 8px 0 0; cursor: pointer; min-height: 36px; }
+.tp .tp-lockwrap { position: relative; }
+.tp .tp-lockwrap.locked > input, .tp .tp-lockwrap.locked > .seg { opacity: .5; }
+.tp .tp-lockcover { display: none; position: absolute; inset: 0; background: transparent; border: none; cursor: pointer; z-index: 3; min-height: 0; }
+.tp .tp-lockwrap.locked > .tp-lockcover { display: block; }
+.tp .tp-ptag { display: none; font-size: 10.5px; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 4px; padding: 0 6px; margin-left: 6px; }
+.tp .locked .tp-ptag, .tp .tp-ptag.on { display: inline-block; }
+.tp .go.tp-go2 { background: var(--surface); color: var(--ink); border: 1px solid var(--line); font-size: 15px; min-height: 48px; margin-top: 10px; box-shadow: none; }
+.tp .go.tp-off { background: var(--surface-2); color: var(--muted); box-shadow: none; }
+.tp .tp-opt-sub { font-size: 12.5px; color: var(--muted); text-align: center; margin-top: 6px; }
+.tp .spot.closed .ph img { filter: grayscale(1); opacity: .7; }
+.tp .tp-day { font-family: "Noto Serif JP", serif; font-size: 16px; font-weight: 800; margin: 18px 0 4px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.tp .tp-day:first-child { border-top: none; padding-top: 0; margin-top: 8px; }
+.tp .tp-lockbox { margin: 8px 0 4px; padding: 14px; border-radius: 12px; background: var(--accent-soft); text-align: center; }
+.tp .tp-lockbox b { display: block; font-size: 15px; color: var(--accent); }
+.tp .tp-lockbox p { font-size: 12.5px; color: var(--ink-soft); margin: 4px 0 10px; }
+.tp .tp-lockbox button { font: inherit; font-size: 14px; font-weight: 700; background: var(--accent); color: var(--accent-ink); border: none; border-radius: 10px; padding: 9px 18px; min-height: 44px; cursor: pointer; }
+.tp .tp-blur { filter: blur(5px); opacity: .6; pointer-events: none; user-select: none; -webkit-user-select: none; }
+.tp .tp-legmap { color: var(--navy); text-decoration: none; font-size: 12px; margin-left: 8px; white-space: nowrap; }
+.tp .tp-save { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; }
+.tp .tp-save h3 { font-size: 15px; margin: 0 0 8px; }
+.tp .tp-save input[type="text"], .tp .tp-save textarea { font: inherit; font-size: 15px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; width: 100%; margin-bottom: 8px; }
+.tp .tp-save textarea { min-height: 64px; resize: vertical; }
+.tp .tp-mapchunks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.tp #saved-routes-list .saved-route-item { background: var(--surface); border-color: var(--line); }
+.tp .rankup-banner { margin-top: 12px; }
+
 </style>
 </head>
 <body>
@@ -3439,100 +3625,112 @@
     <div style="padding-bottom:40px;"></div>
   </div>
 
-  <!-- ROUTE VIEW -->
+  <!-- ROUTE VIEW（巡礼プランナー：Muse版をベースに組み込み 2026-11-14） -->
   <div id="view-route">
-    <div class="section-title">ルート保存</div>
-    <div class="section-sub">MY ROUTE</div>
+  <div class="tp"><div class="wrap">
+    <div class="tp-head">
+      <h1>巡礼プランナー</h1>
+      <p class="lead">エリアと行きたいスポットを選ぶと、まわる順番と1日のモデルコースを時刻つきで組みます。</p>
+    </div>
 
-    <!-- ランク・最適化残回数バナー -->
-    <div class="route-rank-banner">
-      <div class="route-rank-left">
-        <div class="route-rank-label">現在のランク</div>
-        <div class="route-rank-name" id="route-rank-name">🥉 ブロンズ</div>
+    <section class="panel" aria-label="ランクと残り回数">
+      <div class="tp-rank-row">
+        <div><span class="flabel">現在のランク</span><b id="route-rank-name">🥉 ブロンズ</b></div>
+        <div><span class="flabel">最適化 残り</span><b id="route-opt-remaining">0 / 0回</b><span class="tp-small">毎月1日にリセット</span></div>
+        <div><span class="flabel">保存できるルート</span><b id="route-save-limit">読み込み中</b></div>
       </div>
-      <div class="route-rank-right">
-        <div class="route-opt-label">最適化 残り</div>
-        <div class="route-opt-count" id="route-opt-remaining">1 / 1回</div>
-        <div class="route-opt-reset">来月リセット</div>
+      <button type="button" class="tp-link" onclick="showView('pointrules')">ランクと特典を見る →</button>
+    </section>
+
+    <section class="panel" aria-labelledby="tp-h-cond">
+      <h2 id="tp-h-cond"><span class="step">STEP 1</span>条件を決める</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="tp-date">日付</label>
+          <input type="date" id="tp-date">
+        </div>
+        <div class="field">
+          <span class="flabel">開始時刻<span class="tp-ptag">🔒プレミアム</span></span>
+          <div class="tp-lockwrap" id="tp-start-wrap">
+            <input type="time" id="tp-start" value="10:00" step="300">
+            <button type="button" class="tp-lockcover" aria-label="プレミアムで開始時刻を選べます" onclick="tpTeaser('start_time')"></button>
+          </div>
+        </div>
+        <div class="field">
+          <span class="flabel">ペース（1か所の滞在時間）<span class="tp-ptag">🔒プレミアム</span></span>
+          <div class="tp-lockwrap" id="tp-pace-wrap">
+            <div class="seg" role="group" id="tp-pace">
+              <button type="button" data-pace="slow">ゆっくり・30分</button>
+              <button type="button" data-pace="normal">ふつう・25分</button>
+              <button type="button" data-pace="fast">さくさく・20分</button>
+            </div>
+            <button type="button" class="tp-lockcover" aria-label="プレミアムでペースを選べます" onclick="tpTeaser('pace')"></button>
+          </div>
+        </div>
+        <div class="field">
+          <span class="flabel">移動手段</span>
+          <div class="seg" role="group" id="tp-move">
+            <button type="button" data-move="walk">徒歩のみ</button>
+            <button type="button" data-move="transit">電車も使う</button>
+          </div>
+          <p class="hint">電車の時間は距離から出した目安です。各区間の「Googleマップで確認」で正確な時間と運賃を見られます。</p>
+        </div>
       </div>
-    </div>
-
-    <div class="form-group" style="margin-bottom:16px;">
-      <div class="form-label">ルート名</div>
-      <input class="form-input" id="route-name-input" type="text" placeholder="例：東京Hearts2Hearts遠征2024">
-    </div>
-
-    <div class="form-group" style="margin-bottom:16px;">
-      <div class="form-label">メモ</div>
-      <textarea class="form-input form-textarea" id="route-memo-input" placeholder="持ち物・移動手段・注意点など…"></textarea>
-    </div>
-
-    <div class="profile-section-title">📍 スポットを選択</div>
-
-    <!-- 地域フィルタータブ -->
-		<div id="route-member-tabs" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:4px;-webkit-overflow-scrolling:touch;">
-			<div class="region-tab active" onclick="filterRouteMember(this,'all')">💜 全員</div>
-			<div class="region-tab" onclick="filterRouteMember(this,'カルメン')">🌴 カルメン</div>
-			<div class="region-tab" onclick="filterRouteMember(this,'ジウ')">🍓 ジウ</div>
-			<div class="region-tab" onclick="filterRouteMember(this,'ユハ')">🎀 ユハ</div>
-			<div class="region-tab" onclick="filterRouteMember(this,'ステラ')">🧁 ステラ</div>
-			<div class="region-tab" onclick="filterRouteMember(this,'ジュウン')">👾 ジュウン</div>
-			<div class="region-tab" onclick="filterRouteMember(this,'エイナ')">🌻 エイナ</div>
-			<div class="region-tab" onclick="filterRouteMember(this,'イアン')">🫛 イアン</div>
-			<div class="region-tab" onclick="filterRouteMember(this,'イェオン')">😊 イェオン</div>
-		</div>
-    <div class="region-tabs" id="region-tabs">
-      <div class="region-tab active" onclick="filterRouteRegion(this,'all')">🗾 全国</div>
-      <div class="region-tab" onclick="filterRouteRegion(this,'tokyo')">🗼 東京</div>
-      <div class="region-tab" onclick="filterRouteRegion(this,'korea')">🇰🇷 韓国</div>
-      <div class="region-tab" onclick="filterRouteRegion(this,'japan_other')">🌸 その他日本</div>
-    </div>
-
-    <!-- 操作ボタン（スクロールしても上に固定） -->
-    <div id="route-sticky-bar">
-      <div class="rsb-count" id="rsb-count">0か所 選択中</div>
-      <button type="button" class="rsb-btn rsb-opt" id="rsb-opt" onclick="optimizeRoute()">✨ 最適化</button>
-      <button type="button" class="rsb-btn rsb-save" onclick="saveRoute()">💾 保存</button>
-      <button type="button" class="rsb-btn rsb-print" onclick="printRoute()" aria-label="印刷">🖨️</button>
-    </div>
-
-    <div id="route-spot-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+      <div class="field" style="margin-top:16px">
+        <span class="flabel">メンバー</span>
+        <div class="chips" role="group" id="tp-members"></div>
       </div>
+      <div class="field" style="margin-top:14px">
+        <span class="flabel">エリア</span>
+        <div class="chips" role="group" id="tp-areas"></div>
+      </div>
+    </section>
 
-      <div class="route-optimize-wrap" id="route-optimize-wrap">
-      <button class="btn-optimize" id="btn-optimize" onclick="optimizeRoute()">
-        ✨ ルートを最適化する
-        <span class="btn-optimize-sub">移動距離・時間を自動計算</span>
-      </button>
-    </div>
+    <section class="panel" id="tp-step2" aria-labelledby="tp-h-spots">
+      <h2 id="tp-h-spots"><span class="step">STEP 2</span>行きたいスポットを選ぶ</h2>
+      <div class="toolbar">
+        <button type="button" id="tp-pick-fit">おすすめだけ選ぶ<span class="tp-ptag" id="tp-fit-tag">🔒</span></button>
+        <button type="button" id="tp-pick-all">すべて選ぶ</button>
+        <button type="button" id="tp-pick-none">すべて外す</button>
+        <span class="count" id="tp-count"></span>
+      </div>
+      <div class="spots" id="tp-spots"></div>
+      <p class="hint">「おすすめだけ選ぶ」は、選んだ条件で1日（20:30まで）に収まる分だけを自動で選びます。</p>
+      <button type="button" class="go" id="tp-opt-btn">✨ 最適な順番でコースを作る</button>
+      <div class="tp-opt-sub" id="tp-opt-sub"></div>
+      <button type="button" class="go tp-go2" id="tp-plain-btn">選んだ順でコースを作る</button>
+    </section>
 
-    <!-- 最適化結果 -->
-    <div class="route-result-card" id="route-result-card" style="display:none;">
-      <div class="route-result-title">📊 最適化結果</div>
-      <div class="route-result-stats" id="route-result-stats"></div>
-      <div class="route-result-list" id="route-result-list"></div>
-    </div>
+    <section class="panel" id="tp-result" aria-labelledby="tp-h-result" hidden>
+      <h2 id="tp-h-result"><span class="step">STEP 3</span><span id="tp-result-title">モデルコース</span></h2>
+      <div id="tp-result-body"></div>
+      <div class="tp-save">
+        <h3>このコースを保存する</h3>
+        <input type="text" id="route-name-input" placeholder="ルート名（例：東京Hearts2Hearts遠征）">
+        <textarea id="route-memo-input" placeholder="メモ（持ち物・注意点など）"></textarea>
+        <div class="actions" style="margin-top:4px">
+          <button type="button" class="primary" onclick="tpSave()">💾 ルートを保存</button>
+          <button type="button" onclick="tpPrint()">🖨️ 印刷</button>
+        </div>
+      </div>
+    </section>
 
-    <div style="display:flex;gap:10px;margin:16px 0 40px;">
-      <button class="btn-primary" style="flex:2;padding:14px;" onclick="saveRoute()">💾 ルートを保存</button>
-      <button class="btn-secondary" style="flex:1;padding:14px;" onclick="printRoute()">🖨️ 印刷</button>
-    </div>
+    <section class="panel" aria-labelledby="tp-h-saved">
+      <h2 id="tp-h-saved">📂 保存済みルート</h2>
+      <div id="saved-routes-list">
+        <div id="saved-routes-empty" style="font-size:12px;color:var(--muted);padding:14px 4px;">まだ保存したルートはありません</div>
+      </div>
+      <div class="rankup-banner" id="rankup-banner" style="display:none;">
+        <div class="rankup-title">🔒 最適化回数を増やすには</div>
+        <div class="rankup-desc">ゴールド（800pt）で月1回、ダイヤモンド（6000pt＋友達紹介5人）で月2回使えます。毎月1日にリセットされます。</div>
+        <button class="rankup-btn" onclick="showView('pointrules')">ランクを確認する →</button>
+      </div>
+    </section>
 
-    <div class="profile-section-title">📂 保存済みルート
-      <span class="route-save-limit" id="route-save-limit">読み込み中</span>
-    </div>
-    <div id="saved-routes-list">
-      <div id="saved-routes-empty" style="font-size:12px;color:var(--text-light);padding:14px 4px;">まだ保存したルートはありません</div>
-    </div>
-
-    <!-- ランクアップ促進バナー -->
-    <div class="rankup-banner" id="rankup-banner" style="display:none;">
-      <div class="rankup-title">🔒 最適化回数を増やすには</div>
-      <div class="rankup-desc">ゴールド（800pt）で月1回、ダイヤモンド（6000pt＋友達紹介5人）で月2回使えます。毎月1日にリセットされます。</div>
-      <button class="rankup-btn" onclick="showView('pointrules')">ランクを確認する →</button>
-    </div>
-
-    <div style="padding-bottom:40px;"></div>
+    <footer>
+      移動時間はスポット間の直線距離から計算した目安です（徒歩は道のりを直線の1.3倍・1分75mで計算、電車は駅までの徒歩と待ち時間を含めた目安）。正確な所要時間と運賃は、各区間の「Googleマップで確認」から見られます。
+    </footer>
+  </div></div>
   </div>
 
   <!-- POST VIEW -->
@@ -5584,7 +5782,7 @@ function seriesProgressHtml(list, dark) {
   </div>`;
 }
 // 旅のスポットを、今あるルート機能にまとめて入れる
-function addSeriesToRoute(name) {
+function _oldAddSeriesToRoute(name) {
   name = name || activeSeries;
   if (!name) return;
   const list = SPOTS.filter(s => s.series === name);
@@ -9107,7 +9305,7 @@ document.addEventListener('touchmove', function(e) {
 
 
 
-function renderRouteSpotList() {
+function _oldRenderRouteSpotList() {
   var container = document.getElementById('route-spot-list');
   if (!container) return;
   var catIcon = {'カフェ・飲食店':'🍜','撮影スポット':'📸','ライブ・イベント会場':'🎤','観光・名所':'🏯','ショップ':'🛍️'};
@@ -9715,7 +9913,7 @@ function showView(name) {
   if (target) target.style.display = 'block';
   if (name === 'post') setTimeout(initPostForm, 50);
   if (name === 'feed') loadFeed();
-  if (name === 'route') { renderRouteSpotList(); try { updateRouteStickyCount(); } catch(e) {} refreshRouteStatus().then(loadSavedRoutes); }
+  if (name === 'route') { try { tpOnShow(); } catch(e) { console.warn('planner error:', e); } refreshRouteStatus().then(loadSavedRoutes); }
   if (name === 'ranking') {
     loadFounderCount();
     renderSpotRanking(currentRankingPeriod);
@@ -9810,7 +10008,7 @@ function toggleRouteSpot(checkEl) {
   window.routeOptimizedFlag = false; // 選び直したら最適化はやり直し
   updateRouteStickyCount();
 }
-function updateRouteStickyCount() {
+function _oldUpdateRouteStickyCount() {
   const el = document.getElementById('rsb-count');
   if (el) el.textContent = document.querySelectorAll('.route-spot-check.selected').length + 'か所 選択中';
 }
@@ -9896,7 +10094,7 @@ async function loadSavedRoutes() {
   }).join('');
 }
 function findSavedRoute(id) { return (window.savedRoutesCache || []).find(r => r.id === id); }
-function openSavedRoute(id) {
+function _oldOpenSavedRoute(id) {
   const r = findSavedRoute(id);
   if (!r) return;
   const container = document.getElementById('route-spot-list');
@@ -10552,7 +10750,7 @@ function filterRouteRegion(el, region) {
     diamond:  '👑 ダイヤモンド'
   };
 
-  function updateOptimizeBtn() {
+  function _oldUpdateOptimizeBtn() {
     const limit = getRouteLimit();
     const btn = document.getElementById('btn-optimize');
     const remaining = limit.optimizePerMonth - optimizeUsedThisMonth;
@@ -11937,6 +12135,608 @@ function applyTransferCode() {
     msg.style.color = '#dc2626';
   }
 }
+
+// ===================================================================
+// 巡礼プランナー（Muse版の仕組み・見た目をベースに組み込み 2026-11-14）
+//  ・順番の最適化：複数スタートの最近傍法＋2-opt（ランク別の回数制限・RPC use_route_optimize）
+//  ・時間割：誰でも最初の3か所まで。全部の表示／開始時刻・ペース／回りきれない分の別日分け／おすすめ選択はプレミアム
+//  ・エリア：住所の文字ではなく座標で近いスポットをまとめる（日本・韓国・海外どこでも同じ動き）
+//  ・移動：どの都市でも使える距離からの目安。区間ごとにGoogleマップで正確な時間を確認できる
+// ===================================================================
+const TP_STAY = { slow: 30, normal: 25, fast: 20 };
+const TP_DAY_END = 20 * 60 + 30;      // 20:30
+const TP_FREE_STOPS = 3;              // プレミアム以外で時刻を見られる数
+const TP_MAPS_CHUNK = 5;              // Googleマップ1本のリンクに入れるスポット数（スマホは経由地3つまで）
+const TP_MEMBER_EMOJI = { 'カルメン': '🌴', 'ジウ': '🍓', 'ユハ': '🎀', 'ステラ': '🧁', 'ジュウン': '👾', 'エイナ': '🌻', 'イアン': '🫛', 'イェオン': '😊' };
+const TP = { area: null, member: 'all', pace: 'normal', move: 'transit', selected: new Set(), optCache: null, last: null, inited: false };
+
+function tpEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function tp$(id) { return document.getElementById(id); }
+function tpFmt(min) { const d = Math.floor(min / 1440); min = min % 1440; return (d ? '翌' : '') + String(Math.floor(min / 60)).padStart(2, '0') + ':' + String(min % 60).padStart(2, '0'); }
+function tpIsPremium() {
+  const st = window.routeStatus;
+  if (st && st.login && st.rank === 'premium') return true;
+  try { if (devBypassRankActive) return true; } catch (e) {}
+  return false;
+}
+function tpTeaser(feature) {
+  try { if (typeof gtag === 'function') gtag('event', 'premium_teaser_tap', { feature: feature, app_name: 'h2h' }); } catch (e) {}
+  try { showEvalToast('🌟 プレミアム（準備中）で使えるようになります'); } catch (e) { alert('🌟 プレミアム（準備中）で使えるようになります'); }
+}
+function tpGa(name, params) { try { if (typeof gtag === 'function') gtag('event', name, params || {}); } catch (e) {} }
+
+// ── スポット（仮登録・座標なしは除く） ──
+function tpAllSpots() {
+  return SPOTS.filter(s => !s.is_draft && s.db_id && s.lat != null && s.lng != null && !isNaN(s.lat) && !isNaN(s.lng));
+}
+function tpById(id) { return tpAllSpots().find(s => String(s.db_id) === String(id)); }
+function tpMembers(s) { return getSpotMemberList(s.member); }
+
+// ── 場所の名前（エリアの表示名に使う） ──
+const TP_KR = [
+  [/서울|Seoul|ソウル/i, 'ソウル'], [/부산|Busan|釜山/i, '釜山'], [/인천|Incheon|仁川/i, '仁川'], [/대구|Daegu|大邱/i, '大邱'],
+  [/대전|Daejeon|大田/i, '大田'], [/광주광역|Gwangju|光州/i, '光州'], [/울산|Ulsan|蔚山/i, '蔚山'], [/세종|Sejong/i, '世宗'],
+  [/제주|Jeju|済州/i, '済州'], [/강원|Gangwon|Sokcho|Chuncheon|Gangneung|江原/i, '江原道'],
+  [/경기|Gyeonggi|Yongin|Suwon|Goyang|Paju|Gapyeong|Everland|京畿/i, '京畿道'],
+  [/충청|Chungcheong/i, '忠清道'], [/전라|전북|Jeolla|Jeonju/i, '全羅道'], [/경상|Gyeongsang|Gyeongju|Pohang/i, '慶尚道']
+];
+const TP_WORLD = [
+  [/Paris|France|パリ/i, 'パリ'], [/Mexico|México|メキシコ/i, 'メキシコ'], [/Guam|グアム|Tamuning|Tumon|Hagåtña/i, 'グアム'],
+  [/Hong Kong|香港/i, '香港'], [/Macau|マカオ/i, 'マカオ'], [/Bali|バリ|Jimbaran|Kuta|Ubud/i, 'バリ島'], [/Jakarta|ジャカルタ/i, 'ジャカルタ'],
+  [/Indonesia|インドネシア|Jl\./i, 'インドネシア'], [/Los Angeles|Santa Monica|ロサンゼルス/i, 'ロサンゼルス'], [/London|ロンドン/i, 'ロンドン'],
+  [/Madrid|マドリード/i, 'マドリード'], [/New York|ニューヨーク|Central Park|Brooklyn|Manhattan/i, 'ニューヨーク'],
+  [/Taipei|台北/i, '台北'], [/Bangkok|バンコク/i, 'バンコク'], [/Singapore|シンガポール/i, 'シンガポール'], [/Hawaii|Honolulu|ハワイ/i, 'ハワイ']
+];
+function tpPlace(s) {
+  const a = String(s.address || '').replace(/^〒\d{3}-\d{4}\s*/, '').trim();
+  const pm = a.match(/(北海道|東京都|京都府|大阪府|[^\s、,]{2,3}県)/);
+  if (pm) {
+    const rest = a.slice(pm.index + pm[1].length);
+    const city = rest.match(/^(.+?市)/) || rest.match(/^(.+?[区町村])/);
+    return { big: pm[1], small: city ? city[1] : pm[1] };
+  }
+  if (/[가-힣]/.test(a) || /韓国|Korea|Seoul|Busan|Gyeonggi|Jeju|Incheon|Yongin|Daejeon|Gangwon|ソウル|釜山|済州|仁川|京畿|江原/i.test(a)) {
+    for (const [re, name] of TP_KR) if (re.test(a)) return { big: '韓国・' + name, small: name };
+    return { big: '韓国', small: '韓国' };
+  }
+  for (const [re, name] of TP_WORLD) if (re.test(a)) return { big: name, small: name };
+  // 住所で分からないときは座標でざっくり
+  const la = s.lat, ln = s.lng;
+  if (la > 24 && la < 46 && ln > 122 && ln < 146) return { big: '日本', small: '日本' };
+  if (la > 33 && la < 39 && ln > 124 && ln < 131) return { big: '韓国', small: '韓国' };
+  return { big: '海外', small: '海外' };
+}
+
+// ── エリア分け：まず地名（都道府県・韓国の市道・海外の都市）でまとめ、
+//    同じ地名でも遠く離れている（50km超）ものは座標で別のエリアに分ける ──
+const TP_AREA_SPLIT_KM = 50;
+function tpLink(ss, km) {
+  const n = ss.length, parent = ss.map((_, i) => i);
+  const find = i => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+    if (haversineKm(ss[i].lat, ss[i].lng, ss[j].lat, ss[j].lng) <= km) parent[find(i)] = find(j);
+  }
+  const g = {};
+  ss.forEach((s, i) => { const r = find(i); (g[r] = g[r] || []).push(s); });
+  return Object.values(g);
+}
+function tpAreas() {
+  const byBig = {}, place = new Map();
+  const all = tpAllSpots();
+  all.forEach(s => place.set(s, tpPlace(s)));
+  // 住所から地名が分からないスポットは、50km以内にある一番近い地名つきスポットに合わせる
+  const vague = /^(海外|日本|韓国)$/;
+  all.forEach(s => {
+    const p = place.get(s);
+    if (!vague.test(p.big)) return;
+    let best = null, bd = TP_AREA_SPLIT_KM;
+    all.forEach(o => { if (o === s || vague.test(place.get(o).big)) return; const d = haversineKm(s.lat, s.lng, o.lat, o.lng); if (d < bd) { bd = d; best = o; } });
+    if (best) place.set(s, place.get(best));
+  });
+  all.forEach(s => { const p = place.get(s); (byBig[p.big] = byBig[p.big] || []).push(s); });
+  const out = [];
+  Object.entries(byBig).forEach(([big, ss]) => {
+    const parts = tpLink(ss, TP_AREA_SPLIT_KM).sort((a, b) => b.length - a.length);
+    parts.forEach((part, i) => {
+      let label = big;
+      if (parts.length > 1) {
+        const cnt = {};
+        part.forEach(s => { const sm = place.get(s).small; cnt[sm] = (cnt[sm] || 0) + 1; });
+        const top = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0][0];
+        label = top && top !== big && !big.endsWith(top) ? big + '・' + top : big + ' ' + (i + 1);
+      }
+      out.push({ spots: part, label });
+    });
+  });
+  const used = {};
+  out.forEach(a => { if (used[a.label]) { used[a.label]++; a.label += '（' + used[a.label] + '）'; } else used[a.label] = 1; });
+  return out.sort((a, b) => b.spots.length - a.spots.length);
+}
+function tpIsDomestic(label) { return !/^(韓国|海外|パリ|メキシコ|グアム|香港|マカオ|バリ|ジャカルタ|インドネシア|ロサンゼルス|ロンドン|マドリード|ニューヨーク|台北|バンコク|シンガポール|ハワイ)/.test(label); }
+function tpAreaSpots() {
+  const a = (TP.areaList || []).find(x => x.label === TP.area);
+  return a ? a.spots : [];
+}
+function tpAreaOf(spot) {
+  const a = (TP.areaList || []).find(x => x.spots.includes(spot));
+  return a ? a.label : null;
+}
+function tpVisibleSpots() {
+  return tpAreaSpots().filter(s => TP.member === 'all' || tpMembers(s).includes('全員') || tpMembers(s).includes(TP.member))
+    .slice().sort((a, b) => (a.no ?? 99999) - (b.no ?? 99999));
+}
+function tpChosen() {
+  const inArea = new Set(tpAreaSpots().map(s => String(s.db_id)));
+  return [...TP.selected].filter(id => inArea.has(id)).map(tpById).filter(Boolean);
+}
+
+// ── 移動の目安（どの都市でも同じ計算） ──
+function tpLeg(a, b) {
+  const d = haversineKm(a.lat, a.lng, b.lat, b.lng);
+  const walkKm = d * 1.3;
+  const walkMin = Math.max(5, Math.round(walkKm * 1000 / 75 / 5) * 5);
+  if (TP.move === 'walk' || d <= 1.2) {
+    return { mode: 'walk', minutes: walkMin, km: walkKm, label: '🚶 徒歩 約' + walkMin + '分・約' + walkKm.toFixed(1) + 'km' };
+  }
+  if (d > 80) {
+    const m = Math.round((90 + d / 250 * 60) / 10) * 10;
+    return { mode: 'transit', minutes: m, km: d, far: true, label: '🚄 新幹線・飛行機など 約' + Math.floor(m / 60) + '時間' + (m % 60 ? (m % 60) + '分' : '') + '（目安）' };
+  }
+  const speed = d < 8 ? 22 : (d < 30 ? 32 : 45);
+  const m = Math.max(10, Math.round((12 + d * 1.25 / speed * 60) / 5) * 5);
+  return { mode: 'transit', minutes: m, km: d, label: '🚃 電車など 約' + m + '分（目安）' };
+}
+
+// ── 順番の最適化：複数スタートの最近傍＋2-opt（Muse版） ──
+function tpOptimize(spots) {
+  const n = spots.length;
+  if (n <= 2) return spots.slice();
+  const D = spots.map(a => spots.map(b => haversineKm(a.lat, a.lng, b.lat, b.lng)));
+  function nn(start) {
+    const used = new Array(n).fill(false), order = [start];
+    used[start] = true;
+    while (order.length < n) {
+      const last = order[order.length - 1];
+      let best = -1, bd = Infinity;
+      for (let i = 0; i < n; i++) if (!used[i] && D[last][i] < bd) { bd = D[last][i]; best = i; }
+      order.push(best); used[best] = true;
+    }
+    return order;
+  }
+  function total(o) { let t = 0; for (let i = 1; i < o.length; i++) t += D[o[i - 1]][o[i]]; return t; }
+  function twoOpt(order) {
+    let improved = true;
+    while (improved) {
+      improved = false;
+      for (let i = 0; i < order.length - 1; i++) {
+        for (let j = i + 2; j < order.length; j++) {
+          const before = (i > 0 ? D[order[i - 1]][order[i]] : 0) + (j < order.length - 1 ? D[order[j]][order[j + 1]] : 0);
+          const after = (i > 0 ? D[order[i - 1]][order[j]] : 0) + (j < order.length - 1 ? D[order[i]][order[j + 1]] : 0);
+          if (after < before - 1e-9) {
+            const seg = order.slice(i, j + 1).reverse();
+            order.splice(i, seg.length, ...seg);
+            improved = true;
+          }
+        }
+      }
+    }
+    return order;
+  }
+  let bestOrder = null, bestTotal = Infinity;
+  const starts = Math.min(n, 8);
+  for (let s = 0; s < starts; s++) {
+    const o = twoOpt(nn(Math.floor(s * n / starts)));
+    const t = total(o);
+    if (t < bestTotal) { bestTotal = t; bestOrder = o; }
+  }
+  return bestOrder.map(i => spots[i]);
+}
+
+// ── 時間割：開始時刻から積み上げる。splitDays=trueなら20:30を超える分は次の日へ ──
+function tpBuildPlan(ordered, startMin, splitDays) {
+  const stay = TP_STAY[TP.pace];
+  const days = [];
+  let cur = null, t = startMin;
+  ordered.forEach(s => {
+    if (!cur) { cur = { stops: [], legs: [] }; t = startMin; }
+    else {
+      const leg = tpLeg(cur.stops[cur.stops.length - 1].spot, s);
+      if (splitDays && (leg.far || t + leg.minutes + stay > TP_DAY_END)) { days.push(cur); cur = { stops: [], legs: [] }; t = startMin; }
+      else { cur.legs.push(leg); t += leg.minutes; }
+    }
+    cur.stops.push({ spot: s, arr: t, dep: t + stay });
+    t += stay;
+  });
+  if (cur) days.push(cur);
+  return days;
+}
+function tpStartMin() {
+  if (!tpIsPremium()) return 10 * 60;
+  const [hh, mm] = ((tp$('tp-start') || {}).value || '10:00').split(':').map(Number);
+  return (hh || 0) * 60 + (mm || 0);
+}
+
+// ── 描画：条件 ──
+function tpRenderMembers() {
+  const box = tp$('tp-members');
+  if (!box) return;
+  const list = [{ key: 'all', label: '💙 全員' }].concat(GROUP_CONFIG.members.map(m => ({ key: m.name, label: (TP_MEMBER_EMOJI[m.name] ? TP_MEMBER_EMOJI[m.name] + ' ' : '') + m.name })));
+  box.innerHTML = list.map(m => `<button type="button" data-member="${tpEsc(m.key)}" aria-pressed="${m.key === TP.member}">${tpEsc(m.label)}</button>`).join('');
+}
+function tpRenderAreas() {
+  TP.areaList = tpAreas();
+  const list = TP.areaList;
+  if (!list.some(a => a.label === TP.area)) {
+    const dom = list.find(a => tpIsDomestic(a.label));
+    TP.area = dom ? dom.label : (list.length ? list[0].label : null);
+  }
+  const box = tp$('tp-areas');
+  if (box) box.innerHTML = list.map(a => `<button type="button" data-area="${tpEsc(a.label)}" aria-pressed="${a.label === TP.area}">${tpEsc(a.label)}<span class="n">${a.spots.length}件</span></button>`).join('');
+}
+function tpRenderSegs() {
+  const prem = tpIsPremium();
+  if (!prem) TP.pace = 'normal';
+  document.querySelectorAll('#tp-pace button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pace === TP.pace)));
+  document.querySelectorAll('#tp-move button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.move === TP.move)));
+  ['tp-start-wrap', 'tp-pace-wrap'].forEach(id => {
+    const w = tp$(id); if (!w) return;
+    w.classList.toggle('locked', !prem);
+    const f = w.closest('.field'); if (f) f.classList.toggle('locked', !prem);
+  });
+  const st = tp$('tp-start'); if (st) { if (!prem) st.value = '10:00'; st.disabled = !prem; }
+  const ft = tp$('tp-fit-tag'); if (ft) ft.classList.toggle('on', !prem);
+}
+function tpRenderSpots() {
+  const box = tp$('tp-spots');
+  if (!box) return;
+  const spots = tpVisibleSpots();
+  if (!spots.length) box.innerHTML = '<p class="empty">このエリアに該当するスポットはありません。</p>';
+  else box.innerHTML = spots.map(s => {
+    const id = String(s.db_id);
+    const src = spotThumb(s);
+    const ph = src
+      ? `<span class="ph"><img src="${tpEsc(src)}" alt="${tpEsc(s.name)}の写真" loading="lazy" decoding="async" onerror="this.remove()"></span>`
+      : `<span class="ph"><span class="nophoto">${tpEsc(s.name)}</span></span>`;
+    const mem = tpMembers(s).join('・');
+    return `<label class="spot${s.is_closed ? ' closed' : ''}">
+      <input type="checkbox" data-id="${tpEsc(id)}" ${TP.selected.has(id) ? 'checked' : ''}>
+      ${ph}
+      <span class="body">
+        <span class="no">No.${s.no == null ? '—' : s.no}${s.is_trace_original ? '<span class="badge">Trace独自特定</span>' : ''}${s.is_closed ? '<span class="badge gray">閉業</span>' : ''}${src ? '' : '<span class="badge gray">写真なし</span>'}</span>
+        <span class="name">${tpEsc(s.name)}</span>
+        <span class="meta">${tpEsc(mem)}${mem ? '／' : ''}${tpEsc(tpPlace(s).small)}</span>
+      </span>
+    </label>`;
+  }).join('');
+  tpUpdateCount();
+}
+function tpUpdateCount() {
+  const total = tpAreaSpots().length;
+  const sel = tpChosen().length;
+  const c = tp$('tp-count'); if (c) c.textContent = sel + ' / ' + total + ' 件を選択中';
+  const plain = tp$('tp-plain-btn'); if (plain) plain.disabled = sel === 0;
+  updateOptimizeBtn();
+}
+function tpSelectAll() {
+  tpVisibleSpots().filter(s => !s.is_closed).forEach(s => TP.selected.add(String(s.db_id)));
+}
+function tpSetArea(label) {
+  TP.area = label;
+  tpRenderAreas(); tpRenderSpots();
+  const r = tp$('tp-result'); if (r) r.hidden = true;
+}
+function tpRender() {
+  tpRenderMembers(); tpRenderAreas(); tpRenderSegs(); tpRenderSpots();
+}
+
+// ── 描画：結果 ──
+function tpMapsSearchURL(s) {
+  const q = s.address ? s.name + ' ' + s.address : s.lat + ',' + s.lng;
+  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
+}
+function tpMapsLegURL(a, b, mode) {
+  return 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(a.lat + ',' + a.lng) +
+    '&destination=' + encodeURIComponent(b.lat + ',' + b.lng) + '&travelmode=' + (mode === 'walk' ? 'walking' : 'transit');
+}
+function tpMapsChunkURL(spots) {
+  const pts = spots.map(s => s.lat + ',' + s.lng);
+  let u = 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(pts[0]) +
+    '&destination=' + encodeURIComponent(pts[pts.length - 1]) + '&travelmode=walking';
+  if (pts.length > 2) u += '&waypoints=' + encodeURIComponent(pts.slice(1, -1).join('|'));
+  return u;
+}
+function tpDateLabel() {
+  const v = (tp$('tp-date') || {}).value;
+  const d = v ? new Date(v + 'T00:00:00') : new Date();
+  return (d.getMonth() + 1) + '月' + d.getDate() + '日（' + ['日', '月', '火', '水', '木', '金', '土'][d.getDay()] + '）';
+}
+function tpShow(ordered, optimized, quiet) {
+  const prem = tpIsPremium();
+  const startMin = tpStartMin();
+  const days = tpBuildPlan(ordered, startMin, prem);
+  TP.last = { ordered, optimized, days };
+  window.routeOptimizedFlag = !!optimized;
+  const stay = TP_STAY[TP.pace];
+  const allLegs = days.flatMap(d => d.legs);
+  const moveMin = allLegs.reduce((a, l) => a + l.minutes, 0);
+  const walkKm = allLegs.filter(l => l.mode === 'walk').reduce((a, l) => a + l.km, 0);
+  const lastDay = days[days.length - 1];
+  const endT = lastDay.stops[lastDay.stops.length - 1].dep;
+  const moveTxt = (moveMin >= 60 ? Math.floor(moveMin / 60) + '時間' : '') + (moveMin % 60) + '分';
+  tp$('tp-result-title').textContent = (TP.area || '') + '｜' + tpDateLabel() + 'のモデルコース' + (optimized ? '' : '（選んだ順）');
+
+  let html = `<div class="summary">
+    <div>終了予定<b>${prem ? (days.length > 1 ? days.length + '日間・' : '') + tpFmt(endT) : '🔒'}</b></div>
+    <div>まわるスポット<b>${ordered.length}か所</b></div>
+    <div>移動時間の目安<b>約${moveTxt}</b></div>
+    <div>徒歩距離の目安<b>約${walkKm.toFixed(1)}km</b></div>
+  </div>`;
+  let idx = 0, lockShown = false;
+  days.forEach((day, di) => {
+    if (days.length > 1) html += `<div class="tp-day">${di + 1}日目</div>`;
+    html += '<ol class="tl">';
+    html += `<li class="stop start"><div class="time"><b>${tpFmt(startMin)}</b><span>スタート</span></div><div class="rail"><span class="dot"></span></div><div class="card"><span class="ttl">${tpEsc(TP.area || '')} 巡礼スタート</span></div></li>`;
+    day.stops.forEach((st, i) => {
+      const s = st.spot;
+      const locked = !prem && idx >= TP_FREE_STOPS;
+      if (locked && !lockShown) {
+        lockShown = true;
+        html += `</ol><div class="tp-lockbox"><b>🔒 ${TP_FREE_STOPS + 1}か所目からの時間割はプレミアムで表示</b><p>到着・出発の時刻、終了予定、20:30を過ぎる分の別日分けまで全部わかります</p><button type="button" onclick="tpTeaser('timetable')">🌟 プレミアム（準備中）</button></div><ol class="tl tp-blur" aria-hidden="true">`;
+      }
+      const src = spotThumb(s);
+      html += `<li class="stop"><div class="time"><b>${locked ? '--:--' : tpFmt(st.arr)}</b><span>${locked ? '' : '〜' + tpFmt(st.dep)}</span></div><div class="rail"><span class="dot"></span></div>
+        <div class="card">${src ? `<img class="thumb" src="${tpEsc(src)}" alt="" loading="lazy" onerror="this.remove()">` : ''}
+        <span class="ttl">No.${s.no == null ? '—' : s.no} ${tpEsc(s.name)}</span>${s.is_trace_original ? '<span class="badge">Trace独自特定</span>' : ''}${s.is_closed ? '<span class="badge gray">閉業</span>' : ''}
+        <div class="sub">${tpEsc(tpMembers(s).join('・'))}／滞在 ${stay}分${s.sub ? '｜' + tpEsc(String(s.sub).slice(0, 80)) : ''}</div>
+        ${s.address ? `<div class="addr">${tpEsc(s.address)}</div>` : ''}
+        <div class="links"><a href="${tpMapsSearchURL(s)}" target="_blank" rel="noopener">Googleマップで開く</a>${s.source_url ? `<a href="${tpEsc(s.source_url)}" target="_blank" rel="noopener">出典を見る</a>` : ''}</div>
+        </div></li>`;
+      if (i < day.legs.length) {
+        const leg = day.legs[i];
+        const nx = day.stops[i + 1].spot;
+        html += `<li class="leg"><div class="ltime">${locked ? '' : tpFmt(st.dep)}</div><div class="rail"></div>
+          <div class="lbody">${tpEsc(leg.label)}<a class="tp-legmap" href="${tpMapsLegURL(s, nx, leg.mode)}" target="_blank" rel="noopener">Googleマップで確認</a></div></li>`;
+      }
+      idx++;
+    });
+    const dEnd = day.stops[day.stops.length - 1].dep;
+    const goalLocked = !prem && idx > TP_FREE_STOPS;
+    html += `<li class="stop goal"><div class="time"><b>${goalLocked ? '--:--' : tpFmt(dEnd)}</b><span>${di < days.length - 1 ? 'この日の終わり' : 'ゴール'}</span></div><div class="rail"><span class="dot"></span></div><div class="card"><span class="ttl">${di < days.length - 1 ? '次の日は「' + tpEsc(days[di + 1].stops[0].spot.name) + '」からスタート' : '巡礼おつかれさまでした'}</span></div></li></ol>`;
+  });
+
+  // Googleマップで道案内（スマホのGoogleマップは経由地が少ないので5か所ずつに分ける）
+  if (TP.move === 'walk' && ordered.length > 1) {
+    const chunks = [];
+    for (let i = 0; i < ordered.length - 1; i += TP_MAPS_CHUNK - 1) chunks.push([i, Math.min(i + TP_MAPS_CHUNK - 1, ordered.length - 1)]);
+    html += '<div class="tp-mapchunks">' + chunks.map(([a, b], k) =>
+      `<a class="go" style="width:auto;flex:1 1 200px;margin-top:4px;font-size:15px;min-height:46px;text-decoration:none;text-align:center;padding:12px" href="${tpMapsChunkURL(ordered.slice(a, b + 1))}" target="_blank" rel="noopener">🧭 Googleマップで道案内${chunks.length > 1 ? `（${a + 1}〜${b + 1}か所目）` : ''}</a>`).join('') + '</div>';
+  }
+  html += `<div class="actions"><button type="button" id="tp-copy">コースをテキストでコピー</button></div>
+    <ul class="notes">
+      <li>${optimized ? 'まわる順番は移動距離が短くなるよう自動で並べています。' : '選んだ順のままです。「最適な順番でコースを作る」で移動が短い順に並べ替えられます。'}</li>
+      <li>移動時間は直線距離から出した目安です。${TP.move === 'walk' ? '' : '電車の区間は、各区間の「Googleマップで確認」で正確な時間と運賃を見てください。'}</li>
+      ${ordered.some(s => s.is_closed) ? '<li>閉業したスポットが含まれています。外観だけの訪問になります。</li>' : ''}
+    </ul>`;
+  tp$('tp-result-body').innerHTML = html;
+  const res = tp$('tp-result');
+  res.hidden = false;
+  tp$('tp-copy').addEventListener('click', e => tpCopy(e.target));
+  if (quiet) return;
+  tpGa('route_build', { optimized: optimized ? 'yes' : 'no', spots: ordered.length, premium: prem ? 'yes' : 'no', area: TP.area || '' });
+  res.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function tpPlanText() {
+  const L = TP.last; if (!L) return '';
+  const prem = tpIsPremium();
+  const lines = [(TP.area || '') + '｜' + tpDateLabel()];
+  let idx = 0;
+  L.days.forEach((day, di) => {
+    if (L.days.length > 1) lines.push('【' + (di + 1) + '日目】');
+    day.stops.forEach((st, i) => {
+      const s = st.spot;
+      const t = prem || idx < TP_FREE_STOPS ? tpFmt(st.arr) + '–' + tpFmt(st.dep) + ' ' : (idx + 1) + '. ';
+      lines.push(t + 'No.' + (s.no == null ? '—' : s.no) + ' ' + s.name + '（' + tpMembers(s).join('・') + '）');
+      if (s.address) lines.push('　' + s.address);
+      if (i < day.legs.length) lines.push('↓ ' + day.legs[i].label.replace(/^\S+\s/, ''));
+      idx++;
+    });
+  });
+  lines.push('Trace Hearts2Hearts: ' + APP_URL);
+  return lines.join('\n');
+}
+async function tpCopy(btn) {
+  const text = tpPlanText();
+  try { await navigator.clipboard.writeText(text); }
+  catch (_) { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+  btn.textContent = 'コピーしました';
+  setTimeout(() => { btn.textContent = 'コースをテキストでコピー'; }, 2000);
+}
+
+// ── ボタンの動き ──
+async function tpOptimizeClick() {
+  const chosen = tpChosen();
+  if (chosen.length < 2) { alert('2か所以上のスポットを選んでください。'); return; }
+  const key = chosen.map(s => String(s.db_id)).sort().join(',');
+  // 同じスポットの組み合わせなら、もう一度最適化しても回数は減らさない
+  if (TP.optCache && TP.optCache.key === key) { tpShow(TP.optCache.order, true); return; }
+  if (!(await ensureRouteLogin('ルートの最適化'))) return;
+  const limit = getRouteLimit();
+  const remaining = limit.optimizePerMonth - optimizeUsedThisMonth;
+  if (limit.optimizePerMonth === 0) { alert('🔒 ルートの最適化はゴールドランク（800pt）以上で使えます。「選んだ順でコースを作る」は誰でも使えます。'); return; }
+  if (remaining <= 0) {
+    alert('今月の最適化回数を使い切りました。来月1日にリセットされます。');
+    const banner = tp$('rankup-banner'); if (banner) banner.style.display = 'block';
+    return;
+  }
+  try {
+    const { error } = await getSupabaseClient().rpc('use_route_optimize');
+    if (error) {
+      if (String(error.message).includes('optimize_limit')) alert('今月の最適化回数を使い切りました。来月1日にリセットされます。');
+      else alert('最適化できませんでした：' + error.message);
+      await refreshRouteStatus();
+      return;
+    }
+  } catch (e) { alert('通信エラーで最適化できませんでした'); return; }
+  optimizeUsedThisMonth++;
+  if (window.routeStatus) window.routeStatus.optimize_used = optimizeUsedThisMonth;
+  const order = tpOptimize(chosen);
+  TP.optCache = { key, order };
+  updateOptimizeBtn();
+  tpShow(order, true);
+}
+function tpPlainClick() {
+  const chosen = tpChosen();
+  if (!chosen.length) return;
+  tpShow(chosen, false);
+}
+function tpPickFit() {
+  if (!tpIsPremium()) { tpTeaser('pick_fit'); return; }
+  const cand = tpVisibleSpots().filter(s => !s.is_closed);
+  if (!cand.length) return;
+  const days = tpBuildPlan(tpOptimize(cand), tpStartMin(), true);
+  tpVisibleSpots().forEach(s => TP.selected.delete(String(s.db_id)));
+  days[0].stops.forEach(st => TP.selected.add(String(st.spot.db_id)));
+  tpRenderSpots();
+}
+
+// 最適化ボタンとランク表示（既存の updateOptimizeBtn を置き換え）
+function updateOptimizeBtn() {
+  const limit = getRouteLimit();
+  const remaining = limit.optimizePerMonth - optimizeUsedThisMonth;
+  const remEl = tp$('route-opt-remaining');
+  if (remEl) remEl.textContent = limit.optimizePerMonth >= 999 ? '無制限' : `${Math.max(0, remaining)} / ${limit.optimizePerMonth}回`;
+  const rankNameEl = tp$('route-rank-name');
+  const rsRank = window.routeStatus && window.routeStatus.login ? window.routeStatus.rank : null;
+  if (rankNameEl) rankNameEl.textContent = rsRank === 'premium' ? '🌟 プレミアム' : (RANK_DISPLAY[rsRank || currentUserRank] || RANK_DISPLAY.bronze);
+  const btn = tp$('tp-opt-btn'), sub = tp$('tp-opt-sub');
+  const loggedIn = !!(window.routeStatus && window.routeStatus.login);
+  const n = tpChosen().length;
+  if (btn) {
+    const off = loggedIn && (limit.optimizePerMonth === 0 || remaining <= 0);
+    btn.classList.toggle('tp-off', off);
+    btn.disabled = n < 2;
+    btn.textContent = loggedIn && limit.optimizePerMonth === 0 ? '🔒 最適な順番でコースを作る' : '✨ 最適な順番でコースを作る';
+  }
+  if (sub) {
+    if (!loggedIn) sub.textContent = 'X または Google でログインすると、ランクに応じて使えます';
+    else if (limit.optimizePerMonth === 0) sub.textContent = '🔒 ゴールドランク以上で使えます（「選んだ順」は誰でも使えます）';
+    else if (limit.optimizePerMonth >= 999) sub.textContent = '回数の制限なし';
+    else if (remaining <= 0) sub.textContent = '今月の回数を使い切りました（来月1日にリセット）';
+    else sub.textContent = `今月あと${remaining}回（同じスポットの組み合わせなら作り直しても減りません）`;
+  }
+  const banner = tp$('rankup-banner');
+  if (banner) banner.style.display = loggedIn && limit.optimizePerMonth < 999 && (limit.optimizePerMonth === 0 || remaining <= 0) ? 'block' : 'none';
+  try { tpRenderSegs(); } catch (e) {}
+}
+
+// ── 保存・印刷・保存済みを開く ──
+async function tpSave() {
+  if (!TP.last) { alert('先にコースを作ってください。'); return; }
+  if (!(await ensureRouteLogin('ルートの保存'))) return;
+  const name = tp$('route-name-input').value.trim() || ((TP.area || '') + ' 巡礼ルート');
+  const memo = tp$('route-memo-input').value.trim();
+  const ids = TP.last.ordered.map(s => String(s.db_id));
+  const { error } = await getSupabaseClient().rpc('save_route', {
+    p_name: name, p_memo: memo || null, p_spot_ids: ids, p_spot_memos: {}, p_optimized: !!TP.last.optimized,
+  });
+  if (error) {
+    if (String(error.message).includes('save_limit')) {
+      const st = window.routeStatus || {};
+      alert(`保存できるのは${st.save_max || ''}件までです。保存済みルートを削除するか、ランクを上げると保存できる件数が増えます。`);
+    } else alert('保存できませんでした：' + error.message);
+    return;
+  }
+  await refreshRouteStatus();
+  await loadSavedRoutes();
+  try { showEvalToast(`💾「${name}」を保存しました`); } catch (e) { alert(`「${name}」を保存しました！`); }
+}
+function tpPrint() {
+  if (!TP.last) { alert('先にコースを作ってください。'); return; }
+  printRoute({
+    name: tp$('route-name-input').value.trim() || ((TP.area || '') + ' 巡礼ルート'),
+    memo: tp$('route-memo-input').value.trim(),
+    items: TP.last.ordered.map(s => ({ name: s.name, meta: (s.category || '') + (s.address ? ' · ' + s.address : ''), memo: '', lat: s.lat, lng: s.lng })),
+    optimized: !!TP.last.optimized,
+  });
+}
+// スポットの一覧を、いちばん多く含むエリアに合わせて選んだ状態にする
+function tpSelectList(spots) {
+  tpRender();
+  const cnt = {};
+  spots.forEach(s => { const a = tpAreaOf(s); if (a) cnt[a] = (cnt[a] || 0) + 1; });
+  const best = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
+  if (best) TP.area = best[0];
+  TP.member = 'all';
+  TP.selected = new Set(spots.map(s => String(s.db_id)));
+  tpRender();
+}
+function openSavedRoute(id) {
+  const r = findSavedRoute(id);
+  if (!r) return;
+  const spots = routeSpotsFromIds(r.spot_ids).filter(s => !s.is_draft);
+  if (!spots.length) { alert('このルートのスポットが見つかりませんでした'); return; }
+  tpSelectList(spots);
+  const inArea = spots.filter(s => tpAreaOf(s) === TP.area);
+  tp$('route-name-input').value = r.name || '';
+  tp$('route-memo-input').value = r.memo || '';
+  if (r.optimized) TP.optCache = { key: inArea.map(s => String(s.db_id)).sort().join(','), order: inArea };
+  tpShow(inArea, !!r.optimized);
+  if (inArea.length < spots.length) { try { showEvalToast(`📂「${r.name}」を開きました（別のエリアの${spots.length - inArea.length}か所はエリアを切り替えると選べます）`); } catch (e) {} }
+  else { try { showEvalToast(`📂「${r.name}」を開きました（${spots.length}か所）`); } catch (e) {} }
+}
+// 旅のスポットをまとめて入れる（既存の addSeriesToRoute を置き換え）
+function addSeriesToRoute(name) {
+  name = name || activeSeries;
+  if (!name) return;
+  const list = SPOTS.filter(s => s.series === name && !s.is_draft).sort((a, b) => (a.no ?? 99999) - (b.no ?? 99999));
+  if (!list.length) return;
+  closeSeriesPicker();
+  try { if (cardOpen) toggleCard(); } catch (e) {}
+  showView('route');
+  tpSelectList(list);
+  const r = tp$('tp-result'); if (r) r.hidden = true;
+  tp$('route-name-input').value = name;
+  logSeriesEvent('route', name, null);
+  try { tp$('tp-step2').scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
+  try { showEvalToast(`🗺 ${tpChosen().length}か所を選びました。コースを作ってください`); } catch (e) {}
+}
+// 既存の呼び出しとの互換
+function renderRouteSpotList() { tpRender(); }
+function updateRouteStickyCount() { tpUpdateCount(); }
+
+function tpOnShow() {
+  if (!TP.inited) {
+    TP.inited = true;
+    const now = new Date();
+    const tmr = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    tp$('tp-date').value = tmr.getFullYear() + '-' + String(tmr.getMonth() + 1).padStart(2, '0') + '-' + String(tmr.getDate()).padStart(2, '0');
+    tp$('tp-members').addEventListener('click', e => { const b = e.target.closest('button[data-member]'); if (b) { TP.member = b.dataset.member; tpRenderMembers(); tpRenderSpots(); } });
+    tp$('tp-areas').addEventListener('click', e => { const b = e.target.closest('button[data-area]'); if (b) tpSetArea(b.dataset.area); });
+    tp$('tp-pace').addEventListener('click', e => { const b = e.target.closest('button[data-pace]'); if (!b) return; if (!tpIsPremium()) { tpTeaser('pace'); return; } TP.pace = b.dataset.pace; tpRenderSegs(); tpRefreshResult(); });
+    tp$('tp-move').addEventListener('click', e => { const b = e.target.closest('button[data-move]'); if (!b) return; TP.move = b.dataset.move; tpRenderSegs(); tpRefreshResult(); });
+    tp$('tp-start').addEventListener('change', tpRefreshResult);
+    tp$('tp-date').addEventListener('change', tpRefreshResult);
+    tp$('tp-spots').addEventListener('change', e => {
+      const cb = e.target.closest('input[type=checkbox][data-id]');
+      if (!cb) return;
+      if (cb.checked) TP.selected.add(cb.dataset.id); else TP.selected.delete(cb.dataset.id);
+      tpUpdateCount();
+    });
+    tp$('tp-pick-all').addEventListener('click', () => { tpSelectAll(); tpRenderSpots(); });
+    tp$('tp-pick-none').addEventListener('click', () => { tpVisibleSpots().forEach(s => TP.selected.delete(String(s.db_id))); tpRenderSpots(); });
+    tp$('tp-pick-fit').addEventListener('click', tpPickFit);
+    tp$('tp-opt-btn').addEventListener('click', tpOptimizeClick);
+    tp$('tp-plain-btn').addEventListener('click', tpPlainClick);
+    tpRender();
+    if (!TP.selected.size) { tpSelectAll(); tpRenderSpots(); }
+  } else tpRender();
+}
+// 条件を変えたら、今のコースを同じ順番のまま作り直す（回数は減らない）
+function tpRefreshResult() {
+  const r = tp$('tp-result');
+  if (TP.last && r && !r.hidden) tpShow(TP.last.ordered, TP.last.optimized, true);
+}
+
 </script>
 
 <!-- Supabase JS SDK -->
