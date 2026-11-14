@@ -2422,6 +2422,16 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
   .fba-row span { color: var(--text); word-break: break-all; }
   .fba-row b { flex-shrink: 0; color: var(--purple-deep); }
   .fba-empty { font-size: 12px; color: var(--text-light); padding: 8px 0; }
+
+  /* プライバシー設定 */
+  #privacy-sheet { position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,.45); align-items: flex-end; justify-content: center; }
+  .pv-row { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 10px; cursor: pointer; }
+  .pv-row div { flex: 1; }
+  .pv-row b { display: block; font-size: 14px; color: var(--purple-deep); margin-bottom: 4px; }
+  .pv-row span { font-size: 12px; color: var(--text-mid); line-height: 1.6; }
+  .pv-row input { width: 24px; height: 24px; accent-color: var(--purple-mid); flex-shrink: 0; }
+  .pv-note { font-size: 12px; color: var(--text-light); line-height: 1.6; margin: 4px 2px 10px; }
+  .pv-saved { font-size: 12px; color: #0b6b4a; font-weight: 700; min-height: 18px; text-align: center; }
 </style>
 </head>
 <body>
@@ -3061,15 +3071,11 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
         <div class="settings-item-lang-current" id="lang-current-display">日本語</div>
         <div class="settings-item-arrow">›</div>
       </div>
-      <div class="settings-item" onclick="alert('通知設定は近日公開予定です。')">
-        <div class="settings-item-icon">🔔</div>
-        <div class="settings-item-text">通知設定</div>
-        <div class="settings-item-arrow" style="font-size:10px;color:var(--text-light);">準備中</div>
-      </div>
-      <div class="settings-item" onclick="alert('プライバシー設定は近日公開予定です。')">
+      <!-- 通知設定は中身ができるまで外す（2026-11-14） -->
+      <div class="settings-item" onclick="openPrivacy()">
         <div class="settings-item-icon">🔒</div>
         <div class="settings-item-text">プライバシー設定</div>
-        <div class="settings-item-arrow" style="font-size:10px;color:var(--text-light);">準備中</div>
+        <div class="settings-item-arrow">›</div>
       </div>
       <div class="settings-item" onclick="openTransferModal()">
         <div class="settings-item-icon">📲</div>
@@ -4133,6 +4139,28 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
   </div>
 </div>
 
+<!-- プライバシー設定（2026-11-14） -->
+<div id="privacy-sheet" style="display:none;" onclick="if(event.target===this)closePrivacy()">
+  <div class="faq-panel" style="height:auto;max-height:86vh;">
+    <div class="faq-head">
+      <div><div class="faq-eyebrow">⚙️ 設定</div><div class="faq-title">プライバシー設定</div></div>
+      <button type="button" class="faq-close" onclick="closePrivacy()" aria-label="閉じる">✕</button>
+    </div>
+    <div class="faq-scroll" style="padding-bottom:28px;">
+      <div id="pv-login" class="pv-note" style="display:none;">X または Google でログインすると設定できます。</div>
+      <label class="pv-row">
+        <div><b>タイムラインに名前を出さない</b><span>巡礼報告やコンプリートのお祝いで、名前の代わりに「巡礼者」と表示します。</span></div>
+        <input type="checkbox" id="pv-hide-name" onchange="savePrivacy()">
+      </label>
+      <label class="pv-row">
+        <div><b>ランキングに出さない</b><span>達成率ランキング・推しファンランキング・月間トップ貢献者に表示されなくなります。ポイントやランクはそのまま貯まります。</span></div>
+        <input type="checkbox" id="pv-hide-rank" onchange="savePrivacy()">
+      </label>
+      <div class="pv-note">変更はすぐに保存されます。行きたいマークは、ほかの人には見えません。</div>
+      <div class="pv-saved" id="pv-saved"></div>
+    </div>
+  </div>
+</div>
 <div class="bottom-nav">
   <button class="nav-item active" id="nav-map" onclick="showView('map')">
     <div class="nav-icon">🗺️</div>
@@ -4916,9 +4944,9 @@ async function loadFeed() {
       if (userIds.length) {
         const { data: pdata } = await client
           .from('profiles')
-          .select('id, display_name')
+          .select('id, display_name, hide_name_in_feed')
           .in('id', userIds);
-        if (Array.isArray(pdata)) pdata.forEach(p => { nameMap[p.id] = p.display_name; });
+        if (Array.isArray(pdata)) pdata.forEach(p => { nameMap[p.id] = p.hide_name_in_feed ? null : p.display_name; });
       }
       visits = vdata.map(v => ({
         feedType: 'visit',
@@ -4940,8 +4968,8 @@ async function loadFeed() {
       const ids = [...new Set(cdata.map(c => c.user_id).filter(Boolean))];
       let nm = {};
       if (ids.length) {
-        const { data: pdata } = await client.from('profiles').select('id, display_name').in('id', ids);
-        if (Array.isArray(pdata)) pdata.forEach(p => { nm[p.id] = p.display_name; });
+        const { data: pdata } = await client.from('profiles').select('id, display_name, hide_name_in_feed').in('id', ids);
+        if (Array.isArray(pdata)) pdata.forEach(p => { nm[p.id] = p.hide_name_in_feed ? null : p.display_name; });
       }
       comps = cdata.map(c => ({ feedType: 'complete', id: c.id, kind: c.kind, label: c.label, total: c.total, display_name: nm[c.user_id] || '巡礼者', created_at: c.completed_at }));
     }
@@ -13491,6 +13519,38 @@ async function fbFillUnread() {
     if (error) return;
     document.querySelectorAll('.adm-fb-count').forEach(el => { el.textContent = count || ''; el.style.display = count ? 'inline-block' : 'none'; });
   } catch (e) {}
+}
+
+// ── プライバシー設定（タイムラインに名前を出さない・ランキングに出さない） ──
+async function openPrivacy() {
+  const sheet = document.getElementById('privacy-sheet');
+  sheet.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  document.getElementById('pv-saved').textContent = '';
+  const nameEl = document.getElementById('pv-hide-name'), rankEl = document.getElementById('pv-hide-rank');
+  try {
+    const client = getSupabaseClient();
+    const { data } = await client.auth.getSession();
+    const ses = data && data.session;
+    const ok = !!(ses && !(ses.user && ses.user.is_anonymous));
+    document.getElementById('pv-login').style.display = ok ? 'none' : '';
+    nameEl.disabled = rankEl.disabled = !ok;
+    if (!ok) return;
+    const { data: p } = await client.from('profiles').select('hide_name_in_feed, hide_from_ranking').eq('id', ses.user.id).single();
+    nameEl.checked = !!(p && p.hide_name_in_feed);
+    rankEl.checked = !!(p && p.hide_from_ranking);
+  } catch (e) {}
+}
+function closePrivacy() { document.getElementById('privacy-sheet').style.display = 'none'; document.body.style.overflow = ''; }
+async function savePrivacy() {
+  const hideName = document.getElementById('pv-hide-name').checked;
+  const hideRank = document.getElementById('pv-hide-rank').checked;
+  const msg = document.getElementById('pv-saved');
+  msg.textContent = '保存中…';
+  const { error } = await getSupabaseClient().rpc('set_my_privacy', { p_hide_name: hideName, p_hide_ranking: hideRank });
+  if (error) { msg.textContent = ''; alert('保存できませんでした：' + error.message); return; }
+  try { hideFromRankingActive = hideRank; } catch (e) {}
+  msg.textContent = '✓ 保存しました';
 }
 // 既存の呼び出しとの互換
 function renderRouteSpotList() { tpRender(); }
