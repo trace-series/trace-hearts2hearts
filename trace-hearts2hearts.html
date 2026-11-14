@@ -2343,6 +2343,9 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
   /* iPhoneで時刻・日付の入力欄が枠からはみ出すのを防ぐ */
   .tp .field input[type="time"], .tp .field input[type="date"] { -webkit-appearance: none; appearance: none; display: block; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; text-align: left; }
   .tp .tp-lockwrap { min-width: 0; max-width: 100%; }
+
+  /* STEPの札が2行に折れないようにする */
+  .tp h2 .step { white-space: nowrap; flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -12487,7 +12490,7 @@ function tpShow(ordered, optimized, quiet) {
   tp$('tp-result-title').textContent = (TP.area || '') + '｜' + tpDateLabel() + 'のモデルコース' + (optimized ? '' : '（選んだ順）');
 
   let html = `<div class="summary">
-    <div>終了予定<b>${prem ? (days.length > 1 ? days.length + '日間・' : '') + tpFmt(endT) : '🔒'}</b></div>
+    <div>終了予定<b>${prem ? (days.length > 1 ? days.length + '日目 ' : '') + tpFmt(endT) : '🔒'}</b></div>
     <div>まわるスポット<b>${ordered.length}か所</b></div>
     <div>移動時間の目安<b>約${moveTxt}</b></div>
     <div>徒歩距離の目安<b>約${walkKm.toFixed(1)}km</b></div>
