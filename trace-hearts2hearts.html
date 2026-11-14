@@ -2370,6 +2370,58 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
   .tp .spot .want-chip { margin-top: 6px; align-self: flex-start; }
   .tp .badge.want { background: #fff4c2; color: #8a5a00; }
   .tp .badge.visited { background: #e2f3ec; color: #0b6b4a; }
+  /* 『Q』ボタン・よくある質問・意見（2026-11-14） */
+  #q-tab { position: fixed; right: 0; top: 58%; z-index: 150; width: 34px; height: 44px; border: none; border-radius: 22px 0 0 22px; background: linear-gradient(135deg,var(--purple-mid),var(--purple-deep)); color: #fff; font-size: 18px; font-weight: 800; font-family: Georgia, serif; box-shadow: -2px 2px 10px rgba(0,0,0,.18); cursor: pointer; padding: 0 0 0 4px; opacity: .92; }
+  @media print { #q-tab { display: none !important; } }
+  #faq-sheet, #fb-admin { position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,.45); align-items: flex-end; justify-content: center; }
+  #fb-admin { z-index: 3001; }
+  .faq-panel { background: var(--bg, #f6f9fc); width: 100%; max-width: 640px; height: 92vh; border-radius: 20px 20px 0 0; display: flex; flex-direction: column; overflow: hidden; }
+  .faq-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 10px; background: #fff; border-bottom: 1px solid var(--border); }
+  .faq-eyebrow { font-size: 11px; color: var(--text-light); font-weight: 700; }
+  .faq-title { font-size: 19px; font-weight: 800; color: var(--purple-deep); }
+  .faq-close { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--purple-pale); color: var(--purple-deep); font-size: 16px; cursor: pointer; }
+  .faq-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 16px 40px; }
+  .fb-box { background: #fff; border: 2px solid var(--purple-mid); border-radius: 16px; padding: 14px; margin-bottom: 16px; }
+  .fb-h { font-size: 15px; font-weight: 800; color: var(--purple-deep); }
+  .fb-sub { font-size: 12px; color: var(--text-mid); line-height: 1.6; margin: 4px 0 10px; }
+  .fb-from-line { color: var(--text-light); }
+  .fb-kinds { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .fb-kinds button { border: 1.5px solid var(--border); background: #fff; border-radius: 16px; padding: 7px 11px; font-size: 12px; font-weight: 700; color: var(--text-mid); cursor: pointer; }
+  .fb-kinds button[aria-pressed="true"] { background: var(--purple-mid); border-color: var(--purple-mid); color: #fff; }
+  #fb-text { width: 100%; box-sizing: border-box; min-height: 70px; border: 1.5px solid var(--border); border-radius: 12px; padding: 10px; font-size: 16px; font-family: inherit; resize: vertical; }
+  .fb-send { width: 100%; margin-top: 8px; border: none; border-radius: 12px; padding: 12px; font-size: 15px; font-weight: 800; color: #fff; background: linear-gradient(135deg,var(--purple-mid),var(--purple-deep)); cursor: pointer; }
+  .fb-send:disabled { opacity: .6; }
+  .fb-note { font-size: 11px; color: var(--text-light); margin-top: 6px; }
+  .fb-done { font-size: 14px; font-weight: 700; color: var(--purple-deep); text-align: center; line-height: 1.7; padding: 8px 0; }
+  .faq-cats { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 6px; }
+  .faq-cats a { flex-shrink: 0; font-size: 12px; font-weight: 700; color: var(--purple-deep); background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 6px 11px; text-decoration: none; white-space: nowrap; }
+  .faq-cat { margin-bottom: 14px; }
+  .faq-cat-title { font-size: 13px; font-weight: 800; color: var(--purple-deep); margin: 10px 2px 6px; }
+  .faq-cat details { background: #fff; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 6px; }
+  .faq-cat summary { padding: 12px 14px; font-size: 13.5px; font-weight: 700; color: var(--text); cursor: pointer; line-height: 1.5; }
+  .faq-cat details > div { padding: 0 14px 12px; font-size: 13px; color: var(--text-mid); line-height: 1.7; }
+  .faq-contact { text-align: center; background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-top: 10px; }
+  .faq-contact-h { font-size: 14px; font-weight: 800; color: var(--purple-deep); }
+  .faq-contact-sub { font-size: 12px; color: var(--text-mid); margin: 4px 0 10px; }
+  .faq-contact a { display: inline-block; background: #111; color: #fff; border-radius: 12px; padding: 10px 18px; font-size: 13px; font-weight: 700; text-decoration: none; }
+  .fba-ctrl { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--border); }
+  .fba-seg { display: flex; gap: 4px; }
+  .fba-seg button { border: 1.5px solid var(--border); background: #fff; border-radius: 10px; padding: 7px 10px; font-size: 12px; font-weight: 700; color: var(--text-mid); cursor: pointer; }
+  .fba-seg button[aria-pressed="true"] { background: var(--purple-deep); border-color: var(--purple-deep); color: #fff; }
+  .fba-sum { font-size: 13px; color: var(--text-mid); margin-bottom: 10px; }
+  .fba-item { background: #fff; border: 1px solid var(--border); border-left: 5px solid #e0245e; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
+  .fba-item.done { border-left-color: #9ca3af; opacity: .7; }
+  .fba-meta { font-size: 11px; color: var(--text-light); }
+  .fba-kind { display: inline-block; font-size: 11px; font-weight: 700; color: #fff; background: var(--purple-mid); border-radius: 8px; padding: 1px 8px; margin-top: 4px; }
+  .fba-msg { font-size: 13px; color: var(--text); line-height: 1.6; margin-top: 4px; white-space: pre-wrap; }
+  .fba-item button { margin-top: 8px; border: 1.5px solid var(--border); background: #fff; border-radius: 10px; padding: 6px 10px; font-size: 12px; font-weight: 700; color: var(--purple-deep); cursor: pointer; }
+  .fba-block { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+  .fba-h { font-size: 14px; font-weight: 800; color: var(--purple-deep); }
+  .fba-note { font-size: 11px; color: var(--text-light); margin: 2px 0 6px; line-height: 1.5; }
+  .fba-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; padding: 6px 0; border-top: 1px dashed var(--border); }
+  .fba-row span { color: var(--text); word-break: break-all; }
+  .fba-row b { flex-shrink: 0; color: var(--purple-deep); }
+  .fba-empty { font-size: 12px; color: var(--text-light); padding: 8px 0; }
 </style>
 </head>
 <body>
@@ -2994,8 +3046,8 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
         <div class="settings-item-arrow" style="font-size:12px;color:var(--purple-deep);font-weight:700;">+50pt</div>
       </div>
       <div class="settings-item" onclick="showView('route')">
-        <div class="settings-item-icon">📂</div>
-        <div class="settings-item-text">ルート保存・印刷</div>
+        <div class="settings-item-icon">🗺️</div>
+        <div class="settings-item-text">巡礼プランナー（ルート作成・保存）</div>
         <div class="settings-item-arrow">›</div>
       </div>
       <div class="settings-item" onclick="showView('pointrules')">
@@ -3024,9 +3076,14 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
         <div class="settings-item-text">データ引き継ぎ</div>
         <div class="settings-item-arrow">›</div>
       </div>
-      <div class="settings-item" onclick="window.open('https://trace-series.github.io/trace-hearts2hearts/trace-h2h-faq.html','_blank')">
+      <div class="settings-item" onclick="openFaq()">
         <div class="settings-item-icon">💬</div>
-        <div class="settings-item-text">よくある質問</div>
+        <div class="settings-item-text">よくある質問・ご意見</div>
+        <div class="settings-item-arrow">›</div>
+      </div>
+      <div class="settings-item" id="fb-admin-entry" style="display:none;" onclick="openFbAdmin('fb')">
+        <div class="settings-item-icon">🔧</div>
+        <div class="settings-item-text">意見・つまずき（管理者）</div>
         <div class="settings-item-arrow">›</div>
       </div>
       <div class="settings-item" onclick="window.open('https://x.com/traceH2H','_blank')">
@@ -3963,6 +4020,119 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
 </div>
 
 <!-- BOTTOM NAV -->
+
+<!-- 『Q』ボタン・アプリ内のよくある質問・意見・つまずき（2026-11-14） -->
+<button type="button" id="q-tab" onclick="openFaq()" aria-label="よくある質問・ご意見">Q</button>
+
+<div id="faq-sheet" role="dialog" aria-label="よくある質問" style="display:none;">
+  <div class="faq-panel">
+    <div class="faq-head">
+      <div><div class="faq-eyebrow">💬 サポート</div><div class="faq-title">よくある質問</div></div>
+      <button type="button" class="faq-close" onclick="closeFaq()" aria-label="閉じる">✕</button>
+    </div>
+    <div class="faq-scroll">
+      <!-- ひとこと送る（いちばん上） -->
+      <div class="fb-box">
+        <div id="fb-form">
+          <div class="fb-h">📝 ひとこと送る</div>
+          <div class="fb-sub">分かりにくい所・困った所・ほしい機能を、気軽に教えてください。種類を押すだけでも送れます。<br><span class="fb-from-line">今見ていた画面：<b id="fb-from">マップ</b></span></div>
+          <div class="fb-kinds" id="fb-kinds">
+            <button type="button" data-kind="使い方がわからない" aria-pressed="false" onclick="faqPickKind(this)">😵 使い方がわからない</button>
+            <button type="button" data-kind="うまく動かない" aria-pressed="false" onclick="faqPickKind(this)">🐛 うまく動かない</button>
+            <button type="button" data-kind="こんな機能がほしい" aria-pressed="false" onclick="faqPickKind(this)">💡 こんな機能がほしい</button>
+            <button type="button" data-kind="その他" aria-pressed="false" onclick="faqPickKind(this)">💬 その他</button>
+          </div>
+          <textarea id="fb-text" maxlength="1000" placeholder="（任意）例：ルートの保存ボタンが見つからなかった"></textarea>
+          <button type="button" id="fb-send" class="fb-send" onclick="sendFeedback()">送信する</button>
+          <div class="fb-note">お返事が必要なご相談は、下の「お問い合わせ窓口（X）」へどうぞ。</div>
+        </div>
+        <div id="fb-done" style="display:none;" class="fb-done">🙏 ありがとうございます！<br>いただいた声はアプリの改善に使わせていただきます。</div>
+      </div>
+
+      <nav class="faq-cats">
+        <a href="#faq-cat-planner" onclick="event.preventDefault();document.getElementById('faq-cat-planner').scrollIntoView({behavior:'smooth'})">巡礼プランナー・行きたい</a>
+        <a href="#faq-cat-usage" onclick="event.preventDefault();document.getElementById('faq-cat-usage').scrollIntoView({behavior:'smooth'})">使い方</a>
+        <a href="#faq-cat-report" onclick="event.preventDefault();document.getElementById('faq-cat-report').scrollIntoView({behavior:'smooth'})">間違い・情報提供</a>
+        <a href="#faq-cat-accuracy" onclick="event.preventDefault();document.getElementById('faq-cat-accuracy').scrollIntoView({behavior:'smooth'})">情報の正確性</a>
+        <a href="#faq-cat-about" onclick="event.preventDefault();document.getElementById('faq-cat-about').scrollIntoView({behavior:'smooth'})">アプリについて</a>
+      </nav>
+
+      <div id="faq-main">
+        <section class="faq-cat" id="faq-cat-planner">
+          <div class="faq-cat-title">巡礼プランナー・行きたい・コンプリート</div>
+          <details><summary>巡礼プランナーはどう使うの？</summary><div>My Page の「🗺️ 巡礼プランナー（ルート作成・保存）」か、スポットカードの旅の「📍 ルートを作る」から開きます。①日付や移動手段を決める → ②エリアと行きたいスポットを選ぶ → ③「コースを作る」を押すと、まわる順番と時刻つきのモデルコースができます。各区間の「Googleマップで確認」で、そのまま道案内できます。</div></details>
+          <details><summary>「最適な順番」と「選んだ順」の違いは？</summary><div>「最適な順番」は移動が短くなるように自動で並べ替えます（ゴールドランク以上で、月の回数に制限があります）。「選んだ順」は並べ替えずに、選んだ順のままコースを作ります（誰でも使えます）。同じスポットの組み合わせなら、作り直しても回数は減りません。</div></details>
+          <details><summary>移動時間は正確ですか？</summary><div>スポット間の直線距離から計算した目安です。電車の時間や運賃は、各区間の「Googleマップで確認」から正確なものを見てください。</div></details>
+          <details><summary>「☆ 行きたい」とは？</summary><div>スポットカード・タイムライン・ギャラリーで「☆ 行きたい」を押すと、行きたい場所として保存されます。巡礼プランナーでエリアを開くと、行きたいスポットが最初から選ばれた状態になります。ログイン中はアカウントに保存されるので、機種変更しても残ります。</div></details>
+          <details><summary>コンプリートとバッジの仕組みは？</summary><div>エリア（東京都・大阪府・韓国・ソウルなど）や旅（同じ番組・旅のシリーズ）のスポットを全部「巡礼した！」で報告するとコンプリートです。タイムラインでお祝いされ、合計1・3・5・10のコンプリートでバッジがもらえます。進み具合は My Page の「エリア・旅の制覇状況」で見られます。</div></details>
+          <details><summary>プレミアムとは？</summary><div>現在準備中のプランです。巡礼プランナーの時間割を最後まで表示、開始時刻やペースの変更、回りきれない分の別日分け、最適化と保存の回数無制限などを予定しています。</div></details>
+        </section>
+
+        <section class="faq-cat" id="faq-cat-usage">
+          <div class="faq-cat-title">使い方</div>
+          <details><summary>地図のピンの色や絵文字にはどんな意味がありますか？</summary><div>絵文字はメンバーを表しています。ピンの色はスポットの種類（カフェ・飲食店・撮影スポット・ライブ・イベント会場・観光・名所・ショップ）を示しています。</div></details>
+          <details><summary>メンバータブはどう使いますか？</summary><div>見たいメンバーのアイコンをタップすると、そのメンバーに関連するスポットだけが地図に表示されます。「全員」タブですべてのスポットを表示できます。</div></details>
+          <details><summary>巡礼報告（巡礼した！）ができません</summary><div>巡礼報告は現地でのみできます。位置情報の利用を許可し、スポットの近くで「📸 巡礼した！」を押してください。スポットから離れていると報告できません。</div></details>
+          <details><summary>写真は誰でも投稿できますか？</summary><div>ログインすれば投稿いただけます。投稿写真は運営の確認・承認を経てから掲載され、内容によっては別の写真に差し替えさせていただく場合があります。未ログイン（匿名）の場合は、地図の閲覧やスポットの評価は可能ですが、投稿などの一部機能は制限されます。</div></details>
+          <details><summary>推し設定をすると何が変わりますか？</summary><div>1推し・2推しに設定したメンバーのスポットを評価・報告すると、獲得ポイントに倍率がかかります（1推し1.5倍／2推し1.2倍）。また、推しメンランキングにも反映されます。</div></details>
+          <details><summary>「友達を紹介」はどんな仕組みですか？</summary><div>マイページの「友達を紹介」から紹介リンクをコピーして友達に送ってください。友達がそのリンクから登録し、初めての巡礼報告をすると、紹介したあなたに+50pt（紹介人数に応じてボーナスも加算）が入ります。友達側への特典はありません。</div></details>
+          <details><summary>機種変更してもデータは引き継がれますか？</summary><div>X／Googleでログインしていれば、新しい端末で同じアカウントにログインするだけでポイント・投稿・評価履歴・行きたいが自動的に引き継がれます。未ログイン（匿名）で利用していた場合は、設定の「データ引き継ぎ」から引き継ぎコードを発行し、新しい端末でそのコードを入力することで一部のデータを移行できます。</div></details>
+        </section>
+
+        <section class="faq-cat" id="faq-cat-report">
+          <div class="faq-cat-title">間違い・情報提供</div>
+          <details><summary>間違った情報を見つけたらどうすればいい？</summary><div>各スポットカード下部の報告ボタンから、その場で報告できます。「場所が違う」「正しい位置を報告（現在地をもとに位置を報告）」「誤情報を報告（詳細を入力）」「特定できない」「立入不可」「情報が古い」の中から、状況に近いものをタップしてください。うまく報告できない場合や、より詳しく伝えたい場合は、下部の問い合わせ窓口（X）もご利用いただけます。</div></details>
+          <details><summary>新しい聖地情報を教えたい場合は？</summary><div>画面上の「＋投稿する」から、スポット名・住所を入力して投稿できます。運営の承認後、地図に反映されます。X連携でご投稿いただくと、あなたのお名前が発見者としてスポットに記録され、運営Xでもご紹介することがあります。正確な位置がわからない場合（海外の場所や情報不足など）はチェックを入れておくと、運営側で確認のうえ承認します。</div></details>
+          <details><summary>メンバーの紐付けが違う気がします</summary><div>根拠となる投稿や動画があれば、あわせて問い合わせ窓口までお知らせください。確認して修正いたします。</div></details>
+        </section>
+
+        <section class="faq-cat" id="faq-cat-accuracy">
+          <div class="faq-cat-title">情報の正確性</div>
+          <details><summary>聖地情報はどうやって集めているの？</summary><div>メンバーのSNS投稿、YouTubeコンテンツ、MV・写真集の撮影地情報など、公開されている情報をもとに運営が一つずつ確認しながら登録しています。運営が独自に特定した場所には「Trace独自特定」の印が付いています。</div></details>
+          <details><summary>「メンバー：全員」となっている場所は、本当に全員が訪れた場所ですか？</summary><div>一部のスポットは情報整理中のため、暫定的に「全員」と表示しています。訪問メンバーを特定できる手がかりが見つかり次第、正しい表示に随時修正しています。</div></details>
+          <details><summary>情報の出典はどこで確認できますか？</summary><div>スポットカードの「出典」から、元になった投稿・動画を開けます。巡礼プランナーのコースでも「出典を見る」から確認できます。</div></details>
+          <details><summary>閉業・移転した場所はどう扱われますか？</summary><div>確認でき次第、地図上に注記を追加し、訪問できない旨がわかるようにしています。現地に行く前に念のため営業状況をご確認ください。</div></details>
+        </section>
+
+        <section class="faq-cat" id="faq-cat-about">
+          <div class="faq-cat-title">アプリについて</div>
+          <details><summary>このアプリは公式のものですか？</summary><div>いいえ、ファンが個人で運営している非公式のファンメイドアプリです。所属事務所およびグループの公式アプリではありません。</div></details>
+          <details><summary>ログインしないと何ができませんか？</summary><div>地図の閲覧やスポットの評価は未ログインでも可能ですが、スポット投稿・発見者クレジット・ルートの保存や最適化・コンプリートの記録など一部機能はログインが必要です。</div></details>
+          <details><summary>個人情報はどう扱われますか？</summary><div>ログインにはX／Googleの認証のみを使用しており、パスワードなどの情報がアプリに送信されることはありません。アプリをより使いやすくするため、どの画面を開いたか・エラーが起きたかなどを、個人を特定しない形で記録しています。</div></details>
+        </section>
+      </div>
+
+      <div class="faq-contact">
+        <div class="faq-contact-h">解決しませんでしたか？</div>
+        <div class="faq-contact-sub">ここに載っていない質問や、個別のご相談はお問い合わせ窓口までどうぞ。</div>
+        <a href="https://x.com/traceH2H" target="_blank" rel="noopener">𝕏 お問い合わせ窓口へ</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 管理者：意見・つまずき -->
+<div id="fb-admin" style="display:none;">
+  <div class="faq-panel">
+    <div class="faq-head">
+      <div><div class="faq-eyebrow">🔧 管理者</div><div class="faq-title">意見・つまずき</div></div>
+      <button type="button" class="faq-close" onclick="closeFbAdmin()" aria-label="閉じる">✕</button>
+    </div>
+    <div class="fba-ctrl">
+      <div class="fba-seg" id="fb-admin-tabs">
+        <button type="button" data-tab="fb" onclick="openFbAdmin('fb')">💬 意見</button>
+        <button type="button" data-tab="ux" onclick="openFbAdmin('ux')">📉 つまずき</button>
+      </div>
+      <div class="fba-seg" id="fb-admin-days">
+        <button type="button" data-days="7" onclick="fbAdminDays=7;openFbAdmin()">7日</button>
+        <button type="button" data-days="30" onclick="fbAdminDays=30;openFbAdmin()">30日</button>
+        <button type="button" data-days="90" onclick="fbAdminDays=90;openFbAdmin()">90日</button>
+      </div>
+    </div>
+    <div class="faq-scroll" id="fb-admin-body"></div>
+  </div>
+</div>
+
 <div class="bottom-nav">
   <button class="nav-item active" id="nav-map" onclick="showView('map')">
     <div class="nav-icon">🗺️</div>
@@ -12681,6 +12851,7 @@ function tpShow(ordered, optimized, quiet) {
   tp$('tp-copy').addEventListener('click', e => tpCopy(e.target));
   if (quiet) return;
   tpGa('route_build', { optimized: optimized ? 'yes' : 'no', spots: ordered.length, premium: prem ? 'yes' : 'no', area: TP.area || '' });
+  try { uxLog('planner_build', (optimized ? '最適化' : '選んだ順') + '・' + ordered.length + 'か所'); } catch (e) {}
   res.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function tpPlanText() {
@@ -13074,6 +13245,222 @@ window.addEventListener('load', () => {
   setTimeout(wantSync, 1200);
   try { getSupabaseClient().auth.onAuthStateChange(() => { setTimeout(wantSync, 300); }); } catch (e) {}
 });
+
+// ===================================================================
+// 『Q』ボタン・アプリ内のよくある質問・ひとこと意見・つまずきの自動記録（2026-11-14）
+//  ・どの画面でも右端に『Q』。押すとアプリ内でよくある質問を開く（今いる画面に関係する質問を先頭に）
+//  ・よくある質問の一番上に「ひとこと送る」（種類を押すだけでも送れる）→ feedback
+//  ・意見を言わない人のつまずきも分かるよう、画面の移動・エラー・失敗のお知らせ・連打・Qを開いた画面・読んだ質問を ux_events に記録
+//  ・管理者（media_editors）は My Page の設定から「意見・つまずき」を見られる
+// ===================================================================
+const SCREEN_NAMES = { map: 'マップ', ranking: 'ランキング', feed: 'タイムライン', post: '投稿', profile: 'My Page', route: '巡礼プランナー', pointrules: 'ランクと特典', terms: '利用規約', privacy: 'プライバシー', howto: '使い方', settings: '設定' };
+const SCREEN_FAQ_CAT = { route: 'faq-cat-planner', post: 'faq-cat-report', map: 'faq-cat-usage', feed: 'faq-cat-planner', profile: 'faq-cat-planner', ranking: 'faq-cat-usage', pointrules: 'faq-cat-planner' };
+let uxCurView = 'map';
+function uxScreen() {
+  let s = uxCurView;
+  try { if (uxCurView === 'map' && cardOpen) s = 'map_card'; } catch (e) {}
+  return s;
+}
+function uxScreenLabel(s) {
+  s = s || uxScreen();
+  return s === 'map_card' ? 'マップ（スポットカード）' : (SCREEN_NAMES[s] || s);
+}
+const uxSent = new Set();
+function uxLog(event, detail, once) {
+  try {
+    if (traceDontCount()) return;
+    const d = detail == null ? null : String(detail).slice(0, 300);
+    const k = event + '|' + uxScreen() + '|' + (d || '');
+    if (once && uxSent.has(k)) return;
+    uxSent.add(k);
+    getSupabaseClient().from('ux_events').insert({ session_id: traceSessionId(), screen: uxScreen(), event: event, detail: d }).then(() => {}, () => {});
+  } catch (e) {}
+}
+// 画面の移動
+(function () {
+  const orig = showView;
+  showView = function (name) {
+    const r = orig.apply(this, arguments);
+    uxCurView = name;
+    uxLog('view', null);
+    try { const q = document.getElementById('q-tab'); if (q) q.style.display = ''; } catch (e) {}
+    return r;
+  };
+})();
+// エラー
+window.addEventListener('error', e => { uxLog('error', (e && e.message ? e.message : 'error') + (e && e.lineno ? ' @' + e.lineno : ''), true); });
+window.addEventListener('unhandledrejection', e => { uxLog('error', 'promise: ' + (e && e.reason && (e.reason.message || e.reason)) , true); });
+// 失敗などのお知らせ（alert）の文面
+(function () {
+  const orig = window.alert;
+  window.alert = function (msg) { uxLog('alert', msg); return orig.apply(window, arguments); };
+})();
+// 連打（反応しないと思って何度も押している所）
+(function () {
+  let taps = [];
+  document.addEventListener('click', e => {
+    const now = Date.now();
+    taps = taps.filter(t => now - t.t < 900);
+    taps.push({ t: now, x: e.clientX, y: e.clientY });
+    const near = taps.filter(t => Math.abs(t.x - e.clientX) < 30 && Math.abs(t.y - e.clientY) < 30);
+    if (near.length === 3) {
+      const el = e.target && e.target.closest ? e.target.closest('button,a,[onclick],label,input') || e.target : e.target;
+      const txt = el ? ((el.id ? '#' + el.id + ' ' : '') + (el.textContent || el.getAttribute && el.getAttribute('aria-label') || el.tagName || '')).replace(/\s+/g, ' ').trim().slice(0, 60) : '';
+      uxLog('rage_tap', txt || '(不明)');
+    }
+  }, true);
+})();
+
+// ── よくある質問（アプリ内） ──
+let faqKind = '';
+let faqFrom = 'map';
+function openFaq() {
+  const from = uxScreen();
+  faqFrom = from;
+  uxLog('faq_open', uxScreenLabel(from));
+  try { if (typeof gtag === 'function') gtag('event', 'faq_open', { app_name: 'h2h', screen: from }); } catch (e) {}
+  const sheet = document.getElementById('faq-sheet');
+  if (!sheet) return;
+  document.getElementById('fb-from').textContent = uxScreenLabel(from);
+  document.getElementById('fb-done').style.display = 'none';
+  document.getElementById('fb-form').style.display = '';
+  // 今いる画面に関係するカテゴリを先頭に
+  const main = document.getElementById('faq-main');
+  const catId = SCREEN_FAQ_CAT[from.replace('_card', '')] || 'faq-cat-usage';
+  const cat = document.getElementById(catId);
+  if (main && cat) main.insertBefore(cat, main.firstChild);
+  sheet.querySelectorAll('details').forEach(d => { d.open = false; });
+  sheet.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  const sc = sheet.querySelector('.faq-scroll'); if (sc) sc.scrollTop = 0;
+  const q = document.getElementById('q-tab'); if (q) q.style.display = 'none';
+}
+function closeFaq() {
+  const sheet = document.getElementById('faq-sheet');
+  if (sheet) sheet.style.display = 'none';
+  document.body.style.overflow = '';
+  const q = document.getElementById('q-tab'); if (q) q.style.display = '';
+}
+function faqPickKind(btn) {
+  faqKind = btn.getAttribute('data-kind');
+  document.querySelectorAll('#fb-kinds button').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+}
+async function sendFeedback() {
+  const ta = document.getElementById('fb-text');
+  const msg = (ta.value || '').trim();
+  if (!msg && !faqKind) { alert('種類を選ぶか、ひとこと書いてください'); return; }
+  const btn = document.getElementById('fb-send');
+  btn.disabled = true; btn.textContent = '送信中…';
+  try {
+    const { error } = await getSupabaseClient().from('feedback').insert({
+      session_id: traceSessionId(), screen: uxScreenLabel(faqFrom),
+      kind: faqKind || null, message: msg ? msg.slice(0, 1000) : null, ua: navigator.userAgent.slice(0, 200),
+    });
+    if (error) throw error;
+    ta.value = ''; faqKind = '';
+    document.querySelectorAll('#fb-kinds button').forEach(b => b.setAttribute('aria-pressed', 'false'));
+    document.getElementById('fb-form').style.display = 'none';
+    document.getElementById('fb-done').style.display = '';
+    try { if (typeof gtag === 'function') gtag('event', 'feedback_send', { app_name: 'h2h' }); } catch (e) {}
+  } catch (e) {
+    alert('送信できませんでした。時間をおいてもう一度お試しください');
+  } finally {
+    btn.disabled = false; btn.textContent = '送信する';
+  }
+}
+// どの質問を開いたか（＝どこで迷っているか）
+document.addEventListener('toggle', e => {
+  const d = e.target;
+  if (d && d.tagName === 'DETAILS' && d.open && d.closest && d.closest('#faq-sheet')) {
+    const q = d.querySelector('summary');
+    uxLog('faq_q', q ? q.textContent.trim().slice(0, 80) : '', true);
+  }
+}, true);
+
+// ── 管理者：意見・つまずき ──
+function refreshFbAdminEntry() {
+  const row = document.getElementById('fb-admin-entry');
+  if (!row) return;
+  try { checkAdminEditor().then(ok => { row.style.display = ok ? '' : 'none'; }); } catch (e) {}
+}
+window.addEventListener('load', () => {
+  setTimeout(refreshFbAdminEntry, 1500);
+  setTimeout(() => uxLog('view', null), 2000);
+  try { getSupabaseClient().auth.onAuthStateChange(() => setTimeout(refreshFbAdminEntry, 600)); } catch (e) {}
+});
+let fbAdminTab = 'fb';
+let fbAdminDays = 7;
+async function openFbAdmin(tab) {
+  if (tab) fbAdminTab = tab;
+  const box = document.getElementById('fb-admin');
+  box.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  document.querySelectorAll('#fb-admin-tabs button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tab === fbAdminTab)));
+  document.querySelectorAll('#fb-admin-days button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.days) === fbAdminDays)));
+  const body = document.getElementById('fb-admin-body');
+  body.innerHTML = '<div class="fba-empty">読み込み中…</div>';
+  const since = new Date(Date.now() - fbAdminDays * 86400000).toISOString();
+  const client = getSupabaseClient();
+  try {
+    if (fbAdminTab === 'fb') {
+      const { data, error } = await client.from('feedback').select('id,created_at,screen,kind,message,status,user_id').gte('created_at', since).order('created_at', { ascending: false }).limit(200);
+      if (error) throw error;
+      const rows = data || [];
+      const open = rows.filter(r => r.status !== 'done').length;
+      body.innerHTML = `<div class="fba-sum">${fbAdminDays}日間：${rows.length}件（未対応 ${open}件）</div>` + (rows.length ? rows.map(r => `
+        <div class="fba-item${r.status === 'done' ? ' done' : ''}">
+          <div class="fba-meta">${escHtml(new Date(r.created_at).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }))}・${escHtml(r.screen || '')}${r.user_id ? '・ログイン中' : ''}</div>
+          ${r.kind ? `<div class="fba-kind">${escHtml(r.kind)}</div>` : ''}
+          ${r.message ? `<div class="fba-msg">${escHtml(r.message)}</div>` : ''}
+          <button type="button" onclick="fbSetStatus('${r.id}', '${r.status === 'done' ? 'new' : 'done'}')">${r.status === 'done' ? '未対応に戻す' : '✓ 対応済みにする'}</button>
+        </div>`).join('') : '<div class="fba-empty">この期間の意見はまだありません</div>');
+    } else {
+      const { data, error } = await client.from('ux_events').select('created_at,session_id,screen,event,detail').gte('created_at', since).order('created_at', { ascending: false }).limit(5000);
+      if (error) throw error;
+      body.innerHTML = fbStuckHtml(data || []);
+    }
+  } catch (e) {
+    body.innerHTML = `<div class="fba-empty">読み込めませんでした（${escHtml(e.message || e)}）</div>`;
+  }
+}
+function closeFbAdmin() { document.getElementById('fb-admin').style.display = 'none'; document.body.style.overflow = ''; }
+async function fbSetStatus(id, st) {
+  const { error } = await getSupabaseClient().from('feedback').update({ status: st }).eq('id', id);
+  if (error) { alert('更新できませんでした：' + error.message); return; }
+  openFbAdmin();
+}
+function fbTop(rows, keyFn, n) {
+  const c = {};
+  rows.forEach(r => { const k = keyFn(r); if (k) c[k] = (c[k] || 0) + 1; });
+  return Object.entries(c).sort((a, b) => b[1] - a[1]).slice(0, n || 10);
+}
+function fbStuckHtml(ev) {
+  const sessions = new Set(ev.map(e => e.session_id)).size;
+  const views = ev.filter(e => e.event === 'view');
+  const viewSessions = name => new Set(views.filter(v => v.screen === name).map(v => v.session_id)).size;
+  const label = s => uxScreenLabel(s);
+  const list = (title, note, rows, fmt) => `<div class="fba-block"><div class="fba-h">${title}</div>${note ? `<div class="fba-note">${note}</div>` : ''}${rows.length ? rows.map(([k, n]) => `<div class="fba-row"><span>${escHtml(fmt ? fmt(k) : k)}</span><b>${n}</b></div>`).join('') : '<div class="fba-empty">まだありません</div>'}</div>`;
+  // 開いた人のうち、先に進んだ人
+  const sess = ev2 => new Set(ev2.map(e => e.session_id)).size;
+  const planOpen = viewSessions('route');
+  const planBuilt = sess(ev.filter(e => e.event === 'planner_build'));
+  const postOpen = viewSessions('post');
+  const postDone = sess(ev.filter(e => e.event === 'alert' && /の投稿を受け付けました/.test(e.detail || '')));
+  const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '—';
+  const funnel = `<div class="fba-block"><div class="fba-h">📉 途中でやめた人</div>
+    <div class="fba-note">画面を開いた端末の数と、その先まで進んだ数です。割合が低いほど、そこでつまずいています。</div>
+    <div class="fba-row"><span>巡礼プランナーを開いた → コースを作った</span><b>${planOpen} → ${planBuilt}（${pct(planBuilt, planOpen)}）</b></div>
+    <div class="fba-row"><span>投稿画面を開いた → 投稿まで終えた</span><b>${postOpen} → ${postDone}（${pct(postDone, postOpen)}）</b></div>
+  </div>`;
+  return `<div class="fba-sum">${fbAdminDays}日間：${sessions}台の端末・${ev.length}件の記録</div>` + funnel +
+    list('🔁 何度も押された所（反応しないと思われている）', '同じ場所を1秒以内に3回以上押した回数', fbTop(ev.filter(e => e.event === 'rage_tap'), e => label(e.screen) + '｜' + (e.detail || ''))) +
+    list('⚠️ 出たお知らせ（失敗・注意）', 'アプリが出したお知らせの文面。失敗の文面が多い所が、つまずきの場所です', fbTop(ev.filter(e => e.event === 'alert'), e => label(e.screen) + '｜' + (e.detail || '').slice(0, 60))) +
+    list('❓ 『Q』を押した画面', 'ここで迷って質問を見に来ています', fbTop(ev.filter(e => e.event === 'faq_open'), e => e.detail || label(e.screen))) +
+    list('📖 よく開かれた質問', 'ここが分かりにくいと思われています', fbTop(ev.filter(e => e.event === 'faq_q'), e => e.detail)) +
+    list('🐛 エラー', '画面の裏で起きたエラー（同じ端末の同じエラーは1回だけ数えます）', fbTop(ev.filter(e => e.event === 'error'), e => (e.detail || '').slice(0, 80))) +
+    list('👀 よく開かれた画面（端末の数）', '', Object.keys(SCREEN_NAMES).map(s => [label(s), viewSessions(s)]).filter(r => r[1] > 0).sort((a, b) => b[1] - a[1]));
+}
+
 // 既存の呼び出しとの互換
 function renderRouteSpotList() { tpRender(); }
 function updateRouteStickyCount() { tpUpdateCount(); }
