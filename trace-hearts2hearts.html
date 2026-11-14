@@ -2327,6 +2327,18 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
 .tp #saved-routes-list .saved-route-item { background: var(--surface); border-color: var(--line); }
 .tp .rankup-banner { margin-top: 12px; }
 
+
+  /* プレミアム（準備中）の行・ランク表へのジャンプ */
+  #pr-route-rules { scroll-margin-top: 90px; }
+  .pr-route-row.pr-route-premium { cursor: pointer; background: linear-gradient(135deg, #fff7e0 0%, #ffe9f3 55%, #e8f4ff 100%); }
+  .pr-route-row.pr-route-premium .pr-route-pt { color: #b45309; font-weight: 700; }
+  .pr-route-row.pr-route-premium .pr-route-ok { color: #b45309; }
+  .pr-premium-perks { grid-column: 1 / -1; font-size: 11px; color: #92400e; margin-top: 6px; line-height: 1.5; }
+  .pr-route-flash { animation: prFlash 1.6s ease-out 1; }
+  @keyframes prFlash { 0% { box-shadow: 0 0 0 0 rgba(37,99,235,.45); } 30% { box-shadow: 0 0 0 8px rgba(37,99,235,.25); } 100% { box-shadow: 0 0 0 0 rgba(37,99,235,0); } }
+  .tp .tp-premium-tease { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: linear-gradient(135deg, #fff7e0 0%, #ffe9f3 55%, #e8f4ff 100%); border: 1px solid #f5d9a8; cursor: pointer; }
+  .tp .tp-premium-tease b { display: block; font-size: 14px; color: #92400e; }
+  .tp .tp-premium-tease span { font-size: 12px; color: #7c5a1e; }
 </style>
 </head>
 <body>
@@ -3476,7 +3488,7 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
     </div>
 
     <!-- ルート最適化ルール -->
-    <div class="pr-section-title">🗺️ ルート最適化・保存ルール</div>
+    <div class="pr-section-title" id="pr-route-rules">🗺️ ルート最適化・保存ルール</div>
     <div class="pr-desc">ルートを効率よく巡れる最適化機能は、貢献度の高いユーザーへの特典です。</div>
     <div class="pr-card">
       <div class="pr-route-header">
@@ -3509,13 +3521,13 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
         <div class="pr-route-cell pr-route-ok">✅ 月2回</div>
         <div class="pr-route-cell">15件</div>
       </div>
-      <!-- 将来の課金プラン構想（削除せず非表示にする・6/18）
-      <div class="pr-route-row">
-        <div class="pr-route-cell">⭐ プレミアム<br><span class="pr-route-pt">課金プラン</span></div>
-        <div class="pr-route-cell pr-route-ok">✅ 無制限</div>
-        <div class="pr-route-cell">無制限</div>
+      <!-- プレミアム（準備中）を匂わせる行 2026-11-14 -->
+      <div class="pr-route-row pr-route-premium" data-rank="premium" role="button" tabindex="0" onclick="tpTeaser('rank_table')">
+        <div class="pr-route-cell">🌟 プレミアム<br><span class="pr-route-pt">準備中</span></div>
+        <div class="pr-route-cell pr-route-ok">♾️ 無制限</div>
+        <div class="pr-route-cell">♾️ 無制限</div>
+        <div class="pr-premium-perks">＋ 巡礼プランナーの時間割を全部表示・開始時刻とペースの変更・回りきれない分の別日分け</div>
       </div>
-      -->
     </div>
 
     <div class="pr-notice" style="margin-top:12px;">
@@ -3639,7 +3651,7 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
         <div><span class="flabel">最適化 残り</span><b id="route-opt-remaining">0 / 0回</b><span class="tp-small">毎月1日にリセット</span></div>
         <div><span class="flabel">保存できるルート</span><b id="route-save-limit">読み込み中</b></div>
       </div>
-      <button type="button" class="tp-link" onclick="showView('pointrules')">ランクと特典を見る →</button>
+      <button type="button" class="tp-link" onclick="tpGoRankTable()">ランクと特典を見る →</button>
     </section>
 
     <section class="panel" aria-labelledby="tp-h-cond">
@@ -3720,10 +3732,14 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
       <div id="saved-routes-list">
         <div id="saved-routes-empty" style="font-size:12px;color:var(--muted);padding:14px 4px;">まだ保存したルートはありません</div>
       </div>
+      <div class="tp-premium-tease" id="tp-premium-tease" role="button" tabindex="0" onclick="tpTeaser('saved_routes')">
+        <b>🌟 プレミアム（準備中）</b>
+        <span>ルートの保存も最適化も無制限。時間割を最後まで表示できます</span>
+      </div>
       <div class="rankup-banner" id="rankup-banner" style="display:none;">
         <div class="rankup-title">🔒 最適化回数を増やすには</div>
         <div class="rankup-desc">ゴールド（800pt）で月1回、ダイヤモンド（6000pt＋友達紹介5人）で月2回使えます。毎月1日にリセットされます。</div>
-        <button class="rankup-btn" onclick="showView('pointrules')">ランクを確認する →</button>
+        <button class="rankup-btn" onclick="tpGoRankTable()">ランクを確認する →</button>
       </div>
     </section>
 
@@ -12626,6 +12642,7 @@ function updateOptimizeBtn() {
   }
   const banner = tp$('rankup-banner');
   if (banner) banner.style.display = loggedIn && limit.optimizePerMonth < 999 && (limit.optimizePerMonth === 0 || remaining <= 0) ? 'block' : 'none';
+  const tease = tp$('tp-premium-tease'); if (tease) tease.style.display = tpIsPremium() ? 'none' : 'block';
   try { tpRenderSegs(); } catch (e) {}
 }
 
@@ -12642,7 +12659,7 @@ async function tpSave() {
   if (error) {
     if (String(error.message).includes('save_limit')) {
       const st = window.routeStatus || {};
-      alert(`保存できるのは${st.save_max || ''}件までです。保存済みルートを削除するか、ランクを上げると保存できる件数が増えます。`);
+      alert(`保存できるのは${st.save_max || ''}件までです。保存済みルートを削除するか、ランクを上げると保存できる件数が増えます。\n🌟 プレミアム（準備中）なら無制限で保存できます。`);
     } else alert('保存できませんでした：' + error.message);
     return;
   }
@@ -12699,6 +12716,26 @@ function addSeriesToRoute(name) {
   logSeriesEvent('route', name, null);
   try { tp$('tp-step2').scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
   try { showEvalToast(`🗺 ${tpChosen().length}か所を選びました。コースを作ってください`); } catch (e) {}
+}
+
+// ランク表（ルート最適化・保存ルール）までピタッと移動する
+function tpGoRankTable() {
+  tpGa('rank_table_jump', { from: 'route' });
+  showView('pointrules');
+  const go = (smooth) => {
+    const el = document.getElementById('pr-route-rules');
+    if (!el) return;
+    const head = document.querySelector('header');
+    const off = (head ? head.getBoundingClientRect().height : 70) + 12;
+    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - off, behavior: smooth ? 'smooth' : 'auto' });
+  };
+  setTimeout(() => {
+    go(true);
+    const el = document.getElementById('pr-route-rules');
+    const card = el && el.nextElementSibling && el.nextElementSibling.nextElementSibling;
+    if (card) { card.classList.remove('pr-route-flash'); void card.offsetWidth; card.classList.add('pr-route-flash'); }
+  }, 120);
+  setTimeout(() => go(false), 900); // 画像などで高さが変わったときのため、もう一度合わせる
 }
 // 既存の呼び出しとの互換
 function renderRouteSpotList() { tpRender(); }
