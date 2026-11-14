@@ -5455,16 +5455,20 @@ function feedLikeButton(item, table) {
   </button>`;
 }
 
+// カードの一番下の行：左にボタン（行きたい・いいね）、右端に「◯日前」（2026-11-14 並びを統一）
+function feedFooter(left, createdAt) {
+  return `<div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;">${left || ''}<span style="margin-left:auto;font-size:11px;color:var(--text-light);white-space:nowrap;">${timeAgoLabel(createdAt)}</span></div>`;
+}
 function renderFeedItem(item) {
   // お知らせ
   if (item.feedType === 'notice') {
     return `<div style="background:linear-gradient(135deg,var(--purple-deep),var(--purple-mid));color:#fff;border-radius:18px;padding:14px 16px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.12);">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
         <span style="font-size:10px;background:rgba(255,255,255,0.22);border-radius:8px;padding:2px 8px;">📢 運営からのお知らせ</span>
-        <span style="font-size:11px;opacity:0.8;margin-left:auto;">${timeAgoLabel(item.created_at)}</span>
       </div>
       <div style="font-size:14px;font-weight:700;line-height:1.4;margin-bottom:4px;">${escHtml(item.title)}</div>
       ${item.body ? `<div style="font-size:12px;line-height:1.6;opacity:0.92;white-space:pre-wrap;">${escHtml(item.body)}</div>` : ''}
+      <div style="text-align:right;font-size:11px;opacity:0.8;margin-top:8px;">${timeAgoLabel(item.created_at)}</div>
     </div>`;
   }
   // エリア・旅のコンプリート
@@ -5475,7 +5479,7 @@ function renderFeedItem(item) {
         <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#ffd75e,#f2b705);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🏆</div>
         <div style="font-size:13px;color:var(--text);line-height:1.5;"><b style="color:var(--purple-deep);">${escHtml(item.display_name)}</b>さんが<br><b>${what}</b>をコンプリートしました！${item.total ? `<span style="font-size:11px;color:var(--text-light);">（${item.total}か所）</span>` : ''}</div>
       </div>
-      <div style="font-size:11px;color:var(--text-light);margin-top:8px;">${timeAgoLabel(item.created_at)}</div>
+      ${feedFooter('', item.created_at)}
     </div>`;
   }
   // 巡礼報告
@@ -5485,10 +5489,7 @@ function renderFeedItem(item) {
         <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--purple-mid),var(--purple-deep));display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">🚩</div>
         <div style="font-size:13px;color:var(--text);line-height:1.4;"><b style="color:var(--purple-deep);">${escHtml(item.display_name)}</b>さんが<br><b>「${escHtml(item.spot_name)}」</b>を巡礼しました 🌸</div>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
-        <div style="font-size:11px;color:var(--text-light);">${timeAgoLabel(item.created_at)}</div>
-        ${feedLikeButton(item, 'visit_log')}
-      </div>
+      ${feedFooter(feedLikeButton(item, 'visit_log'), item.created_at)}
     </div>`;
   }
 
@@ -5500,8 +5501,6 @@ function renderFeedItem(item) {
         <span style="font-size:10px;background:var(--purple-mid);color:#fff;border-radius:8px;padding:2px 8px;">📍 新スポット追加${item.no != null ? ' No.' + item.no : ''}</span>
         ${videoBadge}
         ${item.is_trace_original ? `<span style="font-size:10px;background:linear-gradient(135deg,#ffb347,#f57c00);color:#fff;border-radius:8px;padding:2px 8px;font-weight:700;">🔍 Trace独自特定</span>` : ''}
-        <span style="font-size:11px;color:var(--text-light);margin-left:auto;">${timeAgoLabel(item.created_at)}</span>
-        ${wantChipHtml(item.id)}
       </div>
       <div style="display:flex;gap:12px;align-items:center;">
         ${item.image_url ? `<img src="${escHtml(item.image_url)}" loading="lazy" style="width:76px;height:76px;object-fit:cover;border-radius:12px;flex-shrink:0;">` : ''}
@@ -5511,6 +5510,7 @@ function renderFeedItem(item) {
           ${item.description ? `<div style="font-size:11px;color:var(--text-light);line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${escHtml(item.description)}</div>` : ''}
         </div>
       </div>
+      ${feedFooter(wantChipHtml(item.id), item.created_at)}
     </div>`;
   }
 
@@ -5522,16 +5522,12 @@ function renderFeedItem(item) {
         <span style="font-size:15px;">📍</span>
         <span style="font-size:14px;font-weight:700;color:var(--purple-deep);">${escHtml(item.spot_name)}</span>
         <span style="font-size:10px;background:var(--gold);color:#fff;border-radius:8px;padding:2px 8px;margin-left:auto;">🌟 発見者</span>
-        ${wantChipHtml(spotIdByName(item.spot_name))}
       </div>
       ${item.description ? `<div style="font-size:13px;color:var(--text-mid);margin-bottom:8px;line-height:1.5;">${escHtml(item.description)}</div>` : ''}
       ${item.image_url ? `<img src="${escHtml(item.image_url)}" style="width:100%;max-height:260px;object-fit:cover;border-radius:12px;margin-bottom:8px;display:block;" loading="lazy">` : ''}
     </div>
     ${item.source_url ? `<a href="${escHtml(item.source_url)}" target="_blank" rel="noopener" style="display:inline-block;font-size:11px;color:var(--purple-mid);margin-bottom:8px;text-decoration:underline;">🔗 元ネタを見る</a>` : ''}
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-      <div style="font-size:11px;color:var(--text-light);">${timeAgoLabel(item.created_at)}</div>
-      ${feedLikeButton(item, 'submissions')}
-    </div>
+    ${feedFooter(wantChipHtml(spotIdByName(item.spot_name)) + feedLikeButton(item, 'submissions'), item.created_at)}
   </div>`;
 }
 
