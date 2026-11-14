@@ -2339,6 +2339,10 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
   .tp .tp-premium-tease { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: linear-gradient(135deg, #fff7e0 0%, #ffe9f3 55%, #e8f4ff 100%); border: 1px solid #f5d9a8; cursor: pointer; }
   .tp .tp-premium-tease b { display: block; font-size: 14px; color: #92400e; }
   .tp .tp-premium-tease span { font-size: 12px; color: #7c5a1e; }
+
+  /* iPhoneで時刻・日付の入力欄が枠からはみ出すのを防ぐ */
+  .tp .field input[type="time"], .tp .field input[type="date"] { -webkit-appearance: none; appearance: none; display: block; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; text-align: left; }
+  .tp .tp-lockwrap { min-width: 0; max-width: 100%; }
 </style>
 </head>
 <body>
@@ -3648,7 +3652,7 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
     <section class="panel" aria-label="ランクと残り回数">
       <div class="tp-rank-row">
         <div><span class="flabel">現在のランク</span><b id="route-rank-name">🥉 ブロンズ</b></div>
-        <div><span class="flabel">最適化 残り</span><b id="route-opt-remaining">0 / 0回</b><span class="tp-small">毎月1日にリセット</span></div>
+        <div><span class="flabel">最適化 残り</span><b id="route-opt-remaining">0 / 0回</b><span class="tp-small" id="tp-opt-reset">毎月1日にリセット</span></div>
         <div><span class="flabel">保存できるルート</span><b id="route-save-limit">読み込み中</b></div>
       </div>
       <button type="button" class="tp-link" onclick="tpGoRankTable()">ランクと特典を見る →</button>
@@ -12622,6 +12626,7 @@ function updateOptimizeBtn() {
   const remaining = limit.optimizePerMonth - optimizeUsedThisMonth;
   const remEl = tp$('route-opt-remaining');
   if (remEl) remEl.textContent = limit.optimizePerMonth >= 999 ? '無制限' : `${Math.max(0, remaining)} / ${limit.optimizePerMonth}回`;
+  const resetEl = tp$('tp-opt-reset'); if (resetEl) resetEl.style.display = limit.optimizePerMonth >= 999 ? 'none' : '';
   const rankNameEl = tp$('route-rank-name');
   const rsRank = window.routeStatus && window.routeStatus.login ? window.routeStatus.rank : null;
   if (rankNameEl) rankNameEl.textContent = (rsRank === 'premium' || tpIsPremium()) ? '🌟 プレミアム' : (RANK_DISPLAY[rsRank || currentUserRank] || RANK_DISPLAY.bronze);
