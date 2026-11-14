@@ -7135,6 +7135,10 @@ async function openAdminListPanel(tab) {
       <button onclick="closeAdminSheet('admin-list-modal');openAdminInbox()" style="flex:1;border:1.5px solid var(--border);background:#fff;color:var(--purple-deep);border-radius:12px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;">📥 候補箱</button>
       <button onclick="closeAdminSheet('admin-list-modal');openAdminEvents()" style="flex:1;border:1.5px solid var(--border);background:#fff;color:var(--purple-deep);border-radius:12px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;">🎉 イベント</button>
     </div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <button onclick="closeAdminSheet('admin-list-modal');openFbAdmin('fb')" style="flex:1;border:1.5px solid var(--border);background:#fff;color:var(--purple-deep);border-radius:12px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;">💬 意見<span class="adm-fb-count" style="display:none;margin-left:4px;background:#e0245e;color:#fff;border-radius:9px;padding:0 7px;font-size:11px;"></span></button>
+      <button onclick="closeAdminSheet('admin-list-modal');openFbAdmin('ux')" style="flex:1;border:1.5px solid var(--border);background:#fff;color:var(--purple-deep);border-radius:12px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;">📉 つまずき</button>
+    </div>
     <button onclick="closeAdminSheet('admin-list-modal');openAdminThumbs()" style="width:100%;border:1.5px solid var(--border);background:#fff;color:var(--purple-deep);border-radius:12px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:10px;">🖼️ 一覧用の小さい写真を作る（通信量の節約）</button>
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">${tabs}${cur.key === 'reports' ? `<button onclick="adminReportsCache=null;openAdminListPanel('reports');refreshAdminListCtl()" style="border:none;background:none;font-size:12px;color:var(--purple-mid);cursor:pointer;">↻ 更新</button>` : ''}</div>
     <div>${body}</div>`);
@@ -13470,6 +13474,24 @@ function fbStuckHtml(ev) {
     list('👀 よく開かれた画面（端末の数）', '', Object.keys(SCREEN_NAMES).map(s => [label(s), viewSessions(s)]).filter(r => r[1] > 0).sort((a, b) => b[1] - a[1]));
 }
 
+
+// 管理一覧（地図の「管理」）に未対応の意見の数を出す
+(function () {
+  if (typeof openAdminListPanel !== 'function') return;
+  const orig = openAdminListPanel;
+  openAdminListPanel = function () {
+    const r = orig.apply(this, arguments);
+    Promise.resolve(r).then(fbFillUnread);
+    return r;
+  };
+})();
+async function fbFillUnread() {
+  try {
+    const { count, error } = await getSupabaseClient().from('feedback').select('id', { count: 'exact', head: true }).neq('status', 'done');
+    if (error) return;
+    document.querySelectorAll('.adm-fb-count').forEach(el => { el.textContent = count || ''; el.style.display = count ? 'inline-block' : 'none'; });
+  } catch (e) {}
+}
 // 既存の呼び出しとの互換
 function renderRouteSpotList() { tpRender(); }
 function updateRouteStickyCount() { tpUpdateCount(); }
