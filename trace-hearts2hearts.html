@@ -2433,6 +2433,7 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
   .pv-note { font-size: 12px; color: var(--text-light); line-height: 1.6; margin: 4px 2px 10px; }
   .pv-saved { font-size: 12px; color: #0b6b4a; font-weight: 700; min-height: 18px; text-align: center; }
   .pv-warn { display: block; font-style: normal; font-size: 11.5px; color: #9a5b00; background: #fff7e0; border-radius: 8px; padding: 6px 8px; margin-top: 6px; line-height: 1.6; }
+  .pv-good { display: block; font-style: normal; font-size: 11.5px; color: #0b6b4a; background: #e8f6ef; border-radius: 8px; padding: 6px 8px; margin-top: 6px; line-height: 1.6; }
 </style>
 </head>
 <body>
@@ -4150,12 +4151,16 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
     <div class="faq-scroll" style="padding-bottom:28px;">
       <div id="pv-login" class="pv-note" style="display:none;">X または Google でログインすると設定できます。</div>
       <label class="pv-row">
-        <div><b>タイムラインに名前を出さない</b><span>巡礼報告やコンプリートのお祝いで、名前の代わりに「巡礼者」と表示します。</span><em class="pv-warn">⚠️ 巡礼報告への「いいね」は今までどおり届き、バズ投稿バッジにも数えられます。ただ、誰の報告か分からなくなるので、名前で注目されたり、ほかのファンに覚えてもらったりすることはなくなります。新しい聖地を投稿したときの「発見者」の名前は、この設定とは別にそのまま表示されます。</em></div>
+        <div><b>タイムラインに名前を出さない</b><span>巡礼報告やコンプリートのお祝いで、名前の代わりに「巡礼者」と表示します。</span><em class="pv-warn">⚠️ 巡礼報告への「いいね」は今までどおり届き、バズ投稿バッジにも数えられます。ただ、誰の報告か分からなくなるので、名前で注目されたり、ほかのファンに覚えてもらったりすることはなくなります。新しい聖地を投稿したときの「発見者」の名前は、下の「発見者の名前を出さない」で決められます。</em></div>
         <input type="checkbox" id="pv-hide-name" onchange="savePrivacy()">
       </label>
       <label class="pv-row">
         <div><b>ランキングに出さない</b><span>達成率ランキング・推しファンランキング・月間トップ貢献者に表示されなくなります。ポイントやランクはそのまま貯まります。</span><em class="pv-warn">⚠️ 月間1位になっても「👑 トップ貢献者」バッジはもらえなくなります。ランキングで名前が知られることもなくなります。</em></div>
         <input type="checkbox" id="pv-hide-rank" onchange="savePrivacy()">
+      </label>
+      <label class="pv-row">
+        <div><b>発見者の名前を出さない</b><span>新しい聖地を投稿して承認されたとき、スポットカードとタイムラインの「最初の発見者」を「匿名の発見者」と表示します。</span><em class="pv-good">🥇 オフのまま（名前を出す）だと：発見者として名前が載り、ほかのファンに知ってもらえます。クレジットとしてスポットにずっと残ります。名前が載った方は、運営のXで紹介されることがあります。</em><em class="pv-warn">⚠️ オンにすると：発見者バッジとポイントはそのまま残りますが、名前は表示されません。運営のXでは「匿名さんの報告で発見されました！」のように、名前を出さずに紹介することがあります。</em></div>
+        <input type="checkbox" id="pv-hide-disc" onchange="savePrivacy()">
       </label>
       <div class="pv-note">変更はすぐに保存されます。行きたいマークは、ほかの人には見えません。</div>
       <div class="pv-saved" id="pv-saved"></div>
@@ -4730,6 +4735,7 @@ function mapSpotRow(s) {
       address: s.address || '',
       member: s.member || '全員',
       discoverer: s.discoverer || '@missing_link',
+      discoverer_id: s.discoverer_id || null,
       likes: s.likes_count || 0,
       badges: [s.category || ''],
       color: '#1a1a1a',
@@ -4875,7 +4881,7 @@ async function loadFeed() {
         description: s.description,
         image_url: s.image_url || null,
         source_url: s.source_url || null,
-        submitter: s.submitter || '匿名',
+        submitter: discovererLabel(s.submitter || '匿名', s.submitter_id),
         created_at: s.created_at,
         likes_count: s.likes_count || 0,
       }));
@@ -8686,7 +8692,7 @@ function openCard(spot) {
         try { renderCardNearby(spot); } catch(e) { console.warn('近くの聖地表示失敗:', e); }
         refreshAdminEditRow();
   document.getElementById('card-address').textContent = spot.address;
-  document.getElementById('card-discoverer').textContent = spot.discoverer;
+  document.getElementById('card-discoverer').textContent = discovererLabel(spot.discoverer, spot.discoverer_id, spot.name);
   document.getElementById('card-likes').textContent = spot.likes + ' 件の巡礼報告';
 
   // 距離表示
@@ -13528,31 +13534,55 @@ async function openPrivacy() {
   sheet.style.display = 'flex';
   document.body.style.overflow = 'hidden';
   document.getElementById('pv-saved').textContent = '';
-  const nameEl = document.getElementById('pv-hide-name'), rankEl = document.getElementById('pv-hide-rank');
+  const nameEl = document.getElementById('pv-hide-name'), rankEl = document.getElementById('pv-hide-rank'), discEl = document.getElementById('pv-hide-disc');
   try {
     const client = getSupabaseClient();
     const { data } = await client.auth.getSession();
     const ses = data && data.session;
     const ok = !!(ses && !(ses.user && ses.user.is_anonymous));
     document.getElementById('pv-login').style.display = ok ? 'none' : '';
-    nameEl.disabled = rankEl.disabled = !ok;
+    nameEl.disabled = rankEl.disabled = discEl.disabled = !ok;
     if (!ok) return;
-    const { data: p } = await client.from('profiles').select('hide_name_in_feed, hide_from_ranking').eq('id', ses.user.id).single();
+    const { data: p } = await client.from('profiles').select('hide_name_in_feed, hide_from_ranking, hide_discoverer').eq('id', ses.user.id).single();
     nameEl.checked = !!(p && p.hide_name_in_feed);
     rankEl.checked = !!(p && p.hide_from_ranking);
+    discEl.checked = !!(p && p.hide_discoverer);
   } catch (e) {}
 }
 function closePrivacy() { document.getElementById('privacy-sheet').style.display = 'none'; document.body.style.overflow = ''; }
 async function savePrivacy() {
   const hideName = document.getElementById('pv-hide-name').checked;
   const hideRank = document.getElementById('pv-hide-rank').checked;
+  const hideDisc = document.getElementById('pv-hide-disc').checked;
   const msg = document.getElementById('pv-saved');
   msg.textContent = '保存中…';
-  const { error } = await getSupabaseClient().rpc('set_my_privacy', { p_hide_name: hideName, p_hide_ranking: hideRank });
+  const { error } = await getSupabaseClient().rpc('set_my_privacy', { p_hide_name: hideName, p_hide_ranking: hideRank, p_hide_discoverer: hideDisc });
   if (error) { msg.textContent = ''; alert('保存できませんでした：' + error.message); return; }
   try { hideFromRankingActive = hideRank; } catch (e) {}
   msg.textContent = '✓ 保存しました';
+  loadHiddenDiscoverers();
 }
+// 発見者の名前を出さない人（表示するときに「匿名の発見者」に置き換える）
+let hiddenDiscoverers = new Set();
+async function loadHiddenDiscoverers() {
+  try {
+    const { data, error } = await getSupabaseClient().from('profiles').select('id').eq('hide_discoverer', true);
+    if (!error && Array.isArray(data)) hiddenDiscoverers = new Set(data.map(r => String(r.id)));
+    // スポット側に発見者のIDが無い場合に備えて、その人が投稿して承認されたスポット名も控える
+    hiddenDiscSpotNames = new Set();
+    if (hiddenDiscoverers.size) {
+      const { data: sub } = await getSupabaseClient().from('submissions').select('spot_name').eq('type', 'new_spot').eq('status', 'approved').in('submitter_id', [...hiddenDiscoverers]);
+      if (Array.isArray(sub)) sub.forEach(r => { if (r.spot_name) hiddenDiscSpotNames.add(r.spot_name); });
+    }
+  } catch (e) {}
+}
+let hiddenDiscSpotNames = new Set();
+function discovererLabel(name, id, spotName) {
+  if (id && hiddenDiscoverers.has(String(id))) return '匿名の発見者';
+  if (spotName && hiddenDiscSpotNames.has(spotName)) return '匿名の発見者';
+  return name;
+}
+window.addEventListener('load', () => { setTimeout(loadHiddenDiscoverers, 500); });
 // 既存の呼び出しとの互換
 function renderRouteSpotList() { tpRender(); }
 function updateRouteStickyCount() { tpUpdateCount(); }
