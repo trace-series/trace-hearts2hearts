@@ -2346,6 +2346,30 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
 
   /* STEPの札が2行に折れないようにする */
   .tp h2 .step { white-space: nowrap; flex-shrink: 0; }
+
+  /* 行きたい・コンプリート（2026-11-14） */
+  .want-chip { border: 1.5px solid #f2b705; background: #fff; color: #9a6b00; border-radius: 16px; padding: 3px 10px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; line-height: 1.5; }
+  .want-chip.on { background: #fff4c2; border-color: #f2b705; color: #8a5a00; }
+  #btn-want.on { background: linear-gradient(135deg,#fff4c2,#ffe28a) !important; border-color: #f2b705 !important; color: #8a5a00 !important; }
+  .gal-want-mark { position: absolute; left: 4px; top: 4px; font-size: 13px; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
+  #comp-progress-list { margin-bottom: 22px; }
+  .comp-sum { font-size: 13px; color: var(--text-mid); margin: 0 2px 10px; }
+  .comp-sum b { color: var(--purple-deep); font-size: 16px; }
+  .comp-row { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 9px 12px; margin-bottom: 8px; }
+  .comp-row.done { border: 2px solid #f2b705; background: linear-gradient(135deg,#fffbea,#fff); }
+  .comp-top { display: flex; align-items: center; gap: 6px; }
+  .comp-kind { font-size: 10px; color: var(--text-light); flex-shrink: 0; }
+  .comp-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 700; color: var(--purple-deep); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .comp-num { flex-shrink: 0; font-size: 12px; font-weight: 700; color: var(--text-mid); }
+  .comp-row.done .comp-num { color: #b8860b; }
+  .comp-bar { height: 5px; border-radius: 3px; background: rgba(0,0,0,.08); overflow: hidden; margin-top: 6px; }
+  .comp-bar > div { height: 100%; background: var(--purple-mid); border-radius: 3px; }
+  .comp-row.done .comp-bar > div { background: #f2b705; }
+  .comp-more { width: 100%; border: 1.5px solid var(--border); background: #fff; color: var(--purple-deep); border-radius: 12px; padding: 10px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .comp-empty { font-size: 12px; color: var(--text-light); padding: 10px 4px; }
+  .tp .spot .want-chip { margin-top: 6px; align-self: flex-start; }
+  .tp .badge.want { background: #fff4c2; color: #8a5a00; }
+  .tp .badge.visited { background: #e2f3ec; color: #0b6b4a; }
 </style>
 </head>
 <body>
@@ -2542,6 +2566,7 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
         <div class="card-actions" style="margin-top:8px;">
           <button id="btn-navi" onclick="openNavi()" style="flex:1;background:linear-gradient(135deg,#ededed,#e6e6e6);border:2px solid #bfbfbf;border-radius:12px;padding:9px;font-size:13px;font-weight:700;color:#333333;cursor:pointer;">🗺️ ナビ</button>
           <button id="btn-set-origin" onclick="setOriginSpot()" style="flex:1;background:linear-gradient(135deg,#ededed,#e6e6e6);border:2px solid #bfbfbf;border-radius:12px;padding:9px;font-size:13px;font-weight:700;color:#333333;cursor:pointer;">📍 起点に設定</button>
+          <button id="btn-want" onclick="wantCardClick()" style="flex:1;background:#fff;border:2px solid #f2b705;border-radius:12px;padding:9px;font-size:13px;font-weight:700;color:#9a6b00;cursor:pointer;">☆ 行きたい</button>
         </div>
         <button onclick="openShareCard()" style="width:100%;margin-top:8px;background:#fff;border:2px solid var(--purple-mid);border-radius:12px;padding:9px;font-size:13px;font-weight:700;color:var(--purple-deep);cursor:pointer;">🖼️ 巡礼シェア画像を作る（TikTok・インスタ用）</button>
         <!-- 管理者だけに表示：スポット情報の直接編集 -->
@@ -2842,6 +2867,9 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
       <div style="color:var(--text-mid);font-size:13px;text-align:center;padding:16px;">履歴を読み込み中...</div>
     </div>
 
+    <div class="profile-section-title">🗾 エリア・旅の制覇状況</div>
+    <div id="comp-progress-list"><div class="comp-empty">読み込み中...</div></div>
+
     <div class="profile-section-title">🏅 バッジコレクション</div>
     <div class="badge-grid" id="badge-grid">
       <div class="badge-card locked">
@@ -2898,6 +2926,26 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
         <div class="badge-icon">📣</div>
         <div class="badge-name">Evangelist</div>
         <div class="badge-desc">友達紹介10人達成</div>
+      </div>
+      <div class="badge-card locked">
+        <div class="badge-icon">🎖️</div>
+        <div class="badge-name">はじめての制覇</div>
+        <div class="badge-desc">エリアか旅を1つコンプリート</div>
+      </div>
+      <div class="badge-card locked">
+        <div class="badge-icon">🗾</div>
+        <div class="badge-name">エリアハンター</div>
+        <div class="badge-desc">合計3つコンプリート</div>
+      </div>
+      <div class="badge-card locked">
+        <div class="badge-icon">🏯</div>
+        <div class="badge-name">聖地マスター</div>
+        <div class="badge-desc">合計5つコンプリート</div>
+      </div>
+      <div class="badge-card locked">
+        <div class="badge-icon">🌈</div>
+        <div class="badge-name">聖地の伝説</div>
+        <div class="badge-desc">合計10コンプリート</div>
       </div>
     </div>
 
@@ -3492,6 +3540,37 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
           <div class="pr-badge-cond">友達紹介10人達成</div>
         </div>
       </div>
+      <div class="pr-badge-row">
+        <span class="pr-badge-icon">🎖️</span>
+        <div class="pr-badge-info">
+          <div class="pr-badge-name">はじめての制覇</div>
+          <div class="pr-badge-cond">エリアか旅を1つコンプリート（そのエリア・旅のスポットを全部巡礼報告）</div>
+        </div>
+      </div>
+      <div class="pr-badge-row">
+        <span class="pr-badge-icon">🗾</span>
+        <div class="pr-badge-info">
+          <div class="pr-badge-name">エリアハンター</div>
+          <div class="pr-badge-cond">エリア・旅を合計3つコンプリート</div>
+        </div>
+      </div>
+      <div class="pr-badge-row">
+        <span class="pr-badge-icon">🏯</span>
+        <div class="pr-badge-info">
+          <div class="pr-badge-name">聖地マスター</div>
+          <div class="pr-badge-cond">エリア・旅を合計5つコンプリート</div>
+        </div>
+      </div>
+      <div class="pr-badge-row">
+        <span class="pr-badge-icon">🌈</span>
+        <div class="pr-badge-info">
+          <div class="pr-badge-name">聖地の伝説</div>
+          <div class="pr-badge-cond">エリア・旅を合計10コンプリート</div>
+        </div>
+      </div>
+    </div>
+    <div class="pr-notice" style="margin-top:10px;">
+      🗾 <b>エリア</b>は巡礼プランナーの区切り（東京都・大阪府・韓国・ソウルなど）、<b>旅</b>は同じ番組・旅のシリーズ（グアム編など）です。2か所以上あるものが対象で、全部を巡礼報告するとコンプリート。タイムラインでもお祝いされます。あとからスポットが増えても、一度取ったコンプリートとバッジは消えません。
     </div>
 
     <!-- ルート最適化ルール -->
@@ -3708,13 +3787,14 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
     <section class="panel" id="tp-step2" aria-labelledby="tp-h-spots">
       <h2 id="tp-h-spots"><span class="step">STEP 2</span>行きたいスポットを選ぶ</h2>
       <div class="toolbar">
+        <button type="button" id="tp-pick-want">⭐ 行きたいだけ選ぶ</button>
         <button type="button" id="tp-pick-fit">おすすめだけ選ぶ<span class="tp-ptag" id="tp-fit-tag">🔒</span></button>
         <button type="button" id="tp-pick-all">すべて選ぶ</button>
         <button type="button" id="tp-pick-none">すべて外す</button>
         <span class="count" id="tp-count"></span>
       </div>
       <div class="spots" id="tp-spots"></div>
-      <p class="hint">「おすすめだけ選ぶ」は、選んだ条件で1日（20:30まで）に収まる分だけを自動で選びます。</p>
+      <p class="hint">「⭐ 行きたいだけ選ぶ」は、スポットカード・タイムライン・ギャラリーで「☆ 行きたい」を付けたスポットを選びます。「おすすめだけ選ぶ」は、選んだ条件で1日（20:30まで）に収まる分だけを自動で選びます。</p>
       <button type="button" class="go" id="tp-opt-btn">✨ 最適な順番でコースを作る</button>
       <div class="tp-opt-sub" id="tp-opt-sub"></div>
       <button type="button" class="go tp-go2" id="tp-plain-btn">選んだ順でコースを作る</button>
@@ -4681,6 +4761,22 @@ async function loadFeed() {
     }
   } catch(e) { console.warn('feed visit_log取得失敗:', e); }
 
+  // ③' エリア・旅のコンプリート
+  let comps = [];
+  try {
+    const client = getSupabaseClient();
+    const { data: cdata } = await client.from('completions').select('id, user_id, kind, label, total, completed_at').order('completed_at', { ascending: false }).limit(FEED_MAX_ITEMS);
+    if (Array.isArray(cdata) && cdata.length) {
+      const ids = [...new Set(cdata.map(c => c.user_id).filter(Boolean))];
+      let nm = {};
+      if (ids.length) {
+        const { data: pdata } = await client.from('profiles').select('id, display_name').in('id', ids);
+        if (Array.isArray(pdata)) pdata.forEach(p => { nm[p.id] = p.display_name; });
+      }
+      comps = cdata.map(c => ({ feedType: 'complete', id: c.id, kind: c.kind, label: c.label, total: c.total, display_name: nm[c.user_id] || '巡礼者', created_at: c.completed_at }));
+    }
+  } catch(e) { console.warn('feed completions取得失敗:', e); }
+
   // ④ お知らせ（表示中のもののみ）
   let notices = [];
   try {
@@ -4697,7 +4793,7 @@ async function loadFeed() {
     }
   } catch(e) { console.warn('feed notices取得失敗:', e); }
 
-  feedItemsCache = [...posts, ...spotItems, ...visits, ...notices]
+  feedItemsCache = [...posts, ...spotItems, ...visits, ...comps, ...notices]
     .filter(i => i.created_at)
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     .slice(0, FEED_MAX_ITEMS);
@@ -4885,6 +4981,7 @@ function showMoreGallery() {
     html += `<div class="gal-tile" data-idx="${i}" onclick="openGalleryItem(this)">
       ${src ? `<img src="${escHtml(src)}" loading="lazy" alt="">` : `<div class="gal-tile-ph">🎬</div>`}
       ${m.media_type === 'video' ? '<span class="gal-video-mark">🎬</span>' : ''}
+      ${isWanted(m.spot_id) ? '<span class="gal-want-mark">⭐</span>' : ''}
     </div>`;
   }
   grid.insertAdjacentHTML('beforeend', html);
@@ -4923,6 +5020,7 @@ function openGalleryItem(el) {
         <button data-spot-name="${escHtml(m.spot_name)}" onclick="closeGalleryLightbox();jumpToSpotFromFeed(this)" style="flex:1;min-width:140px;border:none;background:linear-gradient(135deg,var(--purple-mid),var(--purple-deep));color:#fff;border-radius:12px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;">📍 このスポットを見る</button>
         ${m.source_url ? `<a href="${escHtml(m.source_url)}" target="_blank" rel="noopener" style="flex:1;min-width:110px;text-align:center;border:1.5px solid var(--border);background:#fff;color:var(--purple-deep);border-radius:12px;padding:10px;font-size:13px;font-weight:700;text-decoration:none;">🔗 元ネタ</a>` : ''}
       </div>
+      ${m.spot_id ? `<div style="margin-top:8px;">${wantChipHtml(m.spot_id).replace('class="want-chip', 'style="width:100%;padding:9px;font-size:13px;border-radius:12px;" class="want-chip')}</div>` : ''}
     </div>`;
   body.scrollTop = 0;
   box.style.display = 'flex';
@@ -5199,6 +5297,17 @@ function renderFeedItem(item) {
       ${item.body ? `<div style="font-size:12px;line-height:1.6;opacity:0.92;white-space:pre-wrap;">${escHtml(item.body)}</div>` : ''}
     </div>`;
   }
+  // エリア・旅のコンプリート
+  if (item.feedType === 'complete') {
+    const what = item.kind === 'area' ? `「${escHtml(item.label)}」エリア` : `旅「${escHtml(item.label)}」`;
+    return `<div style="background:linear-gradient(135deg,#fff7d6,#fff);border-radius:18px;padding:14px 16px;margin-bottom:10px;box-shadow:0 4px 14px rgba(242,183,5,0.25);border:2px solid #f2b705;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#ffd75e,#f2b705);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🏆</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.5;"><b style="color:var(--purple-deep);">${escHtml(item.display_name)}</b>さんが<br><b>${what}</b>をコンプリートしました！${item.total ? `<span style="font-size:11px;color:var(--text-light);">（${item.total}か所）</span>` : ''}</div>
+      </div>
+      <div style="font-size:11px;color:var(--text-light);margin-top:8px;">${timeAgoLabel(item.created_at)}</div>
+    </div>`;
+  }
   // 巡礼報告
   if (item.feedType === 'visit') {
     return `<div style="background:linear-gradient(135deg,#fff,var(--purple-pale));border-radius:18px;padding:14px 16px;margin-bottom:10px;box-shadow:0 2px 8px rgba(123,79,166,0.08);border:1px solid var(--border);">
@@ -5222,6 +5331,7 @@ function renderFeedItem(item) {
         ${videoBadge}
         ${item.is_trace_original ? `<span style="font-size:10px;background:linear-gradient(135deg,#ffb347,#f57c00);color:#fff;border-radius:8px;padding:2px 8px;font-weight:700;">🔍 Trace独自特定</span>` : ''}
         <span style="font-size:11px;color:var(--text-light);margin-left:auto;">${timeAgoLabel(item.created_at)}</span>
+        ${wantChipHtml(item.id)}
       </div>
       <div style="display:flex;gap:12px;align-items:center;">
         ${item.image_url ? `<img src="${escHtml(item.image_url)}" loading="lazy" style="width:76px;height:76px;object-fit:cover;border-radius:12px;flex-shrink:0;">` : ''}
@@ -5242,6 +5352,7 @@ function renderFeedItem(item) {
         <span style="font-size:15px;">📍</span>
         <span style="font-size:14px;font-weight:700;color:var(--purple-deep);">${escHtml(item.spot_name)}</span>
         <span style="font-size:10px;background:var(--gold);color:#fff;border-radius:8px;padding:2px 8px;margin-left:auto;">🌟 発見者</span>
+        ${wantChipHtml(spotIdByName(item.spot_name))}
       </div>
       ${item.description ? `<div style="font-size:13px;color:var(--text-mid);margin-bottom:8px;line-height:1.5;">${escHtml(item.description)}</div>` : ''}
       ${item.image_url ? `<img src="${escHtml(item.image_url)}" style="width:100%;max-height:260px;object-fit:cover;border-radius:12px;margin-bottom:8px;display:block;" loading="lazy">` : ''}
@@ -5382,6 +5493,7 @@ async function initMap() {
   if (dbSpots && dbSpots.length > 0) {
     SPOTS.length = 0;
     dbSpots.forEach(s => SPOTS.push(s));
+    try { compSchedule(); wantRefreshUI(); } catch(e) {}
     console.log(`✅ Supabaseから${SPOTS.length}件取得`);
   } else {
     console.log(`⚠️ ローカルデータ${SPOTS.length}件で起動`);
@@ -11149,6 +11261,7 @@ function loadProfileData() {
         if (typeof updateUserRank === 'function') updateUserRank(pts, r.data.referral_count || 0);
         var visited = (r.data.visited_spots || []).length;
         myVisitedSpots = r.data.visited_spots || [];
+        try { compSchedule(); } catch(e) {}
         if (typeof applyFilters === 'function') applyFilters();
         if (typeof listViewOpen !== 'undefined' && listViewOpen && typeof renderSpotList === 'function') renderSpotList();
         var vel = document.getElementById("profile-visited");
@@ -12395,7 +12508,12 @@ function tpRenderAreas() {
     TP.area = dom ? dom.label : (list.length ? list[0].label : null);
   }
   const box = tp$('tp-areas');
-  if (box) box.innerHTML = list.map(a => `<button type="button" data-area="${tpEsc(a.label)}" aria-pressed="${a.label === TP.area}">${tpEsc(a.label)}<span class="n">${a.spots.length}件</span></button>`).join('');
+  const vis = new Set((Array.isArray(myVisitedSpots) ? myVisitedSpots : []).map(String));
+  if (box) box.innerHTML = list.map(a => {
+    const done = a.spots.filter(s => vis.has(String(s.db_id))).length;
+    const w = a.spots.filter(s => isWanted(s.db_id)).length;
+    return `<button type="button" data-area="${tpEsc(a.label)}" aria-pressed="${a.label === TP.area}">${tpEsc(a.label)}<span class="n">${done ? '✅' + done + '/' : ''}${a.spots.length}件${w ? '・⭐' + w : ''}</span></button>`;
+  }).join('');
 }
 function tpRenderSegs() {
   const prem = tpIsPremium();
@@ -12426,9 +12544,10 @@ function tpRenderSpots() {
       <input type="checkbox" data-id="${tpEsc(id)}" ${TP.selected.has(id) ? 'checked' : ''}>
       ${ph}
       <span class="body">
-        <span class="no">No.${s.no == null ? '—' : s.no}${s.is_trace_original ? '<span class="badge">Trace独自特定</span>' : ''}${s.is_closed ? '<span class="badge gray">閉業</span>' : ''}${src ? '' : '<span class="badge gray">写真なし</span>'}</span>
+        <span class="no">No.${s.no == null ? '—' : s.no}${isWanted(s.db_id) ? '<span class="badge want">⭐行きたい</span>' : ''}${(Array.isArray(myVisitedSpots) && myVisitedSpots.map(String).includes(id)) ? '<span class="badge visited">✅巡礼済み</span>' : ''}${s.is_trace_original ? '<span class="badge">Trace独自特定</span>' : ''}${s.is_closed ? '<span class="badge gray">閉業</span>' : ''}${src ? '' : '<span class="badge gray">写真なし</span>'}</span>
         <span class="name">${tpEsc(s.name)}</span>
         <span class="meta">${tpEsc(mem)}${mem ? '／' : ''}${tpEsc(tpPlace(s).small)}</span>
+        ${wantChipHtml(id)}
       </span>
     </label>`;
   }).join('');
@@ -12444,9 +12563,24 @@ function tpUpdateCount() {
 function tpSelectAll() {
   tpVisibleSpots().filter(s => !s.is_closed).forEach(s => TP.selected.add(String(s.db_id)));
 }
+// そのエリアでまだ何も選んでいなければ、行きたいスポット（無ければ全部）を選ぶ
+function tpDefaultSelect() {
+  if (tpChosen().length) return;
+  const vs = tpVisibleSpots().filter(s => !s.is_closed);
+  const wanted = vs.filter(s => isWanted(s.db_id));
+  (wanted.length ? wanted : vs).forEach(s => TP.selected.add(String(s.db_id)));
+}
+function tpPickWant() {
+  const vs = tpAreaSpots();
+  const wanted = vs.filter(s => isWanted(s.db_id));
+  if (!wanted.length) { try { showEvalToast('このエリアに行きたいスポットはまだありません。スポットカードの「☆ 行きたい」で追加できます'); } catch (e) {} return; }
+  vs.forEach(s => TP.selected.delete(String(s.db_id)));
+  wanted.forEach(s => TP.selected.add(String(s.db_id)));
+  tpRenderSpots();
+}
 function tpSetArea(label) {
   TP.area = label;
-  tpRenderAreas(); tpRenderSpots();
+  tpRenderAreas(); tpDefaultSelect(); tpRenderSpots();
   const r = tp$('tp-result'); if (r) r.hidden = true;
 }
 function tpRender() {
@@ -12746,6 +12880,200 @@ function tpGoRankTable() {
   }, 120);
   setTimeout(() => go(false), 900); // 画像などで高さが変わったときのため、もう一度合わせる
 }
+
+// ===================================================================
+// 行きたいマーク・エリア/旅のコンプリート・コンプリートバッジ（2026-11-14）
+//  ・行きたい：ログイン中（匿名以外）はアカウント（spot_wants）、それ以外は端末（localStorage）に保存
+//  ・コンプリート：エリア（巡礼プランナーと同じ区切り）と旅（同じシリーズ）。2か所以上のものが対象
+//  ・達成したら completions に記録（RPC record_completion がサーバーで巡礼済みを確認）→ タイムラインに表示
+//  ・段階バッジ：合計1・3・5・10か所のコンプリート
+// ===================================================================
+const WANT_LS_KEY = 'tracehearts2hearts_wants_v1';
+const COMP_BADGES = [
+  { n: 1,  icon: '🎖️', name: 'はじめての制覇', desc: 'エリアか旅を1つコンプリート' },
+  { n: 3,  icon: '🗾', name: 'エリアハンター', desc: 'エリア・旅を合計3つコンプリート' },
+  { n: 5,  icon: '🏯', name: '聖地マスター',   desc: 'エリア・旅を合計5つコンプリート' },
+  { n: 10, icon: '🌈', name: '聖地の伝説',     desc: 'エリア・旅を合計10コンプリート' },
+];
+let wantSet = new Set();
+let wantUserId = null;   // アカウントに保存できるユーザー（匿名以外）のID
+let compMine = [];       // 自分のコンプリート記録
+
+function wantLoadLocal() {
+  try { return new Set(JSON.parse(localStorage.getItem(WANT_LS_KEY) || '[]').map(String)); } catch (e) { return new Set(); }
+}
+function wantSaveLocal() {
+  try { localStorage.setItem(WANT_LS_KEY, JSON.stringify([...wantSet])); } catch (e) {}
+}
+function isWanted(id) { return !!id && wantSet.has(String(id)); }
+
+// 起動時・ログイン時：端末の分とアカウントの分を合わせる
+async function wantSync() {
+  wantSet = wantLoadLocal();
+  wantUserId = null;
+  try {
+    const client = getSupabaseClient();
+    const { data } = await client.auth.getSession();
+    const s = data && data.session;
+    if (s && !(s.user && s.user.is_anonymous)) {
+      wantUserId = s.user.id;
+      const { data: rows, error } = await client.from('spot_wants').select('spot_id');
+      if (!error && Array.isArray(rows)) {
+        const server = new Set(rows.map(r => String(r.spot_id)));
+        const toPush = [...wantSet].filter(id => !server.has(id));
+        server.forEach(id => wantSet.add(id));
+        if (toPush.length) await client.from('spot_wants').upsert(toPush.map(id => ({ user_id: wantUserId, spot_id: id })), { onConflict: 'user_id,spot_id', ignoreDuplicates: true });
+        wantSaveLocal();
+      }
+    }
+  } catch (e) { console.warn('want sync error:', e); }
+  wantRefreshUI();
+}
+
+async function toggleWant(id, ev) {
+  if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+  if (!id) return;
+  id = String(id);
+  const on = !wantSet.has(id);
+  if (on) wantSet.add(id); else wantSet.delete(id);
+  wantSaveLocal();
+  wantRefreshUI();
+  try { if (typeof gtag === 'function') gtag('event', on ? 'want_add' : 'want_remove', { app_name: 'h2h' }); } catch (e) {}
+  try { showEvalToast(on ? '⭐ 行きたいに追加しました（巡礼プランナーで選べます）' : '行きたいから外しました'); } catch (e) {}
+  if (wantUserId) {
+    try {
+      const client = getSupabaseClient();
+      if (on) await client.from('spot_wants').upsert({ user_id: wantUserId, spot_id: id }, { onConflict: 'user_id,spot_id', ignoreDuplicates: true });
+      else await client.from('spot_wants').delete().eq('user_id', wantUserId).eq('spot_id', id);
+    } catch (e) { console.warn('want save error:', e); }
+  }
+}
+function spotIdByName(name) {
+  const s = SPOTS.find(x => x.name === name && !x.is_draft);
+  return s ? String(s.db_id) : '';
+}
+function wantChipHtml(id) {
+  if (!id) return '';
+  const on = isWanted(id);
+  return `<button type="button" class="want-chip${on ? ' on' : ''}" data-want-id="${escHtml(String(id))}" onclick="toggleWant('${escHtml(String(id))}', event)">${on ? '⭐ 行きたい' : '☆ 行きたい'}</button>`;
+}
+// 画面にある行きたいボタンの見た目をまとめて更新
+function wantRefreshUI() {
+  document.querySelectorAll('[data-want-id]').forEach(el => {
+    const on = isWanted(el.getAttribute('data-want-id'));
+    el.classList.toggle('on', on);
+    el.textContent = on ? '⭐ 行きたい' : '☆ 行きたい';
+  });
+  const cb = document.getElementById('btn-want');
+  if (cb) {
+    const on = !!(currentSpot && isWanted(currentSpot.db_id));
+    cb.classList.toggle('on', on);
+    cb.textContent = on ? '⭐ 行きたい' : '☆ 行きたい';
+  }
+  try { if (typeof TP !== 'undefined' && TP.inited) { tpRenderAreas(); tpRenderSpots(); } } catch (e) {}
+}
+function wantCardClick() { if (currentSpot) toggleWant(currentSpot.db_id); }
+
+// ── コンプリートの判定 ──
+function compUnits() {
+  const units = [];
+  try {
+    tpAreas().forEach(a => { if (a.spots.length >= 2) units.push({ kind: 'area', key: a.label, label: a.label, spots: a.spots }); });
+  } catch (e) {}
+  const bySeries = {};
+  SPOTS.filter(s => s.series && !s.is_draft && s.db_id).forEach(s => { (bySeries[s.series] = bySeries[s.series] || []).push(s); });
+  Object.entries(bySeries).forEach(([k, ss]) => { if (ss.length >= 2) units.push({ kind: 'series', key: k, label: k, spots: ss }); });
+  return units;
+}
+function compProgress(u) {
+  const v = Array.isArray(myVisitedSpots) ? myVisitedSpots.map(String) : [];
+  const done = u.spots.filter(s => v.includes(String(s.db_id))).length;
+  return { done, total: u.spots.length };
+}
+let compChecking = false;
+async function compCheck() {
+  if (compChecking || !SPOTS.length || !Array.isArray(myVisitedSpots) || !myVisitedSpots.length) return;
+  compChecking = true;
+  try {
+    const client = getSupabaseClient();
+    const { data } = await client.auth.getSession();
+    if (!data || !data.session) return;
+    await compLoadMine();
+    const have = new Set(compMine.map(c => c.kind + '|' + c.key));
+    for (const u of compUnits()) {
+      const p = compProgress(u);
+      if (p.done < p.total || have.has(u.kind + '|' + u.key)) continue;
+      const { data: ok, error } = await client.rpc('record_completion', {
+        p_kind: u.kind, p_key: u.key, p_label: u.label, p_spot_ids: u.spots.map(s => String(s.db_id)),
+      });
+      if (!error && ok === true) {
+        try { showEvalToast(`🏆 ${u.kind === 'area' ? '「' + u.label + '」エリア' : '旅「' + u.label + '」'}をコンプリートしました！`); } catch (e) {}
+        try { if (typeof gtag === 'function') gtag('event', 'complete_' + u.kind, { app_name: 'h2h', label: u.label }); } catch (e) {}
+      }
+    }
+    await compLoadMine();
+  } catch (e) { console.warn('completion check error:', e); }
+  finally { compChecking = false; compRenderMyPage(); }
+}
+async function compLoadMine() {
+  try {
+    const client = getSupabaseClient();
+    const { data: sess } = await client.auth.getSession();
+    if (!sess || !sess.session) { compMine = []; return; }
+    const { data } = await client.from('completions').select('kind,key,label,total,completed_at').eq('user_id', sess.session.user.id);
+    compMine = Array.isArray(data) ? data : [];
+  } catch (e) { compMine = []; }
+}
+// SPOTSと巡礼済みが揃ったら判定する（どちらが先に来ても動くように）
+let compTimer = null;
+function compSchedule() {
+  clearTimeout(compTimer);
+  compTimer = setTimeout(function tryRun(n) {
+    n = n || 0;
+    if (SPOTS.length && Array.isArray(myVisitedSpots)) { compCheck(); compRenderMyPage(); return; }
+    if (n < 20) compTimer = setTimeout(() => tryRun(n + 1), 1500);
+  }, 800);
+}
+
+// ── My Page：制覇状況とバッジ ──
+let compShowAll = false;
+function compRenderMyPage() {
+  // 段階バッジ
+  const n = compMine.length;
+  COMP_BADGES.forEach(b => {
+    document.querySelectorAll('#badge-grid .badge-card').forEach(el => {
+      const nm = el.querySelector('.badge-name');
+      if (nm && nm.textContent === b.name) el.classList.toggle('locked', n < b.n);
+    });
+  });
+  const box = document.getElementById('comp-progress-list');
+  if (!box) return;
+  if (!SPOTS.length) { box.innerHTML = '<div class="comp-empty">読み込み中...</div>'; return; }
+  const doneSet = new Set(compMine.map(c => c.kind + '|' + c.key));
+  const rows = compUnits().map(u => ({ u, p: compProgress(u), done: doneSet.has(u.kind + '|' + u.key) }))
+    .sort((a, b) => (b.done - a.done) || (b.p.done / b.p.total - a.p.done / a.p.total) || (b.p.total - a.p.total));
+  const list = compShowAll ? rows : rows.slice(0, 6);
+  box.innerHTML = `<div class="comp-sum">🏆 コンプリート <b>${n}</b> ／ ${rows.length}（次のバッジまで あと${Math.max(0, ((COMP_BADGES.find(b => b.n > n) || { n: n }).n) - n)}）</div>` +
+    list.map(({ u, p, done }) => {
+      const pct = Math.round(p.done / p.total * 100);
+      const complete = done || p.done === p.total;
+      return `<div class="comp-row${complete ? ' done' : ''}">
+        <div class="comp-top"><span class="comp-kind">${u.kind === 'area' ? '🗾 エリア' : '📺 旅'}</span><span class="comp-name">${escHtml(u.label)}</span><span class="comp-num">${complete ? '🏆 コンプリート' : p.done + '/' + p.total}</span></div>
+        <div class="comp-bar"><div style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('') +
+    (rows.length > 6 ? `<button type="button" class="comp-more" onclick="compShowAll=!compShowAll;compRenderMyPage()">${compShowAll ? '閉じる' : 'すべて見る（' + rows.length + '件）'}</button>` : '');
+}
+
+// スポットカードを開いたら行きたいボタンを合わせる
+(function () {
+  const orig = openCard;
+  openCard = function (spot) { const r = orig.apply(this, arguments); try { wantRefreshUI(); } catch (e) {} return r; };
+})();
+window.addEventListener('load', () => {
+  setTimeout(wantSync, 1200);
+  try { getSupabaseClient().auth.onAuthStateChange(() => { setTimeout(wantSync, 300); }); } catch (e) {}
+});
 // 既存の呼び出しとの互換
 function renderRouteSpotList() { tpRender(); }
 function updateRouteStickyCount() { tpUpdateCount(); }
@@ -12771,10 +13099,11 @@ function tpOnShow() {
     tp$('tp-pick-all').addEventListener('click', () => { tpSelectAll(); tpRenderSpots(); });
     tp$('tp-pick-none').addEventListener('click', () => { tpVisibleSpots().forEach(s => TP.selected.delete(String(s.db_id))); tpRenderSpots(); });
     tp$('tp-pick-fit').addEventListener('click', tpPickFit);
+    tp$('tp-pick-want').addEventListener('click', tpPickWant);
     tp$('tp-opt-btn').addEventListener('click', tpOptimizeClick);
     tp$('tp-plain-btn').addEventListener('click', tpPlainClick);
     tpRender();
-    if (!TP.selected.size) { tpSelectAll(); tpRenderSpots(); }
+    if (!TP.selected.size) { tpDefaultSelect(); tpRenderSpots(); }
   } else tpRender();
 }
 // 条件を変えたら、今のコースを同じ順番のまま作り直す（回数は減らない）
