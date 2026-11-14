@@ -4022,7 +4022,7 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
 <!-- BOTTOM NAV -->
 
 <!-- 『Q』ボタン・アプリ内のよくある質問・意見・つまずき（2026-11-14） -->
-<button type="button" id="q-tab" onclick="openFaq()" aria-label="よくある質問・ご意見">Q</button>
+<button type="button" id="q-tab" onclick="openFaq()" aria-label="よくある質問・ご意見" style="display:none;">Q</button>
 
 <div id="faq-sheet" role="dialog" aria-label="よくある質問" style="display:none;">
   <div class="faq-panel">
@@ -5712,6 +5712,17 @@ async function initMap() {
   listCtl.addEventListener('click', function() { if (!listViewOpen) toggleListView(); });
   listCtl.index = -2; // 写真ボタン（-1）より上
   map.controls[google.maps.ControlPosition.RIGHT_CENTER].push(listCtl);
+
+  // よくある質問（Q）：地図では右端の『Q』がボタンと重なるので、同じ並びに置く
+  const faqCtl = document.createElement('button');
+  faqCtl.type = 'button';
+  faqCtl.title = 'よくある質問・ご意見';
+  faqCtl.setAttribute('aria-label', 'よくある質問・ご意見を開く');
+  faqCtl.style.cssText = 'width:40px;height:48px;margin:0 10px 8px 0;background:#fff;border:none;border-radius:8px;box-shadow:rgba(0,0,0,0.3) 0 1px 4px -1px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:0;';
+  faqCtl.innerHTML = '<span style="font-size:19px;line-height:1;font-weight:800;font-family:Georgia,serif;color:var(--purple-deep);">Q</span><span style="font-size:9px;font-weight:700;color:#555;line-height:1;">質問</span>';
+  faqCtl.addEventListener('click', function() { openFaq(); });
+  faqCtl.index = -3; // リスト（-2）より上
+  map.controls[google.maps.ControlPosition.RIGHT_CENTER].push(faqCtl);
 
   // 管理者だけ：未整備スポットの一覧ボタン（左側に固定）
   const adminListCtl = document.createElement('button');
@@ -13283,7 +13294,7 @@ function uxLog(event, detail, once) {
     const r = orig.apply(this, arguments);
     uxCurView = name;
     uxLog('view', null);
-    try { const q = document.getElementById('q-tab'); if (q) q.style.display = ''; } catch (e) {}
+    qTabSync();
     return r;
   };
 })();
@@ -13335,11 +13346,16 @@ function openFaq() {
   const sc = sheet.querySelector('.faq-scroll'); if (sc) sc.scrollTop = 0;
   const q = document.getElementById('q-tab'); if (q) q.style.display = 'none';
 }
+function qTabSync() {
+  const q = document.getElementById('q-tab');
+  const open = document.getElementById('faq-sheet');
+  if (q) q.style.display = (uxCurView === 'map' || (open && open.style.display === 'flex')) ? 'none' : '';
+}
 function closeFaq() {
   const sheet = document.getElementById('faq-sheet');
   if (sheet) sheet.style.display = 'none';
   document.body.style.overflow = '';
-  const q = document.getElementById('q-tab'); if (q) q.style.display = '';
+  qTabSync();
 }
 function faqPickKind(btn) {
   faqKind = btn.getAttribute('data-kind');
