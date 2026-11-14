@@ -5675,10 +5675,7 @@ async function initMap() {
     mapTypeControl: false,
     streetViewControl: false,
     fullscreenControl: false,
-    zoomControl: true,
-    zoomControlOptions: {
-      position: google.maps.ControlPosition.RIGHT_CENTER
-    },
+    zoomControl: false, // ＋−は出さない（ピンチ・ダブルタップで拡大縮小。右のボタンと重なるため 2026-11-14）
     styles: [
       { featureType: 'all', elementType: 'geometry', stylers: [{ saturation: -20 }] },
       { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
