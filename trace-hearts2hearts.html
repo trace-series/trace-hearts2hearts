@@ -2432,6 +2432,7 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
   .pv-row input { width: 24px; height: 24px; accent-color: var(--purple-mid); flex-shrink: 0; }
   .pv-note { font-size: 12px; color: var(--text-light); line-height: 1.6; margin: 4px 2px 10px; }
   .pv-saved { font-size: 12px; color: #0b6b4a; font-weight: 700; min-height: 18px; text-align: center; }
+  .pv-warn { display: block; font-style: normal; font-size: 11.5px; color: #9a5b00; background: #fff7e0; border-radius: 8px; padding: 6px 8px; margin-top: 6px; line-height: 1.6; }
 </style>
 </head>
 <body>
@@ -4149,11 +4150,11 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
     <div class="faq-scroll" style="padding-bottom:28px;">
       <div id="pv-login" class="pv-note" style="display:none;">X または Google でログインすると設定できます。</div>
       <label class="pv-row">
-        <div><b>タイムラインに名前を出さない</b><span>巡礼報告やコンプリートのお祝いで、名前の代わりに「巡礼者」と表示します。</span></div>
+        <div><b>タイムラインに名前を出さない</b><span>巡礼報告やコンプリートのお祝いで、名前の代わりに「巡礼者」と表示します。</span><em class="pv-warn">⚠️ 巡礼報告への「いいね」は今までどおり届き、バズ投稿バッジにも数えられます。ただ、誰の報告か分からなくなるので、名前で注目されたり、ほかのファンに覚えてもらったりすることはなくなります。新しい聖地を投稿したときの「発見者」の名前は、この設定とは別にそのまま表示されます。</em></div>
         <input type="checkbox" id="pv-hide-name" onchange="savePrivacy()">
       </label>
       <label class="pv-row">
-        <div><b>ランキングに出さない</b><span>達成率ランキング・推しファンランキング・月間トップ貢献者に表示されなくなります。ポイントやランクはそのまま貯まります。</span></div>
+        <div><b>ランキングに出さない</b><span>達成率ランキング・推しファンランキング・月間トップ貢献者に表示されなくなります。ポイントやランクはそのまま貯まります。</span><em class="pv-warn">⚠️ 月間1位になっても「👑 トップ貢献者」バッジはもらえなくなります。ランキングで名前が知られることもなくなります。</em></div>
         <input type="checkbox" id="pv-hide-rank" onchange="savePrivacy()">
       </label>
       <div class="pv-note">変更はすぐに保存されます。行きたいマークは、ほかの人には見えません。</div>
