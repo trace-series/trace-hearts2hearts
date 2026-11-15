@@ -2438,6 +2438,20 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
   .spot-list-want { margin-top: 6px; }
   #list-sort-bar button.ls-want { border-color: #f2b705; color: #9a6b00; }
   #list-sort-bar button.ls-want.active { background: #fff4c2; border-color: #f2b705; color: #8a5a00; }
+  /* 巡礼プランナーの共有リンク・画像 */
+  .tp .tp-sharebox { margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: var(--surface-2); }
+  .tp .tp-sharebox label { display: block; font-size: 12.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 8px; }
+  .tp .tp-shareRow { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tp .tp-shareRow input { flex: 1 1 220px; font: inherit; font-size: 13px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-height: 40px; width: 100%; }
+  .tp .tp-shareRow button { font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; min-height: 40px; }
+  .tp .tp-imgout { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
+  .tp .tp-imgout figure { margin: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
+  .tp .tp-imgout img { width: 100%; height: auto; display: block; }
+  .tp .tp-imgout figcaption { display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: 6px 10px; font-size: 11.5px; }
+  .tp .tp-imgout figcaption a { color: var(--navy); font-weight: 700; text-decoration: none; }
+  .tp .tp-imgnote { font-size: 12.5px; color: var(--muted); margin: 10px 0 0; line-height: 1.6; }
+  .tp .tp-imgnote a { color: var(--navy); }
+  .tp .tp-restored { background: var(--accent-soft); border-radius: 10px; padding: 10px 14px; font-size: 13px; margin-bottom: 12px; line-height: 1.6; }
 </style>
 </head>
 <body>
@@ -3872,6 +3886,16 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
     <section class="panel" id="tp-result" aria-labelledby="tp-h-result" hidden>
       <h2 id="tp-h-result"><span class="step">STEP 3</span><span id="tp-result-title">モデルコース</span></h2>
       <div id="tp-result-body"></div>
+      <div class="tp-save">
+        <h3>📤 コースを送る・SNSに載せる</h3>
+        <div class="actions" style="margin-top:4px">
+          <button type="button" class="primary" onclick="tpShareLink()">🔗 共有リンクを送る</button>
+          <button type="button" id="tp-img-btn" onclick="tpMakeImages()">🖼️ 画像にする（SNS用）</button>
+        </div>
+        <p class="hint" style="margin:8px 0 0">共有リンクは、開いた人のTraceで同じコースがそのまま見られます。画像は表紙＋スポットごとに分けた縦長（Instagramのフィードと同じ形）で、まとめて投稿できます。</p>
+        <div id="tp-share-area"></div>
+        <div id="tp-img-area"></div>
+      </div>
       <div class="tp-save">
         <h3>このコースを保存する</h3>
         <input type="text" id="route-name-input" placeholder="ルート名（例：東京Hearts2Hearts遠征）">
@@ -12620,12 +12644,15 @@ function tpAreaOf(spot) {
   const a = (TP.areaList || []).find(x => x.spots.includes(spot));
   return a ? a.label : null;
 }
+// メンバーの絞り込み（そのメンバーか「全員」のスポット）
+function tpMemberOk(s) { return TP.member === 'all' || tpMembers(s).includes('全員') || tpMembers(s).includes(TP.member); }
 function tpVisibleSpots() {
-  return tpAreaSpots().filter(s => TP.member === 'all' || tpMembers(s).includes('全員') || tpMembers(s).includes(TP.member))
+  return tpAreaSpots().filter(tpMemberOk)
     .slice().sort((a, b) => (a.no ?? 99999) - (b.no ?? 99999));
 }
+// コースに使うのは、今のエリア・メンバーで見えているスポットのうち選んだもの
 function tpChosen() {
-  const inArea = new Set(tpAreaSpots().map(s => String(s.db_id)));
+  const inArea = new Set(tpVisibleSpots().map(s => String(s.db_id)));
   return [...TP.selected].filter(id => inArea.has(id)).map(tpById).filter(Boolean);
 }
 
@@ -12725,17 +12752,20 @@ function tpRenderMembers() {
 function tpRenderAreas() {
   TP.areaList = tpAreas();
   const list = TP.areaList;
-  if (!list.some(a => a.label === TP.area)) {
-    const dom = list.find(a => tpIsDomestic(a.label));
-    TP.area = dom ? dom.label : (list.length ? list[0].label : null);
+  // メンバーを選んでいるときは、そのメンバーのスポットがあるエリアだけを、件数の多い順に出す
+  const shown = list.map(a => ({ a, ss: a.spots.filter(tpMemberOk) })).filter(x => x.ss.length > 0)
+    .sort((x, y) => y.ss.length - x.ss.length);
+  if (!shown.some(x => x.a.label === TP.area)) {
+    const dom = shown.find(x => tpIsDomestic(x.a.label));
+    TP.area = dom ? dom.a.label : (shown.length ? shown[0].a.label : null);
   }
   const box = tp$('tp-areas');
   const vis = new Set((Array.isArray(myVisitedSpots) ? myVisitedSpots : []).map(String));
-  if (box) box.innerHTML = list.map(a => {
-    const done = a.spots.filter(s => vis.has(String(s.db_id))).length;
-    const w = a.spots.filter(s => isWanted(s.db_id)).length;
-    return `<button type="button" data-area="${tpEsc(a.label)}" aria-pressed="${a.label === TP.area}">${tpEsc(a.label)}<span class="n">${done ? '✅' + done + '/' : ''}${a.spots.length}件${w ? '・⭐' + w : ''}</span></button>`;
-  }).join('');
+  if (box) box.innerHTML = shown.length ? shown.map(({ a, ss }) => {
+    const done = ss.filter(s => vis.has(String(s.db_id))).length;
+    const w = ss.filter(s => isWanted(s.db_id)).length;
+    return `<button type="button" data-area="${tpEsc(a.label)}" aria-pressed="${a.label === TP.area}">${tpEsc(a.label)}<span class="n">${done ? '✅' + done + '/' : ''}${ss.length}件${w ? '・⭐' + w : ''}</span></button>`;
+  }).join('') : '<p class="empty">このメンバーのスポットはまだありません。</p>';
 }
 function tpRenderSegs() {
   const prem = tpIsPremium();
@@ -12776,7 +12806,7 @@ function tpRenderSpots() {
   tpUpdateCount();
 }
 function tpUpdateCount() {
-  const total = tpAreaSpots().length;
+  const total = tpVisibleSpots().length;
   const sel = tpChosen().length;
   const c = tp$('tp-count'); if (c) c.textContent = sel + ' / ' + total + ' 件を選択中';
   const plain = tp$('tp-plain-btn'); if (plain) plain.disabled = sel === 0;
@@ -12793,7 +12823,7 @@ function tpDefaultSelect() {
   (wanted.length ? wanted : vs).forEach(s => TP.selected.add(String(s.db_id)));
 }
 function tpPickWant() {
-  const vs = tpAreaSpots();
+  const vs = tpVisibleSpots();
   const wanted = vs.filter(s => isWanted(s.db_id));
   if (!wanted.length) { try { showEvalToast('このエリアに行きたいスポットはまだありません。スポットカードの「☆ 行きたい」で追加できます'); } catch (e) {} return; }
   vs.forEach(s => TP.selected.delete(String(s.db_id)));
@@ -12831,6 +12861,7 @@ function tpDateLabel() {
   return (d.getMonth() + 1) + '月' + d.getDate() + '日（' + ['日', '月', '火', '水', '木', '金', '土'][d.getDay()] + '）';
 }
 function tpShow(ordered, optimized, quiet) {
+  try { tp$('tp-share-area').innerHTML = ''; tp$('tp-img-area').innerHTML = ''; } catch (e) {}
   const prem = tpIsPremium();
   const startMin = tpStartMin();
   const days = tpBuildPlan(ordered, startMin, prem);
@@ -13593,6 +13624,352 @@ function discovererLabel(name, id, spotName) {
   return name;
 }
 window.addEventListener('load', () => { setTimeout(loadHiddenDiscoverers, 500); });
+
+// ===================================================================
+// 巡礼プランナーの書き出し：共有リンク（URLにコースを埋め込む）と SNS用画像（Muse版をもとに組み込み 2026-11-15）
+//  ・共有リンク：日付・出発時刻・ペース・移動手段・エリア・回る順番（No.）を ?c= に入れる。開くと同じコースを再現
+//  ・画像：幅1080×高さ最大1350。表紙＋スポットの区切りで分割、日ごとに改ページ。写真はSupabaseから（だめなら名前カード）
+//  ・プレミアム以外は、時刻は最初の3か所まで（4か所目からは順番だけ）。終了予定もプレミアムだけ
+// ===================================================================
+const CV = { W: 1080, H: 1350, M: 64, HEAD: 96, FOOT: 104, BG: '#fffdf7', INK: '#26211a', SOFT: '#57503f', MUTED: '#8a8171', LINE: '#ddd2bd', ACCENT: '#b8402a', SOFTBG: '#efe8d8', ACCENTBG: '#f7e3dc' };
+let tpImageFiles = [];
+
+function cvRR(ctx, x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function cvFit(ctx, text, maxW) {
+  let t = String(text);
+  if (ctx.measureText(t).width <= maxW) return t;
+  while (t.length && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+  return t + '…';
+}
+function cvWrap(ctx, text, maxW) {
+  const lines = []; let cur = '';
+  for (const ch of String(text)) { const t = cur + ch; if (cur && ctx.measureText(t).width > maxW) { lines.push(cur); cur = ch; } else cur = t; }
+  if (cur) lines.push(cur);
+  return lines.length ? lines : [''];
+}
+function cvDur(min) { const h = Math.floor(min / 60), m = min % 60; return '約' + (h ? h + '時間' : '') + (m || !h ? m + '分' : ''); }
+async function tpCopyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; }
+  catch (_) {
+    try { const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok; } catch (e) { return false; }
+  }
+}
+
+// ── 共有リンク ──
+function tpEncode(obj) {
+  const bytes = new TextEncoder().encode(JSON.stringify(obj)); let bin = '';
+  bytes.forEach(b => { bin += String.fromCharCode(b); });
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function tpDecode(str) {
+  const bin = atob(String(str).replace(/-/g, '+').replace(/_/g, '/'));
+  return JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0))));
+}
+function tpShareURL() {
+  const L = TP.last; if (!L) return '';
+  const st = tp$('tp-start') ? tp$('tp-start').value : '10:00';
+  const payload = { v: 1, d: (tp$('tp-date') || {}).value || '', s: tpIsPremium() ? st : '10:00', p: TP.pace, m: TP.move, a: TP.area, o: L.optimized ? 1 : 0, n: L.ordered.map(s => s.no) };
+  return APP_URL + '?c=' + tpEncode(payload);
+}
+async function tpShareLink() {
+  const url = tpShareURL(); if (!url) return;
+  const title = (TP.area || '') + '｜' + tpDateLabel() + 'の巡礼コース';
+  const box = tp$('tp-share-area');
+  box.innerHTML = `<div class="tp-sharebox"><label>共有リンク（LINE・DMで送ると、開いた人のTraceで同じコースが見られます）</label>
+    <div class="tp-shareRow"><input type="text" readonly value="${tpEsc(url)}" onfocus="this.select()"><button type="button" id="tp-share-copy">コピー</button>${navigator.share ? '<button type="button" id="tp-share-sheet">共有する</button>' : ''}</div>
+    <p class="hint" id="tp-share-status" style="margin:6px 0 0"></p></div>`;
+  const ok = await tpCopyText(url);
+  tp$('tp-share-status').textContent = ok ? '✓ リンクをコピーしました' : '上の欄を長押ししてコピーしてください';
+  tp$('tp-share-copy').addEventListener('click', async () => { tp$('tp-share-status').textContent = (await tpCopyText(url)) ? '✓ リンクをコピーしました' : '上の欄を長押ししてコピーしてください'; });
+  const sb = tp$('tp-share-sheet');
+  if (sb) sb.addEventListener('click', async () => { try { await navigator.share({ title: title, text: title + '｜Trace Hearts2Hearts', url: url }); } catch (_) {} });
+  try { if (typeof gtag === 'function') gtag('event', 'route_share_link', { app_name: 'h2h', spots: TP.last.ordered.length }); } catch (e) {}
+  try { uxLog('route_share_link', TP.last.ordered.length + 'か所'); } catch (e) {}
+  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+// 共有リンクで開いたとき：スポットとSPOTSが揃ってから、同じコースを再現する
+function tpRestoreFromURL() {
+  let code = '';
+  try { code = new URLSearchParams(location.search).get('c') || ''; } catch (_) {}
+  if (!code) return;
+  let p = null;
+  try { p = tpDecode(code); } catch (_) { return; }
+  if (!p || !Array.isArray(p.n) || !p.n.length) return;
+  let tries = 0;
+  (function wait() {
+    if (!SPOTS.length) { if (tries++ < 40) setTimeout(wait, 500); return; }
+    try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
+    showView('route');
+    const byNo = new Map(tpAllSpots().map(s => [s.no, s]));
+    const ordered = p.n.map(no => byNo.get(no)).filter(Boolean);
+    if (!ordered.length) { alert('共有されたコースのスポットが見つかりませんでした'); return; }
+    if (p.m === 'walk' || p.m === 'transit') TP.move = p.m;
+    if (tpIsPremium() && TP_STAY[p.p]) TP.pace = p.p;
+    tpSelectList(ordered);
+    if (p.a && TP.areaList.some(a => a.label === p.a)) { TP.area = p.a; tpRender(); }
+    if (p.d && /^\d{4}-\d{2}-\d{2}$/.test(p.d)) tp$('tp-date').value = p.d;
+    if (tpIsPremium() && /^\d{1,2}:\d{2}$/.test(p.s || '')) tp$('tp-start').value = p.s.padStart(5, '0');
+    const inArea = ordered.filter(s => tpAreaOf(s) === TP.area);
+    const list = inArea.length ? inArea : ordered;
+    if (p.o) TP.optCache = { key: list.map(s => String(s.db_id)).sort().join(','), order: list };
+    tpShow(list, !!p.o);
+    const body = tp$('tp-result-body');
+    if (body) body.insertAdjacentHTML('afterbegin', '<div class="tp-restored">🔗 共有されたコースです。「このコースを保存する」から、自分のルートとして保存できます。</div>');
+    try { if (typeof gtag === 'function') gtag('event', 'route_share_open', { app_name: 'h2h', spots: list.length }); } catch (e) {}
+    try { uxLog('route_share_open', list.length + 'か所'); } catch (e) {}
+  })();
+}
+window.addEventListener('load', () => setTimeout(tpRestoreFromURL, 800));
+
+// ── SNS用画像 ──
+function tpLoadImg(src) {
+  return new Promise(resolve => {
+    if (!src) { resolve(null); return; }
+    const im = new Image(); im.crossOrigin = 'anonymous';
+    let done = false;
+    const t = setTimeout(() => { if (!done) { done = true; resolve(null); } }, 9000);
+    im.onload = () => { if (!done) { done = true; clearTimeout(t); resolve(im); } };
+    im.onerror = () => { if (!done) { done = true; clearTimeout(t); resolve(null); } };
+    im.src = src;
+  });
+}
+function tpCourseInfo() {
+  const L = TP.last;
+  const legs = L.days.flatMap(d => d.legs);
+  const lastDay = L.days[L.days.length - 1];
+  return {
+    L, prem: tpIsPremium(),
+    moveMin: legs.reduce((a, l) => a + l.minutes, 0),
+    walkKm: legs.filter(l => l.mode === 'walk').reduce((a, l) => a + l.km, 0),
+    endT: lastDay.stops[lastDay.stops.length - 1].dep,
+    startMin: tpStartMin(),
+    courseName: 'Hearts2Hearts ' + (TP.area || ''),
+    dateLabel: tpDateLabel(),
+  };
+}
+// 1つのスポットの高さを先に測る（スポットの途中で画像を切らないため）
+function tpMeasureBlocks(photoMap, info) {
+  const CW = CV.W - CV.M * 2;
+  const sc = document.createElement('canvas').getContext('2d');
+  const blocks = [];
+  let idx = 0;
+  info.L.days.forEach((day, di) => {
+    day.stops.forEach((st, i) => {
+      const s = st.spot;
+      const photo = photoMap.get(s) || null;
+      sc.font = "700 34px 'Noto Sans JP', sans-serif";
+      const titleLines = cvWrap(sc, 'No.' + (s.no == null ? '—' : s.no) + ' ' + s.name, photo ? CW : CW - 48).slice(0, 2);
+      const dayHead = info.L.days.length > 1 && i === 0;
+      let h = (i > 0 ? 52 : 8) + (dayHead ? 64 : 0);
+      if (photo) h += 300 + 16 + titleLines.length * 46 + 38 + 34;
+      else h += Math.max(138, 34 + 40 + titleLines.length * 44 + 36 + 20) + 30;
+      blocks.push({ st, day: di, first: i === 0, dayHead, photo, titleLines, h, leg: i > 0 ? day.legs[i - 1] : null, idx: idx++ });
+    });
+  });
+  return blocks;
+}
+function tpTimeText(info, b) {
+  if (info.prem || b.idx < TP_FREE_STOPS) return tpFmt(b.st.arr) + '–' + tpFmt(b.st.dep);
+  return (b.idx + 1) + 'か所目';
+}
+function tpDrawCover(ctx, info) {
+  const CW = CV.W - CV.M * 2;
+  ctx.fillStyle = CV.BG; ctx.fillRect(0, 0, CV.W, CV.H);
+  ctx.fillStyle = CV.ACCENT; ctx.fillRect(0, 0, CV.W, 16);
+  let y = 96;
+  ctx.fillStyle = CV.ACCENT; ctx.font = "700 27px 'Noto Sans JP', sans-serif";
+  ctx.fillText('Trace Hearts2Hearts ・ 巡礼プランナー', CV.M, y);
+  y += 30;
+  ctx.fillStyle = CV.INK; ctx.font = "800 60px 'Noto Serif JP', 'Hiragino Mincho ProN', serif";
+  cvWrap(ctx, info.courseName, CW).slice(0, 3).forEach(ln => { y += 76; ctx.fillText(ln, CV.M, y); });
+  y += 18;
+  ctx.font = "700 40px 'Noto Serif JP', 'Hiragino Mincho ProN', serif";
+  ctx.fillText(info.dateLabel + 'のモデルコース', CV.M, y + 52);
+  y += 88;
+  ctx.font = "400 30px 'Noto Sans JP', sans-serif"; ctx.fillStyle = CV.SOFT;
+  ctx.fillText(tpFmt(info.startMin) + ' スタート' + (info.prem ? ' ／ ' + (info.L.days.length > 1 ? info.L.days.length + '日目 ' : '') + tpFmt(info.endT) + ' 終了予定' : ''), CV.M, y + 10);
+  y += 48;
+  const stats = [
+    ['終了予定', info.prem ? (info.L.days.length > 1 ? info.L.days.length + '日目 ' : '') + tpFmt(info.endT) : 'プレミアムで表示'],
+    ['まわるスポット', info.L.ordered.length + 'か所'],
+    ['総移動時間の目安', cvDur(info.moveMin)],
+    ['徒歩距離の目安', '約' + info.walkKm.toFixed(1) + 'km'],
+  ];
+  const bw = (CW - 20) / 2, bh = 128;
+  stats.forEach((st, i) => {
+    const bx = CV.M + (i % 2) * (bw + 20), by = y + Math.floor(i / 2) * (bh + 20);
+    ctx.fillStyle = CV.SOFTBG; cvRR(ctx, bx, by, bw, bh, 16); ctx.fill();
+    ctx.fillStyle = CV.SOFT; ctx.font = "400 24px 'Noto Sans JP', sans-serif"; ctx.fillText(st[0], bx + 26, by + 42);
+    ctx.fillStyle = CV.INK; ctx.font = (st[1].length > 8 ? "700 30px" : "700 42px") + " 'Noto Sans JP', sans-serif"; ctx.fillText(cvFit(ctx, st[1], bw - 40), bx + 26, by + 96);
+  });
+  y += bh * 2 + 20 + 34;
+  ctx.fillStyle = CV.INK; ctx.font = "700 30px 'Noto Sans JP', sans-serif";
+  ctx.fillText('まわるスポット', CV.M, y + 10);
+  y += 36;
+  ctx.strokeStyle = CV.LINE; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(CV.M, y); ctx.lineTo(CV.W - CV.M, y); ctx.stroke();
+  y += 22;
+  const bottom = CV.H - CV.FOOT - 20;
+  ctx.font = "400 27px 'Noto Sans JP', sans-serif"; ctx.fillStyle = CV.SOFT;
+  const names = info.L.ordered.map((s, i) => (i + 1) + '. No.' + (s.no == null ? '—' : s.no) + ' ' + s.name);
+  const maxLines = Math.max(1, Math.floor((bottom - y) / 44));
+  let show = names;
+  if (names.length > maxLines) { const keep = Math.max(0, maxLines - 1); show = names.slice(0, keep).concat(['ほか ' + (names.length - keep) + ' か所（次の画像に続きます）']); }
+  show.forEach(nm => { y += 44; ctx.fillText(cvFit(ctx, nm, CW), CV.M, y); });
+}
+function tpDrawHeader(ctx, info) {
+  ctx.fillStyle = CV.BG; ctx.fillRect(0, 0, CV.W, CV.H);
+  ctx.fillStyle = CV.ACCENT; ctx.fillRect(0, 0, CV.W, 10);
+  ctx.fillStyle = CV.INK; ctx.font = "700 27px 'Noto Sans JP', sans-serif";
+  ctx.fillText(cvFit(ctx, info.courseName + '｜' + info.dateLabel, 680), CV.M, 56);
+  ctx.fillStyle = CV.MUTED; ctx.font = "400 22px 'Noto Sans JP', sans-serif";
+  const sub = info.prem ? '時刻つきタイムライン' : 'まわる順番';
+  ctx.fillText(sub, CV.W - CV.M - ctx.measureText(sub).width, 56);
+  ctx.strokeStyle = CV.LINE; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(CV.M, 76); ctx.lineTo(CV.W - CV.M, 76); ctx.stroke();
+}
+function tpDrawBlock(ctx, info, b, y) {
+  const CW = CV.W - CV.M * 2;
+  let cy = y;
+  if (b.dayHead) {
+    ctx.fillStyle = CV.ACCENT; ctx.font = "800 36px 'Noto Serif JP', 'Hiragino Mincho ProN', serif";
+    ctx.fillText((b.day + 1) + '日目', CV.M, cy + 44);
+    cy += 64;
+  }
+  if (b.leg) {
+    ctx.fillStyle = CV.MUTED; ctx.font = "400 24px 'Noto Sans JP', sans-serif";
+    ctx.fillText('↓ ' + cvFit(ctx, b.leg.label.replace(/^\S+\s/, ''), CW - 30), CV.M + 6, cy + 30);
+    cy += 52;
+  }
+  const s = b.st.spot;
+  const sub = tpMembers(s).join('・') + '／滞在 ' + TP_STAY[TP.pace] + '分';
+  const time = tpTimeText(info, b);
+  if (b.photo) {
+    const ph = 300;
+    ctx.save(); cvRR(ctx, CV.M, cy, CW, ph, 14); ctx.clip();
+    const im = b.photo;
+    const sc = Math.max(CW / im.naturalWidth, ph / im.naturalHeight);
+    const dw = im.naturalWidth * sc, dh = im.naturalHeight * sc;
+    ctx.drawImage(im, CV.M + (CW - dw) / 2, cy + (ph - dh) / 2, dw, dh);
+    ctx.restore();
+    ctx.font = "700 26px 'Noto Sans JP', sans-serif";
+    const bw2 = ctx.measureText(time).width + 32;
+    ctx.fillStyle = 'rgba(38,33,26,.8)'; cvRR(ctx, CV.M + 16, cy + 16, bw2, 44, 22); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.fillText(time, CV.M + 32, cy + 48);
+    cy += ph + 16;
+    ctx.fillStyle = CV.INK; ctx.font = "700 34px 'Noto Sans JP', sans-serif";
+    b.titleLines.forEach(ln => { cy += 46; ctx.fillText(ln, CV.M, cy); });
+    cy += 38;
+    ctx.fillStyle = CV.MUTED; ctx.font = "400 24px 'Noto Sans JP', sans-serif";
+    ctx.fillText(cvFit(ctx, sub, CW), CV.M, cy);
+    cy += 34;
+  } else {
+    const cardH = Math.max(138, 34 + 40 + b.titleLines.length * 44 + 36 + 20);
+    ctx.fillStyle = CV.ACCENTBG; cvRR(ctx, CV.M, cy, CW, cardH, 14); ctx.fill();
+    let iy = cy + 34;
+    ctx.fillStyle = CV.ACCENT; ctx.font = "700 27px 'Noto Sans JP', sans-serif";
+    ctx.fillText(time, CV.M + 24, iy + 6);
+    iy += 40;
+    ctx.fillStyle = CV.INK; ctx.font = "700 32px 'Noto Sans JP', sans-serif";
+    b.titleLines.forEach(ln => { iy += 44; ctx.fillText(ln, CV.M + 24, iy); });
+    iy += 36;
+    ctx.fillStyle = CV.SOFT; ctx.font = "400 23px 'Noto Sans JP', sans-serif";
+    ctx.fillText(cvFit(ctx, sub, CW - 48), CV.M + 24, iy);
+    cy += cardH + 30;
+  }
+  return cy;
+}
+function tpDrawFooter(ctx, info, idx, total) {
+  const y0 = CV.H - CV.FOOT;
+  ctx.fillStyle = CV.BG; ctx.fillRect(0, y0, CV.W, CV.FOOT);
+  ctx.strokeStyle = CV.LINE; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(CV.M, y0 + 8); ctx.lineTo(CV.W - CV.M, y0 + 8); ctx.stroke();
+  ctx.fillStyle = CV.INK; ctx.font = "700 25px 'Noto Sans JP', sans-serif";
+  ctx.fillText(cvFit(ctx, info.courseName + '｜' + info.dateLabel, 600), CV.M, y0 + 50);
+  ctx.fillStyle = CV.MUTED; ctx.font = "400 19px 'Noto Sans JP', sans-serif";
+  ctx.fillText(cvFit(ctx, APP_URL.replace(/^https?:\/\//, ''), 760), CV.M, y0 + 82);
+  ctx.fillStyle = CV.INK; ctx.font = "700 25px 'Noto Sans JP', sans-serif";
+  const pg = (idx + 1) + '枚目／全' + total + '枚';
+  ctx.fillText(pg, CV.W - CV.M - ctx.measureText(pg).width, y0 + 58);
+}
+function tpBuildCanvases(photoMap) {
+  const info = tpCourseInfo();
+  const blocks = tpMeasureBlocks(photoMap, info);
+  const usable = CV.H - CV.HEAD - CV.FOOT - 16;
+  const pages = []; let cur = [], used = 0;
+  blocks.forEach(b => {
+    // 日が変わったら必ず改ページ。スポットの途中では切らない
+    if (cur.length && (used + b.h > usable || (b.first && b.day > 0))) { pages.push(cur); cur = []; used = 0; }
+    cur.push(b); used += b.h;
+  });
+  if (cur.length) pages.push(cur);
+  const total = pages.length + 1;
+  const out = [];
+  const cc = document.createElement('canvas'); cc.width = CV.W; cc.height = CV.H;
+  const cctx = cc.getContext('2d');
+  tpDrawCover(cctx, info); tpDrawFooter(cctx, info, 0, total); out.push(cc);
+  pages.forEach((pg, pi) => {
+    const c = document.createElement('canvas'); c.width = CV.W; c.height = CV.H;
+    const ctx = c.getContext('2d');
+    tpDrawHeader(ctx, info);
+    let y = CV.HEAD;
+    pg.forEach(b => { y = tpDrawBlock(ctx, info, b, y); });
+    if (!info.prem && pi === pages.length - 1 && info.L.ordered.length > TP_FREE_STOPS && y < CV.H - CV.FOOT - 80) {
+      ctx.fillStyle = CV.MUTED; ctx.font = "400 22px 'Noto Sans JP', sans-serif";
+      ctx.fillText(TP_FREE_STOPS + 1 + 'か所目からの時刻は、アプリの巡礼プランナーで確認できます', CV.M, y + 34);
+    }
+    tpDrawFooter(ctx, info, pi + 1, total);
+    out.push(c);
+  });
+  return out;
+}
+function tpBlobs(canvases) {
+  return Promise.all(canvases.map(c => new Promise((resolve, reject) => {
+    try { c.toBlob(b => b ? resolve(b) : reject(new Error('書き出し失敗')), 'image/png'); } catch (e) { reject(e); }
+  })));
+}
+async function tpMakeImages() {
+  if (!TP.last) return;
+  const btn = tp$('tp-img-btn'), area = tp$('tp-img-area');
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = '画像を作っています…';
+  area.innerHTML = '<p class="hint">スポットの写真を読み込んでいます…</p>';
+  try {
+    try { await document.fonts.ready; } catch (_) {}
+    const map = new Map(); let noPhoto = [];
+    await Promise.all(TP.last.ordered.map(async s => {
+      let im = await tpLoadImg(s.image_url || '');
+      if (!im && s.thumb_url && s.thumb_url !== s.image_url) im = await tpLoadImg(s.thumb_url);
+      map.set(s, im); if (!im) noPhoto.push(s.name);
+    }));
+    let canvases = tpBuildCanvases(map), blobs = null;
+    try { blobs = await tpBlobs(canvases); }
+    catch (e) { canvases = tpBuildCanvases(new Map()); blobs = await tpBlobs(canvases); noPhoto = ['（写真を使えなかったため、すべて名前カードで作りました）']; }
+    const fname = i => 'trace-h2h-course-' + ((tp$('tp-date') || {}).value || 'course') + '-' + (i + 1) + '.png';
+    tpImageFiles = blobs.map((b, i) => new File([b], fname(i), { type: 'image/png' }));
+    const urls = blobs.map(b => URL.createObjectURL(b));
+    let html = `<p class="tp-imgnote">全${urls.length}枚できました（1080×1350・Instagramのフィードと同じ縦長）。1枚目が表紙で、スポットの途中では切れないように分けています。画像を長押しすると保存できます。</p>`;
+    if (!tpIsPremium() && TP.last.ordered.length > TP_FREE_STOPS) html += `<p class="tp-imgnote">時刻は最初の${TP_FREE_STOPS}か所まで入っています（4か所目からは順番だけ）。<a href="#" onclick="event.preventDefault();tpTeaser('image_times')">全部の時刻はプレミアム（準備中）</a></p>`;
+    if (noPhoto.length) html += `<p class="tp-imgnote">写真がないため名前カードにしたスポット：${noPhoto.map(tpEsc).join('、')}</p>`;
+    let canShare = false;
+    try { canShare = !!(navigator.canShare && navigator.canShare({ files: tpImageFiles })); } catch (_) {}
+    if (canShare) html += `<div class="actions" style="margin-top:10px"><button type="button" class="primary" id="tp-img-share">📤 画像をまとめて共有・保存</button></div>`;
+    html += '<div class="tp-imgout">' + urls.map((u, i) => `<figure><img src="${u}" alt="コース画像 ${i + 1}枚目"><figcaption><span>${i + 1}枚目／全${urls.length}枚</span><a href="${u}" download="${fname(i)}">ダウンロード</a></figcaption></figure>`).join('') + '</div>';
+    area.innerHTML = html;
+    const sb = tp$('tp-img-share');
+    if (sb) sb.addEventListener('click', async () => { try { await navigator.share({ files: tpImageFiles, title: (TP.area || '') + 'の巡礼コース' }); } catch (_) {} });
+    try { if (typeof gtag === 'function') gtag('event', 'route_share_image', { app_name: 'h2h', pages: urls.length }); } catch (e) {}
+    try { uxLog('route_share_image', urls.length + '枚'); } catch (e) {}
+    area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch (e) {
+    area.innerHTML = '<p class="hint">画像を作れませんでした。通信環境を確かめて、もう一度お試しください。</p>';
+  } finally { btn.disabled = false; btn.textContent = label; }
+}
+
 // 既存の呼び出しとの互換
 function renderRouteSpotList() { tpRender(); }
 function updateRouteStickyCount() { tpUpdateCount(); }
@@ -13603,7 +13980,12 @@ function tpOnShow() {
     const now = new Date();
     const tmr = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
     tp$('tp-date').value = tmr.getFullYear() + '-' + String(tmr.getMonth() + 1).padStart(2, '0') + '-' + String(tmr.getDate()).padStart(2, '0');
-    tp$('tp-members').addEventListener('click', e => { const b = e.target.closest('button[data-member]'); if (b) { TP.member = b.dataset.member; tpRenderMembers(); tpRenderSpots(); } });
+    tp$('tp-members').addEventListener('click', e => {
+      const b = e.target.closest('button[data-member]'); if (!b) return;
+      TP.member = b.dataset.member;
+      tpRenderMembers(); tpRenderAreas(); tpDefaultSelect(); tpRenderSpots();
+      const r = tp$('tp-result'); if (r) r.hidden = true;
+    });
     tp$('tp-areas').addEventListener('click', e => { const b = e.target.closest('button[data-area]'); if (b) tpSetArea(b.dataset.area); });
     tp$('tp-pace').addEventListener('click', e => { const b = e.target.closest('button[data-pace]'); if (!b) return; if (!tpIsPremium()) { tpTeaser('pace'); return; } TP.pace = b.dataset.pace; tpRenderSegs(); tpRefreshResult(); });
     tp$('tp-move').addEventListener('click', e => { const b = e.target.closest('button[data-move]'); if (!b) return; TP.move = b.dataset.move; tpRenderSegs(); tpRefreshResult(); });
