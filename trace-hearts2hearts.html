@@ -2365,6 +2365,51 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
   .comp-bar { height: 5px; border-radius: 3px; background: rgba(0,0,0,.08); overflow: hidden; margin-top: 6px; }
   .comp-bar > div { height: 100%; background: var(--purple-mid); border-radius: 3px; }
   .comp-row.done .comp-bar > div { background: #f2b705; }
+  /* ── 巡礼スタンプ帳（2026-11-17 Phase 1：既存データの表示だけを置き換え） ── */
+  .sb-cover { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 2px 8px; font-size:12px; color:var(--text-mid); }
+  .sb-cover b { color:var(--sb-ink); }
+  .sb-empty { background:#fff; border:1.5px dashed var(--purple-light); border-radius:14px; padding:12px; text-align:center; font-size:13px; color:var(--text-mid); margin-bottom:10px; }
+  .sb-book { display:flex; align-items:flex-start; gap:10px; overflow-x:auto; overflow-y:hidden; transition:height .25s ease; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding-bottom:6px; }
+  .sb-book::-webkit-scrollbar { height:4px; }
+  .sb-book::-webkit-scrollbar-thumb { background:var(--purple-light); border-radius:2px; }
+  .sb-page { flex:0 0 100%; scroll-snap-align:start; box-sizing:border-box; position:relative; overflow:hidden;
+    background:#fffefb; border:1px solid #e6e1d6; border-radius:16px; padding:12px 10px 14px;
+    background-image:repeating-linear-gradient(0deg, transparent 0 27px, rgba(26,111,168,.05) 27px 28px); }
+  .sb-page.done { border:2px solid var(--sb-ink); }
+  .sb-page.done .sb-head { padding-right:58px; }
+  .sb-head { display:flex; align-items:baseline; justify-content:space-between; gap:6px; padding:0 4px 8px; border-bottom:1px dashed #e0d9cb; margin-bottom:10px; }
+  .sb-area { font-size:15px; font-weight:800; color:var(--text); }
+  .sb-prog { font-size:12px; color:var(--text-mid); white-space:nowrap; }
+  .sb-prog b { color:var(--sb-ink); font-size:14px; }
+  .sb-left { font-size:12px; color:var(--sb-ink); font-weight:700; padding:0 4px 8px; }
+  .sb-band { position:absolute; top:14px; right:-34px; transform:rotate(35deg); background:var(--sb-ink); color:#fff; font-size:12px; font-weight:800; letter-spacing:.2em; padding:3px 40px; box-shadow:0 2px 6px rgba(0,0,0,.15); z-index:2; }
+  .sb-seal { display:flex; justify-content:center; margin:2px 0 10px; }
+  .sb-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px 6px; }
+  .sb-cell { text-align:center; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  .sb-stamp { width:84px; height:84px; display:block; margin:0 auto; }
+  .sb-name { font-size:11px; line-height:1.35; color:var(--text); margin-top:3px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .sb-cell.off .sb-name { color:var(--text-mid); }
+  .sb-date { font-size:10px; color:var(--sb-ink); margin-top:1px; letter-spacing:.03em; }
+  .sb-nav { text-align:center; font-size:11px; color:var(--text-light); margin:4px 0 12px; }
+  .sb-sub { font-size:13px; font-weight:700; color:var(--text-mid); margin:6px 2px 8px; }
+  #sb-arrows { position:fixed; left:0; top:0; width:0; height:0; z-index:40; display:none; pointer-events:none; }
+  #sb-arrows button { position:fixed; width:40px; height:40px; margin-top:-20px; border-radius:50%; border:none; pointer-events:auto;
+    background:rgba(255,255,255,.92); color:var(--purple-deep); font-size:22px; font-weight:800; line-height:40px; padding:0;
+    box-shadow:0 2px 8px rgba(20,49,74,.22); cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  #sb-arrows button:disabled { opacity:.3; }
+  /* 旅（シリーズ）の制覇：先端にモチーフが付いたバー（金色は使わない） */
+  .tr-row { background:#fff; border:1px solid var(--border); border-radius:12px; padding:9px 12px 11px; margin-bottom:8px; cursor:default; }
+  .tr-row.done { border:2px solid var(--sb-ink); }
+  .tr-top { display:flex; align-items:center; gap:6px; }
+  .tr-name { flex:1; font-size:13px; font-weight:700; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tr-num { font-size:12px; color:var(--text-mid); white-space:nowrap; }
+  .tr-row.done .tr-num { color:var(--sb-ink); font-weight:800; }
+  .tr-barwrap { display:flex; align-items:center; gap:8px; margin-top:8px; }
+  .tr-track { position:relative; flex:1; height:8px; border-radius:4px; background:#e3e8ec; margin:0 12px 0 4px; }
+  .tr-fill { position:absolute; left:0; top:0; bottom:0; border-radius:4px; background:var(--sb-ink); width:0; transition:width 1.1s cubic-bezier(.25,.8,.3,1); }
+  .tr-tip { position:absolute; top:50%; left:0; width:26px; height:26px; margin:-13px 0 0 -13px; transition:left 1.1s cubic-bezier(.25,.8,.3,1); filter:drop-shadow(0 1px 2px rgba(20,49,74,.25)); }
+  .tr-seal { width:34px; height:34px; flex:0 0 34px; }
+  .tr-seal .sb-stamp { width:34px; height:34px; }
   .comp-more { width: 100%; border: 1.5px solid var(--border); background: #fff; color: var(--purple-deep); border-radius: 12px; padding: 10px; font-size: 13px; font-weight: 700; cursor: pointer; }
   .comp-empty { font-size: 12px; color: var(--text-light); padding: 10px 4px; }
   .tp .spot .want-chip { margin-top: 6px; align-self: flex-start; }
@@ -2949,7 +2994,7 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
       <div style="color:var(--text-mid);font-size:13px;text-align:center;padding:16px;">履歴を読み込み中...</div>
     </div>
 
-    <div class="profile-section-title">🗾 エリア・旅の制覇状況</div>
+    <div class="profile-section-title">📖 巡礼スタンプ帳</div>
     <div id="comp-progress-list"><div class="comp-empty">読み込み中...</div></div>
 
     <div class="profile-section-title">🏅 バッジコレクション</div>
@@ -13291,7 +13336,151 @@ function compSchedule() {
 }
 
 // ── My Page：制覇状況とバッジ ──
+// 2026-11-17 巡礼スタンプ帳 Phase 1（Museの魅せ方提案 v4・本人承認）
+//  ・判定は今までどおり：巡礼済み＝profiles.visited_spots（GPS 300m以内のときだけ記録）、制覇＝completions（visited_spots から計算）
+//  ・巡礼日は visit_log の visited_at（無いものは日付なしで印だけ出す）。判定には使わない
+//  ・エリアは「エリアごとに1ページ」の帳面で見せる。旅（シリーズ）の制覇は見せ方が未決のため、今までの表示のまま
+//  ・印のモチーフと色はアプリごとの設定（STAMP_STYLE）。帳面の作りは3アプリ共通
+const STAMP_STYLE = { motif: 'clover-heart', ink: '#1a6fa8' }; // H2H：クローバー×ハート（青×白）
 let compShowAll = false;
+let stampDates = null;      // spot_name → 最初に巡礼した日（visit_log）
+let stampDatesLoading = false;
+const stampTrSeen = new Set(); // 旅のバーは最初に表示したときだけ 0 から伸ばす
+async function stampLoadDates() {
+  if (stampDates || stampDatesLoading) return;
+  stampDatesLoading = true;
+  try {
+    const client = getSupabaseClient();
+    const { data: sess } = await client.auth.getSession();
+    if (!sess || !sess.session) return;
+    const { data } = await client.from('visit_log').select('spot_name, visited_at').eq('user_id', sess.session.user.id);
+    const m = {};
+    (data || []).forEach(r => { if (!r.spot_name || !r.visited_at) return; if (!m[r.spot_name] || r.visited_at < m[r.spot_name]) m[r.spot_name] = r.visited_at; });
+    stampDates = m;
+  } catch (e) { stampDates = {}; }
+  finally { stampDatesLoading = false; try { compRenderMyPage(); } catch (e) {} }
+}
+function stampFmtDate(iso) {
+  try { const d = new Date(iso); if (isNaN(d)) return ''; return d.getFullYear() + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + String(d.getDate()).padStart(2, '0'); } catch (e) { return ''; }
+}
+function stampHash(str) { let h = 0; str = String(str); for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0; return Math.abs(h); }
+// モチーフ（中心 50,44 付近）。公式ロゴ・紋章は使わない独自デザイン
+function stampMotif(kind, c) {
+  const heart = 'M0 0 C-4 -4 -12 -9 -12 -15 C-12 -20 -7 -23 -3.5 -21 C-1.8 -20 -.6 -18.8 0 -17.5 C.6 -18.8 1.8 -20 3.5 -21 C7 -23 12 -20 12 -15 C12 -9 4 -4 0 0Z';
+  if (kind === 'star-heart') {
+    return `<path d="M44 22 L49.5 34 L62 35.5 L52.5 44 L55.5 57 L44 50 L32.5 57 L35.5 44 L26 35.5 L38.5 34Z" fill="none" stroke="${c}" stroke-width="3" stroke-linejoin="round"/>
+      <g transform="translate(60 60) scale(.55) rotate(180)"><path d="${heart}" fill="none" stroke="${c}" stroke-width="5"/></g>`;
+  }
+  if (kind === 'magnet-heart') {
+    return `<path d="M33 24 V44 A17 17 0 0 0 67 44 V24" fill="none" stroke="${c}" stroke-width="7" stroke-linecap="butt"/>
+      <path d="M33 24 V31 M67 24 V31" stroke="#fff" stroke-width="2.2"/>
+      <g transform="translate(50 47) scale(.5) rotate(180)"><path d="${heart}" fill="${c}"/></g>`;
+  }
+  // clover-heart：ハート4枚のクローバー
+  return `<g transform="translate(50 43) scale(.78)">
+      ${[45, 135, 225, 315].map(a => `<path d="${heart}" transform="rotate(${a}) translate(0 -1.5)" fill="${c}" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/>`).join('')}
+      <path d="M2 2 C6 10 8 16 6 24" fill="none" stroke="${c}" stroke-width="2.6" stroke-linecap="round"/>
+    </g>`;
+}
+function stampSvg(opts) {
+  // opts: { id, on, label, big }
+  const c = STAMP_STYLE.ink;
+  const gid = 'sbarc' + opts.id;
+  const lim = opts.big ? 11 : 8;
+  const short = String(opts.label || '').length > lim ? String(opts.label).slice(0, lim - 1) + '…' : String(opts.label || '');
+  if (!opts.on) {
+    return `<svg class="sb-stamp" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="50" cy="50" r="44" fill="none" stroke="#c9d3da" stroke-width="2" stroke-dasharray="4 4"/>
+      <g opacity=".18" transform="translate(-1 5)">${stampMotif(STAMP_STYLE.motif, '#7d8f9c')}</g></svg>`; // 空欄は文字が無いので、モチーフを円のまん中に寄せる
+  }
+  const h = stampHash(opts.id);
+  const rot = (h % 17) - 8;              // -8〜+8度だけ傾ける（押した感）
+  const op = (0.8 + (h % 15) / 100).toFixed(2); // 濃さのムラ
+  const size = opts.big ? ' style="width:120px;height:120px"' : '';
+  return `<svg class="sb-stamp" viewBox="0 0 100 100"${size} aria-hidden="true">
+    <g transform="rotate(${rot} 50 50)" opacity="${op}" filter="url(#sb-ink)">
+      <circle cx="50" cy="50" r="45" fill="#fff" stroke="${c}" stroke-width="3.2"/>
+      <circle cx="50" cy="50" r="39.5" fill="none" stroke="${c}" stroke-width="1.2"/>
+      ${stampMotif(STAMP_STYLE.motif, c)}
+      <path id="${gid}" d="M17 58 A34 34 0 0 0 83 58" fill="none"/>
+      <text font-size="${opts.big ? 10 : 9}" font-weight="700" fill="${c}" letter-spacing=".5"><textPath href="#${gid}" startOffset="50%" text-anchor="middle">${escHtml(short)}</textPath></text>
+    </g></svg>`;
+}
+function stampEnsureDefs() {
+  if (document.getElementById('sb-defs')) return;
+  const d = document.createElement('div');
+  d.id = 'sb-defs';
+  d.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden';
+  d.innerHTML = `<svg width="0" height="0"><defs><filter id="sb-ink" x="-5%" y="-5%" width="110%" height="110%">
+    <feTurbulence type="fractalNoise" baseFrequency="1.2" numOctaves="1" seed="7" result="n"/>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -4 3.1" result="m"/>
+    <feComposite in="SourceGraphic" in2="m" operator="in" result="s"/>
+    <feDisplacementMap in="s" in2="n" scale="1" xChannelSelector="R" yChannelSelector="G"/>
+  </filter></defs></svg>`;
+  document.body.appendChild(d);
+}
+function stampOpenSpot(id) {
+  try { const s = tpById(id); if (s) { if (typeof showView === 'function') showView('map'); openCard(s); } } catch (e) {}
+}
+// ページを左右にめくる矢印：帳面の見えている範囲の上下まん中に出し、帳面が画面から外れたら消す
+function stampArrowsEl() {
+  let el = document.getElementById('sb-arrows');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'sb-arrows';
+    el.innerHTML = '<button type="button" data-dir="-1" aria-label="前のページ">‹</button><button type="button" data-dir="1" aria-label="次のページ">›</button>';
+    el.querySelectorAll('button').forEach(b => b.addEventListener('click', function () { stampTurn(Number(this.dataset.dir)); }));
+    document.body.appendChild(el);
+    const upd = () => { if (!stampArrowsRaf) stampArrowsRaf = requestAnimationFrame(() => { stampArrowsRaf = 0; stampPlaceArrows(); }); };
+    document.addEventListener('scroll', upd, true);
+    window.addEventListener('resize', upd);
+    setInterval(stampPlaceArrows, 800); // 画面の切り替えなど、スクロール以外で位置が変わったとき用
+  }
+  return el;
+}
+let stampArrowsRaf = 0;
+function stampPageIndex(book) { return book ? Math.round(book.scrollLeft / Math.max(1, book.clientWidth + 10)) : 0; }
+function stampTurn(dir) {
+  const book = document.getElementById('sb-book');
+  if (!book) return;
+  const n = book.children.length;
+  const i = Math.max(0, Math.min(n - 1, stampPageIndex(book) + dir));
+  const pg = book.children[i];
+  if (pg) book.scrollTo({ left: pg.offsetLeft - book.offsetLeft, behavior: 'smooth' });
+}
+// 帳面の高さを「今開いているページ」に合わせる（長い東京ページに合わせて、短いページの下が空かないように）
+function stampFitHeight(book, i) {
+  try {
+    const pg = book.children[i];
+    if (!pg) return;
+    const h = pg.offsetHeight + 6;
+    if (Math.abs((parseFloat(book.style.height) || 0) - h) > 1) book.style.height = h + 'px';
+  } catch (e) {}
+}
+function stampPlaceArrows() {
+  const el = stampArrowsEl();
+  const book = document.getElementById('sb-book');
+  if (!book || book.children.length < 2 || !book.offsetParent) { el.style.display = 'none'; return; }
+  const r = book.getBoundingClientRect();
+  let topLimit = 0;
+  try { topLimit = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--content-top')) || 0; } catch (e) {}
+  const nav = document.querySelector('.bottom-nav');
+  const bottomLimit = nav ? nav.getBoundingClientRect().top : window.innerHeight;
+  const vt = Math.max(r.top, topLimit), vb = Math.min(r.bottom, bottomLimit);
+  if (vb - vt < 70 || r.width === 0) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  const y = (vt + vb) / 2;
+  const [prev, next] = el.querySelectorAll('button');
+  prev.style.top = next.style.top = y + 'px';
+  prev.style.left = (r.left + 2) + 'px';
+  next.style.left = (r.right - 42) + 'px';
+  const i = stampPageIndex(book);
+  stampFitHeight(book, i);
+  prev.disabled = i <= 0;
+  next.disabled = i >= book.children.length - 1;
+  const nav2 = document.getElementById('sb-nav');
+  if (nav2) nav2.textContent = (i + 1) + ' ／ ' + book.children.length + ' ページ';
+}
 function compRenderMyPage() {
   // 段階バッジ
   const n = compMine.length;
@@ -13304,20 +13493,107 @@ function compRenderMyPage() {
   const box = document.getElementById('comp-progress-list');
   if (!box) return;
   if (!SPOTS.length) { box.innerHTML = '<div class="comp-empty">読み込み中...</div>'; return; }
+  stampEnsureDefs();
+  if (!stampDates) stampLoadDates();
+  box.style.setProperty('--sb-ink', STAMP_STYLE.ink);
   const doneSet = new Set(compMine.map(c => c.kind + '|' + c.key));
-  const rows = compUnits().map(u => ({ u, p: compProgress(u), done: doneSet.has(u.kind + '|' + u.key) }))
+  const units = compUnits();
+  const visited = new Set((Array.isArray(myVisitedSpots) ? myVisitedSpots : []).map(String));
+  const dates = stampDates || {};
+
+  // ── 帳面：エリアごとに1ページ（1か所だけのエリアも載せるが、制覇の帯は出さない）
+  let areas = [];
+  try { areas = tpAreas(); } catch (e) { areas = []; }
+  const pages = areas.map(a => {
+    const total = a.spots.length;
+    const done = a.spots.filter(s => visited.has(String(s.db_id))).length;
+    const isUnit = total >= 2;
+    const complete = isUnit && (doneSet.has('area|' + a.label) || done === total);
+    return { a, total, done, complete };
+  }).sort((x, y) => (y.complete - x.complete) || (y.done / y.total - x.done / x.total) || (y.total - x.total));
+
+  const visitedCount = pages.reduce((t, p) => t + p.done, 0);
+  const areaUnits = units.filter(u => u.kind === 'area');
+  const areaDone = areaUnits.filter(u => doneSet.has('area|' + u.key) || compProgress(u).done === compProgress(u).total).length;
+
+  let html = `<div class="comp-sum">🏆 コンプリート <b>${n}</b> ／ ${units.length}（次のバッジまで あと${Math.max(0, ((COMP_BADGES.find(b => b.n > n) || { n: n }).n) - n)}）</div>`;
+  html += `<div class="sb-cover"><span>押したスタンプ <b>${visitedCount}</b> 個</span><span>制覇したエリア <b>${areaDone}</b> ／ ${areaUnits.length}</span></div>`;
+  if (!visitedCount) html += `<div class="sb-empty">まだスタンプがないよ。最初の1か所に行ってみよう</div>`;
+  html += `<div class="sb-book" id="sb-book">` + pages.map((p, pi) => {
+    const left = p.total - p.done;
+    const leftMsg = p.complete ? '' : (left === 1 && p.total >= 2 ? `<div class="sb-left">${escHtml(p.a.label)}エリア制覇まで、あと1か所！</div>` : '');
+    const cells = p.a.spots.map(s => {
+      const on = visited.has(String(s.db_id));
+      const dt = on && dates[s.name] ? stampFmtDate(dates[s.name]) : '';
+      return `<div class="sb-cell${on ? '' : ' off'}" data-spot-id="${escHtml(String(s.db_id))}" onclick="stampOpenSpot(this.dataset.spotId)">
+        ${stampSvg({ id: String(s.db_id), on, label: s.name })}
+        <div class="sb-name">${escHtml(s.name)}</div>
+        ${dt ? `<div class="sb-date">${dt}</div>` : ''}
+      </div>`;
+    }).join('');
+    return `<div class="sb-page${p.complete ? ' done' : ''}">
+      ${p.complete ? '<div class="sb-band">制覇</div>' : ''}
+      <div class="sb-head"><span class="sb-area">${escHtml(p.a.label)}</span><span class="sb-prog"><b>${p.done}</b> ／ ${p.total} か所${p.complete ? '' : '・あと' + left + 'か所'}</span></div>
+      ${leftMsg}
+      ${p.complete ? `<div class="sb-seal">${stampSvg({ id: 'area-' + p.a.label, on: true, label: p.a.label + ' 制覇', big: true })}</div>` : ''}
+      <div class="sb-grid">${cells}</div>
+    </div>`;
+  }).join('') + `</div>`;
+  if (pages.length > 1) html += `<div class="sb-nav" id="sb-nav">1 ／ ${pages.length} ページ</div>`;
+
+  // ── 旅（シリーズ）の制覇：先端にアプリの印のモチーフが付いたバー（案1・2026-11-17 本人承認）
+  //    判定は今までどおり（completions の series ＋ visited_spots）。金色は使わず、グループの色で祝う
+  const rows = units.filter(u => u.kind !== 'area').map(u => ({ u, p: compProgress(u), done: doneSet.has(u.kind + '|' + u.key) }))
     .sort((a, b) => (b.done - a.done) || (b.p.done / b.p.total - a.p.done / a.p.total) || (b.p.total - a.p.total));
-  const list = compShowAll ? rows : rows.slice(0, 6);
-  box.innerHTML = `<div class="comp-sum">🏆 コンプリート <b>${n}</b> ／ ${rows.length}（次のバッジまで あと${Math.max(0, ((COMP_BADGES.find(b => b.n > n) || { n: n }).n) - n)}）</div>` +
-    list.map(({ u, p, done }) => {
+  const trAnim = [];
+  if (rows.length) {
+    const list = compShowAll ? rows : rows.slice(0, 6);
+    html += `<div class="sb-sub">📺 旅の制覇状況</div>` + list.map(({ u, p, done }) => {
       const pct = Math.round(p.done / p.total * 100);
       const complete = done || p.done === p.total;
-      return `<div class="comp-row${complete ? ' done' : ''}">
-        <div class="comp-top"><span class="comp-kind">${u.kind === 'area' ? '🗾 エリア' : '📺 旅'}</span><span class="comp-name">${escHtml(u.label)}</span><span class="comp-num">${complete ? '🏆 コンプリート' : p.done + '/' + p.total}</span></div>
-        <div class="comp-bar"><div style="width:${pct}%"></div></div>
+      const key = u.key;
+      const first = !stampTrSeen.has(key);
+      if (first) trAnim.push({ key, pct });
+      const w = first ? 0 : pct;
+      return `<div class="tr-row${complete ? ' done' : ''}">
+        <div class="tr-top"><span class="tr-name">📺 ${escHtml(u.label)}</span><span class="tr-num">${complete ? 'コンプリート' : p.done + '／' + p.total + ' か所'}</span></div>
+        <div class="tr-barwrap">
+          <div class="tr-track" data-tr-key="${escHtml(key)}">
+            <div class="tr-fill" style="width:${w}%"></div>
+            <svg class="tr-tip" viewBox="20 16 60 60" style="left:${w}%" aria-hidden="true"><circle cx="50" cy="46" r="28" fill="#fff" stroke="${STAMP_STYLE.ink}" stroke-width="2.5"/>${stampMotif(STAMP_STYLE.motif, STAMP_STYLE.ink)}</svg>
+          </div>
+          ${complete ? `<div class="tr-seal">${stampSvg({ id: 'tr-' + key, on: true, label: '' })}</div>` : ''}
+        </div>
       </div>`;
     }).join('') +
     (rows.length > 6 ? `<button type="button" class="comp-more" onclick="compShowAll=!compShowAll;compRenderMyPage()">${compShowAll ? '閉じる' : 'すべて見る（' + rows.length + '件）'}</button>` : '');
+  }
+  const prevScroll = (document.getElementById('sb-book') || {}).scrollLeft || 0;
+  box.innerHTML = html;
+  const book = document.getElementById('sb-book');
+  if (book && prevScroll) book.scrollLeft = prevScroll;
+  if (book) book.addEventListener('scroll', () => { if (!stampArrowsRaf) stampArrowsRaf = requestAnimationFrame(() => { stampArrowsRaf = 0; stampPlaceArrows(); }); });
+  if (book) stampFitHeight(book, stampPageIndex(book));
+  if (trAnim.length) {
+    // 画面に入ったときに、バーが伸びてモチーフが滑っていく（画面の外で動いて見逃さないように）
+    const go = tr => {
+      const t = trAnim.find(x => x.key === tr.dataset.trKey);
+      if (!t) return;
+      const f = tr.querySelector('.tr-fill'), tip = tr.querySelector('.tr-tip');
+      if (!tr.isConnected) return;
+      stampTrSeen.add(t.key);
+      if (f) f.style.width = t.pct + '%';
+      if (tip) tip.style.left = t.pct + '%';
+    };
+    const tracks = [...box.querySelectorAll('.tr-track')].filter(tr => trAnim.some(x => x.key === tr.dataset.trKey));
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { setTimeout(() => go(e.target), 150); io.unobserve(e.target); } }), { threshold: 0.6 });
+      tracks.forEach(tr => io.observe(tr));
+    } else {
+      requestAnimationFrame(() => requestAnimationFrame(() => tracks.forEach(go)));
+    }
+  }
+  stampPlaceArrows();
 }
 
 // スポットカードを開いたら行きたいボタンを合わせる
