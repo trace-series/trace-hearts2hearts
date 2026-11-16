@@ -2397,6 +2397,19 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
     background:rgba(255,255,255,.92); color:var(--purple-deep); font-size:22px; font-weight:800; line-height:40px; padding:0;
     box-shadow:0 2px 8px rgba(20,49,74,.22); cursor:pointer; -webkit-tap-highlight-color:transparent; }
   #sb-arrows button:disabled { opacity:.3; }
+  /* 旅（シリーズ）の制覇：先端にモチーフが付いたバー（金色は使わない） */
+  .tr-row { background:#fff; border:1px solid var(--border); border-radius:12px; padding:9px 12px 11px; margin-bottom:8px; cursor:default; }
+  .tr-row.done { border:2px solid var(--sb-ink); }
+  .tr-top { display:flex; align-items:center; gap:6px; }
+  .tr-name { flex:1; font-size:13px; font-weight:700; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tr-num { font-size:12px; color:var(--text-mid); white-space:nowrap; }
+  .tr-row.done .tr-num { color:var(--sb-ink); font-weight:800; }
+  .tr-barwrap { display:flex; align-items:center; gap:8px; margin-top:8px; }
+  .tr-track { position:relative; flex:1; height:8px; border-radius:4px; background:#e3e8ec; margin:0 12px 0 4px; }
+  .tr-fill { position:absolute; left:0; top:0; bottom:0; border-radius:4px; background:var(--sb-ink); width:0; transition:width 1.1s cubic-bezier(.25,.8,.3,1); }
+  .tr-tip { position:absolute; top:50%; left:0; width:26px; height:26px; margin:-13px 0 0 -13px; transition:left 1.1s cubic-bezier(.25,.8,.3,1); filter:drop-shadow(0 1px 2px rgba(20,49,74,.25)); }
+  .tr-seal { width:34px; height:34px; flex:0 0 34px; }
+  .tr-seal .sb-stamp { width:34px; height:34px; }
   .comp-more { width: 100%; border: 1.5px solid var(--border); background: #fff; color: var(--purple-deep); border-radius: 12px; padding: 10px; font-size: 13px; font-weight: 700; cursor: pointer; }
   .comp-empty { font-size: 12px; color: var(--text-light); padding: 10px 4px; }
   .tp .spot .want-chip { margin-top: 6px; align-self: flex-start; }
@@ -13332,6 +13345,7 @@ const STAMP_STYLE = { motif: 'clover-heart', ink: '#1a6fa8' }; // H2H：クロ�
 let compShowAll = false;
 let stampDates = null;      // spot_name → 最初に巡礼した日（visit_log）
 let stampDatesLoading = false;
+const stampTrSeen = new Set(); // 旅のバーは最初に表示したときだけ 0 から伸ばす
 async function stampLoadDates() {
   if (stampDates || stampDatesLoading) return;
   stampDatesLoading = true;
@@ -13527,17 +13541,29 @@ function compRenderMyPage() {
   }).join('') + `</div>`;
   if (pages.length > 1) html += `<div class="sb-nav" id="sb-nav">1 ／ ${pages.length} ページ</div>`;
 
-  // ── 旅（シリーズ）の制覇：見せ方が未決のため、今までの表示のまま
+  // ── 旅（シリーズ）の制覇：先端にアプリの印のモチーフが付いたバー（案1・2026-11-17 本人承認）
+  //    判定は今までどおり（completions の series ＋ visited_spots）。金色は使わず、グループの色で祝う
   const rows = units.filter(u => u.kind !== 'area').map(u => ({ u, p: compProgress(u), done: doneSet.has(u.kind + '|' + u.key) }))
     .sort((a, b) => (b.done - a.done) || (b.p.done / b.p.total - a.p.done / a.p.total) || (b.p.total - a.p.total));
+  const trAnim = [];
   if (rows.length) {
     const list = compShowAll ? rows : rows.slice(0, 6);
     html += `<div class="sb-sub">📺 旅の制覇状況</div>` + list.map(({ u, p, done }) => {
       const pct = Math.round(p.done / p.total * 100);
       const complete = done || p.done === p.total;
-      return `<div class="comp-row${complete ? ' done' : ''}">
-        <div class="comp-top"><span class="comp-kind">📺 旅</span><span class="comp-name">${escHtml(u.label)}</span><span class="comp-num">${complete ? '🏆 コンプリート' : p.done + '/' + p.total}</span></div>
-        <div class="comp-bar"><div style="width:${pct}%"></div></div>
+      const key = u.key;
+      const first = !stampTrSeen.has(key);
+      if (first) trAnim.push({ key, pct });
+      const w = first ? 0 : pct;
+      return `<div class="tr-row${complete ? ' done' : ''}">
+        <div class="tr-top"><span class="tr-name">📺 ${escHtml(u.label)}</span><span class="tr-num">${complete ? 'コンプリート' : p.done + '／' + p.total + ' か所'}</span></div>
+        <div class="tr-barwrap">
+          <div class="tr-track" data-tr-key="${escHtml(key)}">
+            <div class="tr-fill" style="width:${w}%"></div>
+            <svg class="tr-tip" viewBox="20 16 60 60" style="left:${w}%" aria-hidden="true"><circle cx="50" cy="46" r="28" fill="#fff" stroke="${STAMP_STYLE.ink}" stroke-width="2.5"/>${stampMotif(STAMP_STYLE.motif, STAMP_STYLE.ink)}</svg>
+          </div>
+          ${complete ? `<div class="tr-seal">${stampSvg({ id: 'tr-' + key, on: true, label: '' })}</div>` : ''}
+        </div>
       </div>`;
     }).join('') +
     (rows.length > 6 ? `<button type="button" class="comp-more" onclick="compShowAll=!compShowAll;compRenderMyPage()">${compShowAll ? '閉じる' : 'すべて見る（' + rows.length + '件）'}</button>` : '');
@@ -13548,6 +13574,25 @@ function compRenderMyPage() {
   if (book && prevScroll) book.scrollLeft = prevScroll;
   if (book) book.addEventListener('scroll', () => { if (!stampArrowsRaf) stampArrowsRaf = requestAnimationFrame(() => { stampArrowsRaf = 0; stampPlaceArrows(); }); });
   if (book) stampFitHeight(book, stampPageIndex(book));
+  if (trAnim.length) {
+    // 画面に入ったときに、バーが伸びてモチーフが滑っていく（画面の外で動いて見逃さないように）
+    const go = tr => {
+      const t = trAnim.find(x => x.key === tr.dataset.trKey);
+      if (!t) return;
+      const f = tr.querySelector('.tr-fill'), tip = tr.querySelector('.tr-tip');
+      if (!tr.isConnected) return;
+      stampTrSeen.add(t.key);
+      if (f) f.style.width = t.pct + '%';
+      if (tip) tip.style.left = t.pct + '%';
+    };
+    const tracks = [...box.querySelectorAll('.tr-track')].filter(tr => trAnim.some(x => x.key === tr.dataset.trKey));
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { setTimeout(() => go(e.target), 150); io.unobserve(e.target); } }), { threshold: 0.6 });
+      tracks.forEach(tr => io.observe(tr));
+    } else {
+      requestAnimationFrame(() => requestAnimationFrame(() => tracks.forEach(go)));
+    }
+  }
   stampPlaceArrows();
 }
 
