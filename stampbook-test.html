@@ -2369,7 +2369,7 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
   .sb-cover { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 2px 8px; font-size:12px; color:var(--text-mid); }
   .sb-cover b { color:var(--sb-ink); }
   .sb-empty { background:#fff; border:1.5px dashed var(--purple-light); border-radius:14px; padding:12px; text-align:center; font-size:13px; color:var(--text-mid); margin-bottom:10px; }
-  .sb-book { display:flex; gap:10px; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding-bottom:6px; }
+  .sb-book { display:flex; align-items:flex-start; gap:10px; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding-bottom:6px; }
   .sb-book::-webkit-scrollbar { height:4px; }
   .sb-book::-webkit-scrollbar-thumb { background:var(--purple-light); border-radius:2px; }
   .sb-page { flex:0 0 100%; scroll-snap-align:start; box-sizing:border-box; position:relative; overflow:hidden;
@@ -2392,6 +2392,11 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
   .sb-date { font-size:10px; color:var(--sb-ink); margin-top:1px; letter-spacing:.03em; }
   .sb-nav { text-align:center; font-size:11px; color:var(--text-light); margin:4px 0 12px; }
   .sb-sub { font-size:13px; font-weight:700; color:var(--text-mid); margin:6px 2px 8px; }
+  #sb-arrows { position:fixed; left:0; top:0; width:0; height:0; z-index:40; display:none; pointer-events:none; }
+  #sb-arrows button { position:fixed; width:40px; height:40px; margin-top:-20px; border-radius:50%; border:none; pointer-events:auto;
+    background:rgba(255,255,255,.92); color:var(--purple-deep); font-size:22px; font-weight:800; line-height:40px; padding:0;
+    box-shadow:0 2px 8px rgba(20,49,74,.22); cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  #sb-arrows button:disabled { opacity:.3; }
   .comp-more { width: 100%; border: 1.5px solid var(--border); background: #fff; color: var(--purple-deep); border-radius: 12px; padding: 10px; font-size: 13px; font-weight: 700; cursor: pointer; }
   .comp-empty { font-size: 12px; color: var(--text-light); padding: 10px 4px; }
   .tp .spot .want-chip { margin-top: 6px; align-self: flex-start; }
@@ -13403,6 +13408,55 @@ function stampEnsureDefs() {
 function stampOpenSpot(id) {
   try { const s = tpById(id); if (s) { if (typeof showView === 'function') showView('map'); openCard(s); } } catch (e) {}
 }
+// ページを左右にめくる矢印：帳面の見えている範囲の上下まん中に出し、帳面が画面から外れたら消す
+function stampArrowsEl() {
+  let el = document.getElementById('sb-arrows');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'sb-arrows';
+    el.innerHTML = '<button type="button" data-dir="-1" aria-label="前のページ">‹</button><button type="button" data-dir="1" aria-label="次のページ">›</button>';
+    el.querySelectorAll('button').forEach(b => b.addEventListener('click', function () { stampTurn(Number(this.dataset.dir)); }));
+    document.body.appendChild(el);
+    const upd = () => { if (!stampArrowsRaf) stampArrowsRaf = requestAnimationFrame(() => { stampArrowsRaf = 0; stampPlaceArrows(); }); };
+    document.addEventListener('scroll', upd, true);
+    window.addEventListener('resize', upd);
+    setInterval(stampPlaceArrows, 800); // 画面の切り替えなど、スクロール以外で位置が変わったとき用
+  }
+  return el;
+}
+let stampArrowsRaf = 0;
+function stampPageIndex(book) { return book ? Math.round(book.scrollLeft / Math.max(1, book.clientWidth + 10)) : 0; }
+function stampTurn(dir) {
+  const book = document.getElementById('sb-book');
+  if (!book) return;
+  const n = book.children.length;
+  const i = Math.max(0, Math.min(n - 1, stampPageIndex(book) + dir));
+  const pg = book.children[i];
+  if (pg) book.scrollTo({ left: pg.offsetLeft - book.offsetLeft, behavior: 'smooth' });
+}
+function stampPlaceArrows() {
+  const el = stampArrowsEl();
+  const book = document.getElementById('sb-book');
+  if (!book || book.children.length < 2 || !book.offsetParent) { el.style.display = 'none'; return; }
+  const r = book.getBoundingClientRect();
+  let topLimit = 0;
+  try { topLimit = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--content-top')) || 0; } catch (e) {}
+  const nav = document.querySelector('.bottom-nav');
+  const bottomLimit = nav ? nav.getBoundingClientRect().top : window.innerHeight;
+  const vt = Math.max(r.top, topLimit), vb = Math.min(r.bottom, bottomLimit);
+  if (vb - vt < 70 || r.width === 0) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  const y = (vt + vb) / 2;
+  const [prev, next] = el.querySelectorAll('button');
+  prev.style.top = next.style.top = y + 'px';
+  prev.style.left = (r.left + 2) + 'px';
+  next.style.left = (r.right - 42) + 'px';
+  const i = stampPageIndex(book);
+  prev.disabled = i <= 0;
+  next.disabled = i >= book.children.length - 1;
+  const nav2 = document.getElementById('sb-nav');
+  if (nav2) nav2.textContent = (i + 1) + ' ／ ' + book.children.length + ' ページ';
+}
 function compRenderMyPage() {
   // 段階バッジ
   const n = compMine.length;
@@ -13461,7 +13515,7 @@ function compRenderMyPage() {
       <div class="sb-grid">${cells}</div>
     </div>`;
   }).join('') + `</div>`;
-  if (pages.length > 1) html += `<div class="sb-nav">← 横にめくると次のエリア（全${pages.length}ページ）→</div>`;
+  if (pages.length > 1) html += `<div class="sb-nav" id="sb-nav">1 ／ ${pages.length} ページ</div>`;
 
   // ── 旅（シリーズ）の制覇：見せ方が未決のため、今までの表示のまま
   const rows = units.filter(u => u.kind !== 'area').map(u => ({ u, p: compProgress(u), done: doneSet.has(u.kind + '|' + u.key) }))
@@ -13482,6 +13536,8 @@ function compRenderMyPage() {
   box.innerHTML = html;
   const book = document.getElementById('sb-book');
   if (book && prevScroll) book.scrollLeft = prevScroll;
+  if (book) book.addEventListener('scroll', () => { if (!stampArrowsRaf) stampArrowsRaf = requestAnimationFrame(() => { stampArrowsRaf = 0; stampPlaceArrows(); }); });
+  stampPlaceArrows();
 }
 
 // スポットカードを開いたら行きたいボタンを合わせる
