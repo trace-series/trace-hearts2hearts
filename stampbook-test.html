@@ -2369,7 +2369,7 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
   .sb-cover { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 2px 8px; font-size:12px; color:var(--text-mid); }
   .sb-cover b { color:var(--sb-ink); }
   .sb-empty { background:#fff; border:1.5px dashed var(--purple-light); border-radius:14px; padding:12px; text-align:center; font-size:13px; color:var(--text-mid); margin-bottom:10px; }
-  .sb-book { display:flex; align-items:flex-start; gap:10px; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding-bottom:6px; }
+  .sb-book { display:flex; align-items:flex-start; gap:10px; overflow-x:auto; overflow-y:hidden; transition:height .25s ease; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding-bottom:6px; }
   .sb-book::-webkit-scrollbar { height:4px; }
   .sb-book::-webkit-scrollbar-thumb { background:var(--purple-light); border-radius:2px; }
   .sb-page { flex:0 0 100%; scroll-snap-align:start; box-sizing:border-box; position:relative; overflow:hidden;
@@ -13434,6 +13434,15 @@ function stampTurn(dir) {
   const pg = book.children[i];
   if (pg) book.scrollTo({ left: pg.offsetLeft - book.offsetLeft, behavior: 'smooth' });
 }
+// 帳面の高さを「今開いているページ」に合わせる（長い東京ページに合わせて、短いページの下が空かないように）
+function stampFitHeight(book, i) {
+  try {
+    const pg = book.children[i];
+    if (!pg) return;
+    const h = pg.offsetHeight + 6;
+    if (Math.abs((parseFloat(book.style.height) || 0) - h) > 1) book.style.height = h + 'px';
+  } catch (e) {}
+}
 function stampPlaceArrows() {
   const el = stampArrowsEl();
   const book = document.getElementById('sb-book');
@@ -13452,6 +13461,7 @@ function stampPlaceArrows() {
   prev.style.left = (r.left + 2) + 'px';
   next.style.left = (r.right - 42) + 'px';
   const i = stampPageIndex(book);
+  stampFitHeight(book, i);
   prev.disabled = i <= 0;
   next.disabled = i >= book.children.length - 1;
   const nav2 = document.getElementById('sb-nav');
@@ -13537,6 +13547,7 @@ function compRenderMyPage() {
   const book = document.getElementById('sb-book');
   if (book && prevScroll) book.scrollLeft = prevScroll;
   if (book) book.addEventListener('scroll', () => { if (!stampArrowsRaf) stampArrowsRaf = requestAnimationFrame(() => { stampArrowsRaf = 0; stampPlaceArrows(); }); });
+  if (book) stampFitHeight(book, stampPageIndex(book));
   stampPlaceArrows();
 }
 
