@@ -2144,20 +2144,20 @@
 
   /* ===== 巡礼プランナー（Muse版ベース） ===== */
 .tp {
-/* 2026-11-17 アプリ全体に合わせて淡い水色と白に統一（旧：生成り色＋赤） */
---bg: #eaf6fb;
+/* 2026-11-17 アプリ全体の色に合わせる（:root の色をそのまま使うので、どのグループのアプリでも同じ書き方でよい） */
+--bg: var(--cream);
 --surface: #ffffff;
---surface-2: #e3f2fb;
---ink: #14314a;
---ink-soft: #3d6a86;
---muted: #6f93a8;
---line: #cfe6f2;
---accent: #1a6fa8;
+--surface-2: var(--purple-pale);
+--ink: var(--text);
+--ink-soft: var(--text-mid);
+--muted: color-mix(in srgb, var(--text-mid) 70%, #ffffff);
+--line: color-mix(in srgb, var(--purple-light) 55%, #ffffff);
+--accent: var(--purple-deep);
 --accent-ink: #ffffff;
---accent-soft: #e3f2fb;
---navy: #1a6fa8;
+--accent-soft: var(--purple-pale);
+--navy: var(--purple-deep);
 --ok: #2f7f6a;
---shadow: 0 1px 2px rgba(20, 49, 74,.06), 0 8px 24px rgba(26, 111, 168,.08);
+--shadow: 0 1px 2px rgba(0, 0, 0,.05), 0 8px 24px rgba(0, 0, 0,.06);
 }
 .tp {
 margin: 0;
@@ -4377,6 +4377,8 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
 // ════════════════════════════════════════
 const GROUP_CONFIG = {
   groupName: 'Hearts2Hearts',
+  slug: 'h2h',                                   // GAなどで使う短い名前（2026-11-17）
+  stamp: { motif: 'clover-heart', ink: '#1a6fa8' },  // 巡礼スタンプ帳の印（クローバー×ハート・青×白）
   appName: 'Trace Hearts2Hearts',
   appHandle: '@traceH2H',
   hashtags: ['#TraceHearts2Hearts', '#Hearts2Hearts', '#하츠투하츠', '#聖地巡礼'],
@@ -10569,7 +10571,7 @@ function shareSavedRoute(id) {
   if (!r) return;
   const spots = routeSpotsFromIds(r.spot_ids);
   const list = spots.slice(0, 5).map((s, i) => `${i + 1}. ${s.name}`).join('\n') + (spots.length > 5 ? `\n…ほか${spots.length - 5}か所` : '');
-  const text = `🗺 ${r.name}（${spots.length}か所）\n${list}\n\n#Hearts2Hearts #H2H #聖地巡礼 #TraceH2H`;
+  const text = `🗺 ${r.name}（${spots.length}か所）\n${list}\n\n` + tpShareTags(); // タグはアプリ共通（GROUP_CONFIG.hashtags）
   window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(APP_URL), '_blank', 'noopener');
 }
 async function deleteSavedRoute(id) {
@@ -12578,7 +12580,7 @@ const TP_STAY = { slow: 30, normal: 25, fast: 20 };
 const TP_DAY_END = 20 * 60 + 30;      // 20:30
 const TP_FREE_STOPS = 3;              // プレミアム以外で時刻を見られる数
 const TP_MAPS_CHUNK = 5;              // Googleマップ1本のリンクに入れるスポット数（スマホは経由地3つまで）
-const TP_MEMBER_EMOJI = { 'カルメン': '🌴', 'ジウ': '🍓', 'ユハ': '🎀', 'ステラ': '🧁', 'ジュウン': '👾', 'エイナ': '🌻', 'イアン': '🫛', 'イェオン': '😊' };
+const TP_MEMBER_EMOJI = (typeof MEMBER_ICONS !== 'undefined') ? MEMBER_ICONS : {}; // メンバーの絵文字はアプリ共通の MEMBER_ICONS を使う
 const TP = { area: null, member: 'all', pace: 'normal', move: 'transit', selected: new Set(), optCache: null, last: null, inited: false };
 
 function tpEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
@@ -12591,7 +12593,7 @@ function tpIsPremium() {
   return false;
 }
 function tpTeaser(feature) {
-  try { if (typeof gtag === 'function') gtag('event', 'premium_teaser_tap', { feature: feature, app_name: 'h2h' }); } catch (e) {}
+  try { if (typeof gtag === 'function') gtag('event', 'premium_teaser_tap', { feature: feature, app_name: GROUP_CONFIG.slug }); } catch (e) {}
   try { showEvalToast('🌟 プレミアム（準備中）で使えるようになります'); } catch (e) { alert('🌟 プレミアム（準備中）で使えるようになります'); }
 }
 function tpGa(name, params) { try { if (typeof gtag === 'function') gtag('event', name, params || {}); } catch (e) {} }
@@ -13001,7 +13003,7 @@ function tpPlanText() {
       idx++;
     });
   });
-  lines.push('Trace Hearts2Hearts: ' + APP_URL);
+  lines.push(GROUP_CONFIG.appName + ': ' + APP_URL);
   return lines.join('\n');
 }
 async function tpCopy(btn) {
@@ -13240,7 +13242,7 @@ async function toggleWant(id, ev) {
   if (on) wantSet.add(id); else wantSet.delete(id);
   wantSaveLocal();
   wantRefreshUI();
-  try { if (typeof gtag === 'function') gtag('event', on ? 'want_add' : 'want_remove', { app_name: 'h2h' }); } catch (e) {}
+  try { if (typeof gtag === 'function') gtag('event', on ? 'want_add' : 'want_remove', { app_name: GROUP_CONFIG.slug }); } catch (e) {}
   try { showEvalToast(on ? '⭐ 行きたいに追加しました（巡礼プランナーで選べます）' : '行きたいから外しました'); } catch (e) {}
   if (wantUserId) {
     try {
@@ -13311,7 +13313,7 @@ async function compCheck() {
       });
       if (!error && ok === true) {
         try { showEvalToast(`🏆 ${u.kind === 'area' ? '「' + u.label + '」エリア' : '旅「' + u.label + '」'}をコンプリートしました！`); } catch (e) {}
-        try { if (typeof gtag === 'function') gtag('event', 'complete_' + u.kind, { app_name: 'h2h', label: u.label }); } catch (e) {}
+        try { if (typeof gtag === 'function') gtag('event', 'complete_' + u.kind, { app_name: GROUP_CONFIG.slug, label: u.label }); } catch (e) {}
       }
     }
     await compLoadMine();
@@ -13344,7 +13346,7 @@ function compSchedule() {
 //  ・巡礼日は visit_log の visited_at（無いものは日付なしで印だけ出す）。判定には使わない
 //  ・エリアは「エリアごとに1ページ」の帳面で見せる。旅（シリーズ）の制覇は見せ方が未決のため、今までの表示のまま
 //  ・印のモチーフと色はアプリごとの設定（STAMP_STYLE）。帳面の作りは3アプリ共通
-const STAMP_STYLE = { motif: 'clover-heart', ink: '#1a6fa8' }; // H2H：クローバー×ハート（青×白）
+const STAMP_STYLE = GROUP_CONFIG.stamp || { motif: 'clover-heart', ink: '#1a6fa8' }; // 印のモチーフと色は GROUP_CONFIG.stamp
 let compShowAll = false;
 let stampDates = null;      // spot_name → 最初に巡礼した日（visit_log）
 let stampDatesLoading = false;
@@ -13684,7 +13686,7 @@ function openFaq() {
   const from = uxScreen();
   faqFrom = from;
   uxLog('faq_open', uxScreenLabel(from));
-  try { if (typeof gtag === 'function') gtag('event', 'faq_open', { app_name: 'h2h', screen: from }); } catch (e) {}
+  try { if (typeof gtag === 'function') gtag('event', 'faq_open', { app_name: GROUP_CONFIG.slug, screen: from }); } catch (e) {}
   const sheet = document.getElementById('faq-sheet');
   if (!sheet) return;
   document.getElementById('fb-from').textContent = uxScreenLabel(from);
@@ -13732,7 +13734,7 @@ async function sendFeedback() {
     document.querySelectorAll('#fb-kinds button').forEach(b => b.setAttribute('aria-pressed', 'false'));
     document.getElementById('fb-form').style.display = 'none';
     document.getElementById('fb-done').style.display = '';
-    try { if (typeof gtag === 'function') gtag('event', 'feedback_send', { app_name: 'h2h' }); } catch (e) {}
+    try { if (typeof gtag === 'function') gtag('event', 'feedback_send', { app_name: GROUP_CONFIG.slug }); } catch (e) {}
   } catch (e) {
     alert('送信できませんでした。時間をおいてもう一度お試しください');
   } finally {
@@ -13914,6 +13916,14 @@ window.addEventListener('load', () => { setTimeout(loadHiddenDiscoverers, 500); 
 //  ・プレミアム以外は、時刻は最初の3か所まで（4か所目からは順番だけ）。終了予定もプレミアムだけ
 // ===================================================================
 const CV = { W: 1080, H: 1350, M: 64, HEAD: 96, FOOT: 104, BG: '#ffffff', INK: '#14314a', SOFT: '#3d6a86', MUTED: '#6f93a8', LINE: '#cfe6f2', ACCENT: '#1a6fa8', SOFTBG: '#e3f2fb', ACCENTBG: '#e3f2fb' };
+// 画像の色もアプリの色（:root）から取る（2026-11-17）
+(function () {
+  try {
+    const cs = getComputedStyle(document.documentElement);
+    const v = n => (cs.getPropertyValue(n) || '').trim();
+    if (v('--text')) { CV.INK = v('--text'); CV.SOFT = v('--text-mid'); CV.MUTED = v('--text-mid'); CV.ACCENT = v('--purple-deep'); CV.SOFTBG = v('--purple-pale'); CV.ACCENTBG = v('--purple-pale'); CV.LINE = v('--purple-light'); }
+  } catch (e) {}
+})();
 let tpImageFiles = [];
 
 function cvRR(ctx, x, y, w, h, r) {
@@ -13981,7 +13991,7 @@ async function tpShareLink() {
     window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText) + '&url=' + encodeURIComponent(url), '_blank', 'noopener');
     try { uxLog('route_share_x', TP.last.ordered.length + 'か所'); } catch (e) {}
   });
-  try { if (typeof gtag === 'function') gtag('event', 'route_share_link', { app_name: 'h2h', spots: TP.last.ordered.length }); } catch (e) {}
+  try { if (typeof gtag === 'function') gtag('event', 'route_share_link', { app_name: GROUP_CONFIG.slug, spots: TP.last.ordered.length }); } catch (e) {}
   try { uxLog('route_share_link', TP.last.ordered.length + 'か所'); } catch (e) {}
   box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -14013,7 +14023,7 @@ function tpRestoreFromURL() {
     tpShow(list, !!p.o);
     const body = tp$('tp-result-body');
     if (body) body.insertAdjacentHTML('afterbegin', '<div class="tp-restored">🔗 共有されたコースです。「このコースを保存する」から、自分のルートとして保存できます。</div>');
-    try { if (typeof gtag === 'function') gtag('event', 'route_share_open', { app_name: 'h2h', spots: list.length }); } catch (e) {}
+    try { if (typeof gtag === 'function') gtag('event', 'route_share_open', { app_name: GROUP_CONFIG.slug, spots: list.length }); } catch (e) {}
     try { uxLog('route_share_open', list.length + 'か所'); } catch (e) {}
   })();
 }
@@ -14041,7 +14051,7 @@ function tpCourseInfo() {
     walkKm: legs.filter(l => l.mode === 'walk').reduce((a, l) => a + l.km, 0),
     endT: lastDay.stops[lastDay.stops.length - 1].dep,
     startMin: tpStartMin(),
-    courseName: 'Hearts2Hearts ' + (TP.area || ''),
+    courseName: GROUP_CONFIG.groupName + ' ' + (TP.area || ''),
     dateLabel: tpDateLabel(),
   };
 }
@@ -14076,7 +14086,7 @@ function tpDrawCover(ctx, info) {
   ctx.fillStyle = CV.ACCENT; ctx.fillRect(0, 0, CV.W, 16);
   let y = 96;
   ctx.fillStyle = CV.ACCENT; ctx.font = "700 27px 'Noto Sans JP', sans-serif";
-  ctx.fillText('Trace Hearts2Hearts ・ 巡礼プランナー', CV.M, y);
+  ctx.fillText(GROUP_CONFIG.appName + ' ・ 巡礼プランナー', CV.M, y);
   y += 30;
   ctx.fillStyle = CV.INK; ctx.font = "800 60px 'Noto Serif JP', 'Hiragino Mincho ProN', serif";
   cvWrap(ctx, info.courseName, CW).slice(0, 3).forEach(ln => { y += 76; ctx.fillText(ln, CV.M, y); });
@@ -14243,7 +14253,7 @@ async function tpMakeImages() {
     let canvases = tpBuildCanvases(map), blobs = null;
     try { blobs = await tpBlobs(canvases); }
     catch (e) { canvases = tpBuildCanvases(new Map()); blobs = await tpBlobs(canvases); noPhoto = ['（写真を使えなかったため、すべて名前カードで作りました）']; }
-    const fname = i => 'trace-h2h-course-' + ((tp$('tp-date') || {}).value || 'course') + '-' + (i + 1) + '.png';
+    const fname = i => 'trace-' + GROUP_CONFIG.slug + '-course-' + ((tp$('tp-date') || {}).value || 'course') + '-' + (i + 1) + '.png';
     tpImageFiles = blobs.map((b, i) => new File([b], fname(i), { type: 'image/png' }));
     const urls = blobs.map(b => URL.createObjectURL(b));
     let html = `<p class="tp-imgnote">全${urls.length}枚できました（1080×1350・Instagramのフィードと同じ縦長）。1枚目が表紙で、スポットの途中では切れないように分けています。画像を長押しすると保存できます。</p>`;
@@ -14256,7 +14266,7 @@ async function tpMakeImages() {
     area.innerHTML = html;
     const sb = tp$('tp-img-share');
     if (sb) sb.addEventListener('click', async () => { try { await navigator.share({ files: tpImageFiles, title: (TP.area || '') + 'の巡礼コース' }); } catch (_) {} });
-    try { if (typeof gtag === 'function') gtag('event', 'route_share_image', { app_name: 'h2h', pages: urls.length }); } catch (e) {}
+    try { if (typeof gtag === 'function') gtag('event', 'route_share_image', { app_name: GROUP_CONFIG.slug, pages: urls.length }); } catch (e) {}
     try { uxLog('route_share_image', urls.length + '枚'); } catch (e) {}
     area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   } catch (e) {
