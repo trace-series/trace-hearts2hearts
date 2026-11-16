@@ -4634,7 +4634,7 @@ function showBoostPopup(item, dismissKey) {
   overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(61,26,94,0.85);display:flex;align-items:center;justify-content:center;animation:fadeInBd 0.4s ease;';
   overlay.innerHTML = `
     <div style="background:linear-gradient(135deg,#0f1b3d,#7b1a3e);border-radius:24px;padding:32px 28px;max-width:320px;width:90%;text-align:center;color:#fff;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
-      <button onclick="closeBoostPopup(false,'${dismissKey}')" style="position:absolute;top:14px;right:16px;background:none;border:none;color:rgba(255,255,255,0.6);font-size:22px;cursor:pointer;">×</button>
+      <button type="button" aria-label="閉じる" onclick="closeBoostPopup(false,'${dismissKey}')" style="position:absolute;top:6px;right:6px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.12);border:none;border-radius:50%;color:rgba(255,255,255,0.85);font-size:24px;line-height:1;padding:0;cursor:pointer;z-index:2;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">×</button>
       <div style="font-size:40px;margin-bottom:8px;">${b.emoji || '✨'}</div>
       <div style="font-size:13px;font-weight:700;color:#ffd700;margin-bottom:4px;">${isPre ? '📣 予告' : '✨ 開催中 ✨'}</div>
       <div style="font-size:19px;font-weight:700;margin-bottom:14px;">${b.name}</div>
@@ -4678,10 +4678,7 @@ function showEventPopup(ev, dismissKey) {
       text-align:center;color:#fff;position:relative;
       box-shadow:0 20px 60px rgba(0,0,0,0.5);
     ">
-      <button onclick="closeEventPopup(false,'${dismissKey}')" style="
-        position:absolute;top:14px;right:16px;background:none;border:none;
-        color:rgba(255,255,255,0.6);font-size:22px;cursor:pointer;
-      ">×</button>
+      <button type="button" aria-label="閉じる" onclick="closeEventPopup(false,'${dismissKey}')" style="position:absolute;top:6px;right:6px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.12);border:none;border-radius:50%;color:rgba(255,255,255,0.85);font-size:24px;line-height:1;padding:0;cursor:pointer;z-index:2;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">×</button>
       <div style="font-size:40px;margin-bottom:8px;">🏟️</div>
       <div style="font-size:20px;font-weight:700;margin-bottom:4px;">${ev.name}</div>
       <div style="font-size:14px;opacity:0.85;margin:10px 0 16px;">✨ リリース記念 ✨</div>
@@ -4743,10 +4740,7 @@ function showBirthdayPopup(event, dismissKey) {
       text-align:center;color:#fff;position:relative;
       box-shadow:0 20px 60px rgba(0,0,0,0.5);
     ">
-      <button onclick="closeBirthdayPopup(false,'${dismissKey}')" style="
-        position:absolute;top:14px;right:16px;background:none;border:none;
-        color:rgba(255,255,255,0.6);font-size:22px;cursor:pointer;
-      ">×</button>
+      <button type="button" aria-label="閉じる" onclick="closeBirthdayPopup(false,'${dismissKey}')" style="position:absolute;top:6px;right:6px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.12);border:none;border-radius:50%;color:rgba(255,255,255,0.85);font-size:24px;line-height:1;padding:0;cursor:pointer;z-index:2;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">×</button>
       <div style="font-size:40px;margin-bottom:8px;">${isDay ? '🎂' : '🌸'}</div>
       <div style="font-size:22px;font-weight:700;margin-bottom:4px;">
         ${titleHtml}
