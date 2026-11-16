@@ -4547,6 +4547,14 @@ function buildPopupQueue() {
 }
 function showNextPopupInQueue() {
   if (!_popupQueue.length) return;
+  // はじめての画面（オンボーディング）が出ている間はポップアップを出さず、閉じてから出す。
+  // iPhoneのSafariでは、スクロールする全画面の下に重ねると、上のポップアップの×が押せなくなることがあるため（2026-11-17）
+  const ob = document.getElementById('onboarding-modal');
+  if (ob && ob.style.display !== 'none' && getComputedStyle(ob).display !== 'none') {
+    clearTimeout(window._popupWaitTimer);
+    window._popupWaitTimer = setTimeout(showNextPopupInQueue, 700);
+    return;
+  }
   const next = _popupQueue.shift();
   if (next.kind === 'birthday') showBirthdayPopup(next.data, next.key);
   else if (next.kind === 'boost') showBoostPopup(next.data, next.key);
