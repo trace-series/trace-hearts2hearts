@@ -13957,18 +13957,30 @@ function tpShareURL() {
   const payload = { v: 1, d: (tp$('tp-date') || {}).value || '', s: tpIsPremium() ? st : '10:00', p: TP.pace, m: TP.move, a: TP.area, o: L.optimized ? 1 : 0, n: L.ordered.map(s => s.no) };
   return APP_URL + '?c=' + tpEncode(payload);
 }
+function tpShareTags() {
+  const tags = (GROUP_CONFIG.hashtags && GROUP_CONFIG.hashtags.length) ? GROUP_CONFIG.hashtags.slice() : [];
+  if (GROUP_CONFIG.pilgrimHashtag && !tags.includes(GROUP_CONFIG.pilgrimHashtag)) tags.unshift(GROUP_CONFIG.pilgrimHashtag);
+  return tags.join(' ');
+}
 async function tpShareLink() {
   const url = tpShareURL(); if (!url) return;
   const title = (TP.area || '') + '｜' + tpDateLabel() + 'の巡礼コース';
   const box = tp$('tp-share-area');
   box.innerHTML = `<div class="tp-sharebox"><label>共有リンク（LINE・DMで送ると、開いた人のTraceで同じコースが見られます）</label>
-    <div class="tp-shareRow"><input type="text" readonly value="${tpEsc(url)}" onfocus="this.select()"><button type="button" id="tp-share-copy">コピー</button>${navigator.share ? '<button type="button" id="tp-share-sheet">共有する</button>' : ''}</div>
+    <div class="tp-shareRow"><input type="text" readonly value="${tpEsc(url)}" onfocus="this.select()"><button type="button" id="tp-share-copy">コピー</button>${navigator.share ? '<button type="button" id="tp-share-sheet">共有する</button>' : ''}<button type="button" id="tp-share-x">𝕏 に投稿</button></div>
     <p class="hint" id="tp-share-status" style="margin:6px 0 0"></p></div>`;
   const ok = await tpCopyText(url);
   tp$('tp-share-status').textContent = ok ? '✓ リンクをコピーしました' : '上の欄を長押ししてコピーしてください';
   tp$('tp-share-copy').addEventListener('click', async () => { tp$('tp-share-status').textContent = (await tpCopyText(url)) ? '✓ リンクをコピーしました' : '上の欄を長押ししてコピーしてください'; });
   const sb = tp$('tp-share-sheet');
-  if (sb) sb.addEventListener('click', async () => { try { await navigator.share({ title: title, text: title + '｜Trace Hearts2Hearts', url: url }); } catch (_) {} });
+  // 共有の文面：コース名＋アプリのハッシュタグ（2026-11-17：タグは GROUP_CONFIG.hashtags に揃える。消すこともできる「初期値」）
+  const shareText = title + '｜' + (GROUP_CONFIG.appName || 'Trace') + '\n' + tpShareTags();
+  if (sb) sb.addEventListener('click', async () => { try { await navigator.share({ title: title, text: shareText, url: url }); try { uxLog('route_share_sheet', TP.last.ordered.length + 'か所'); } catch (e) {} } catch (_) {} });
+  const xb = tp$('tp-share-x');
+  if (xb) xb.addEventListener('click', () => {
+    window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText) + '&url=' + encodeURIComponent(url), '_blank', 'noopener');
+    try { uxLog('route_share_x', TP.last.ordered.length + 'か所'); } catch (e) {}
+  });
   try { if (typeof gtag === 'function') gtag('event', 'route_share_link', { app_name: 'h2h', spots: TP.last.ordered.length }); } catch (e) {}
   try { uxLog('route_share_link', TP.last.ordered.length + 'か所'); } catch (e) {}
   box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
