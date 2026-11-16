@@ -13352,16 +13352,19 @@ const stampTrSeen = new Set(); // 旅のバーは最初に表示したときだ�
 async function stampLoadDates() {
   if (stampDates || stampDatesLoading) return;
   stampDatesLoading = true;
+  let got = {};
   try {
     const client = getSupabaseClient();
     const { data: sess } = await client.auth.getSession();
-    if (!sess || !sess.session) return;
-    const { data } = await client.from('visit_log').select('spot_name, visited_at').eq('user_id', sess.session.user.id);
-    const m = {};
-    (data || []).forEach(r => { if (!r.spot_name || !r.visited_at) return; if (!m[r.spot_name] || r.visited_at < m[r.spot_name]) m[r.spot_name] = r.visited_at; });
-    stampDates = m;
-  } catch (e) { stampDates = {}; }
-  finally { stampDatesLoading = false; try { compRenderMyPage(); } catch (e) {} }
+    if (sess && sess.session) {
+      const { data } = await client.from('visit_log').select('spot_name, visited_at').eq('user_id', sess.session.user.id);
+      (data || []).forEach(r => { if (!r.spot_name || !r.visited_at) return; if (!got[r.spot_name] || r.visited_at < got[r.spot_name]) got[r.spot_name] = r.visited_at; });
+    }
+  } catch (e) {}
+  // ログインしていないときも「空」として確定させる（2026-11-17 修正：未ログインで読み直しが止まらず、画面が固まっていた）
+  stampDates = got;
+  stampDatesLoading = false;
+  if (Object.keys(got).length) { try { compRenderMyPage(); } catch (e) {} }
 }
 function stampFmtDate(iso) {
   try { const d = new Date(iso); if (isNaN(d)) return ''; return d.getFullYear() + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + String(d.getDate()).padStart(2, '0'); } catch (e) { return ''; }
