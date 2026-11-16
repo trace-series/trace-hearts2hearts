@@ -13377,7 +13377,7 @@ function stampSvg(opts) {
   if (!opts.on) {
     return `<svg class="sb-stamp" viewBox="0 0 100 100" aria-hidden="true">
       <circle cx="50" cy="50" r="44" fill="none" stroke="#c9d3da" stroke-width="2" stroke-dasharray="4 4"/>
-      <g opacity=".18">${stampMotif(STAMP_STYLE.motif, '#7d8f9c')}</g></svg>`;
+      <g opacity=".18" transform="translate(-1 5)">${stampMotif(STAMP_STYLE.motif, '#7d8f9c')}</g></svg>`; // 空欄は文字が無いので、モチーフを円のまん中に寄せる
   }
   const h = stampHash(opts.id);
   const rot = (h % 17) - 8;              // -8〜+8度だけ傾ける（押した感）
