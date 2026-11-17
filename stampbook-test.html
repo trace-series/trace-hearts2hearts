@@ -13547,6 +13547,10 @@ function stampPlaceArrows() {
 }
 // ── エリア制覇の共有画像（スタンプ帳 Phase 2・2026-11-17）──
 //   原則A：金色を使うのはこの画像だけ。メンバー名は入れない。印はアプリごとの GROUP_CONFIG.stamp
+// 確認用：URLの最後に ?stamp_preview=1 を付けると、まだ制覇していないエリアでも画像を試せる（データは何も変わらない）
+function stampPreviewMode() {
+  try { return new URLSearchParams(location.search).has('stamp_preview'); } catch (e) { return false; }
+}
 function stampSealStandalone(label, size) {
   // 画像に描くための、フィルター込みで単体で使える印のSVG
   const c = STAMP_STYLE.ink, gold = '#c9a227';
@@ -13709,7 +13713,7 @@ function compRenderMyPage() {
       ${p.complete ? '<div class="sb-band">制覇</div>' : ''}
       <div class="sb-head"><span class="sb-area">${escHtml(p.a.label)}</span><span class="sb-prog"><b>${p.done}</b> ／ ${p.total} か所${p.complete ? '' : '・あと' + left + 'か所'}</span></div>
       ${leftMsg}
-      ${p.complete ? `<div class="sb-seal">${stampSvg({ id: 'area-' + p.a.label, on: true, label: p.a.label + ' 制覇', big: true })}</div><div class="sb-share-row"><button type="button" class="sb-share" data-area="${escHtml(p.a.label)}" data-total="${p.total}" onclick="stampShareArea(this.dataset.area, Number(this.dataset.total))">🖼️ 制覇の画像を作る</button></div>` : ''}
+      ${p.complete ? `<div class="sb-seal">${stampSvg({ id: 'area-' + p.a.label, on: true, label: p.a.label + ' 制覇', big: true })}</div><div class="sb-share-row"><button type="button" class="sb-share" data-area="${escHtml(p.a.label)}" data-total="${p.total}" onclick="stampShareArea(this.dataset.area, Number(this.dataset.total))">🖼️ 制覇の画像を作る</button></div>` : (stampPreviewMode() ? `<div class="sb-share-row"><button type="button" class="sb-share" style="opacity:.75" data-area="${escHtml(p.a.label)}" data-total="${p.total}" onclick="stampShareArea(this.dataset.area, Number(this.dataset.total))">🧪 制覇の画像を試す（確認用）</button></div>` : '')}
       <div class="sb-grid">${cells}</div>
     </div>`;
   }).join('') + `</div>`;
