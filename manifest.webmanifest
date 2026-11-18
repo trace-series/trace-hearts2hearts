@@ -3,7 +3,7 @@
   "short_name": "Trace H2H",
   "start_url": "./trace-hearts2hearts.html?utm_source=homescreen",
   "scope": "./",
-  "display": "browser",
+  "display": "standalone",
   "background_color": "#eaf6fb",
   "theme_color": "#1a6fa8",
   "lang": "ja",
