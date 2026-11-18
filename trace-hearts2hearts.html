@@ -18,6 +18,9 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-d-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-title" content="Trace H2H">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="application-name" content="Trace H2H">
 <meta name="theme-color" content="#1a6fa8">
 <title>Trace Hearts2Hearts — 聖地巡礼MAP</title>
@@ -4319,7 +4322,7 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
     <div id="a2hs-inapp" class="a2hs-steps" style="display:none;background:#fff4f6;">今はXやInstagramなどのアプリの中で開いています。右上・右下のメニューから<b>「ブラウザで開く」</b>（iPhoneはSafari）を選んでから、下の手順で追加してください。</div>
     <div id="a2hs-ios" class="a2hs-steps"><b>iPhone（Safari）</b><br>① 画面下の <b>共有ボタン（□に↑）</b> をタップ<br>② 下にスクロールして <b>「ホーム画面に追加」</b> をタップ<br>③ 右上の <b>「追加」</b> をタップ</div>
     <div id="a2hs-android" class="a2hs-steps"><b>Android（Chrome）</b><br>① 右上の <b>︙（メニュー）</b> をタップ<br>② <b>「ホーム画面に追加」</b> をタップ<br>③ <b>「追加」</b> をタップ</div>
-    <div class="a2hs-note">ホーム画面のアイコンから開いても、いつものブラウザで開くので、ログインやポイントはそのまま引き継がれます。</div>
+    <div class="a2hs-note">ホーム画面のアイコンから開くと、アプリのように全画面で開きます。<b>最初の1回だけ、XかGoogleでログインし直してください</b>（ログインしていれば、ポイントや巡礼の記録はそのまま戻ります）。</div>
     <button type="button" class="a2hs-btn" onclick="closeA2hs()">閉じる</button>
   </div>
 </div>
@@ -14225,7 +14228,13 @@ function a2hsMaybeBanner() {
   try {
     const st = a2hsState();
     const today = new Date().toISOString().slice(0, 10);
-    if (/utm_source=homescreen/.test(location.search)) { st.fromHome = 1; st.bannerDone = 1; a2hsSave(st); try { uxLog('open_from_homescreen', null, true); } catch (e) {} return; }
+    const standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+    if (standalone || /utm_source=homescreen/.test(location.search)) {
+      st.fromHome = 1; st.bannerDone = 1; a2hsSave(st);
+      try { uxLog('open_from_homescreen', null, true); } catch (e) {}
+      if (standalone && !st.loginTipDone) a2hsLoginTip();
+      return;
+    }
     if (!st.firstDay) { st.firstDay = today; a2hsSave(st); return; }
     if (st.bannerDone || st.firstDay === today) return;
     if (!(a2hsIsIOS() || a2hsIsAndroid())) return;
@@ -14234,6 +14243,16 @@ function a2hsMaybeBanner() {
     const ob = document.getElementById('onboarding-modal'), pv = document.getElementById('pv-prompt');
     if (busy || (ob && ob.style.display !== 'none') || (pv && pv.style.display === 'flex')) { setTimeout(a2hsMaybeBanner, 5000); return; }
     document.getElementById('a2hs-banner').style.display = 'flex';
+  } catch (e) {}
+}
+// 全画面（ホーム画面のアプリ）で初めて開いたとき、ログインしていなければ一度だけ知らせる
+async function a2hsLoginTip() {
+  try {
+    const { data } = await getSupabaseClient().auth.getSession();
+    const ses = data && data.session;
+    const st = a2hsState(); st.loginTipDone = 1; a2hsSave(st);
+    if (ses && !(ses.user && ses.user.is_anonymous)) return;
+    showEvalToast('📲 ホーム画面版はSafariとは別に保存されます。My PageからXかGoogleでログインすると、ポイントや記録が戻ります');
   } catch (e) {}
 }
 window.addEventListener('load', () => { setTimeout(a2hsMaybeBanner, 6000); });
