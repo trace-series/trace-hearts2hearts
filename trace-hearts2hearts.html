@@ -818,6 +818,7 @@
     display: flex;
     height: 60px;
     z-index: 100;
+    transform: translateZ(0); /* 2026-11-22 iOSでスクロールに釣られて動くのを防ぐ */
   }
 
   .nav-item {
@@ -2439,7 +2440,7 @@ border-radius: 10px; padding: 9px 16px; min-height: 44px; display: inline-flex; 
   .tp .badge.want { background: #fff4c2; color: #8a5a00; }
   .tp .badge.visited { background: #e2f3ec; color: #0b6b4a; }
   /* 『Q』ボタン・よくある質問・意見（2026-11-14） */
-  #q-tab { position: fixed; right: 0; top: 58%; z-index: 150; width: 34px; height: 44px; border: none; border-radius: 22px 0 0 22px; background: linear-gradient(135deg,var(--purple-mid),var(--purple-deep)); color: #fff; font-size: 18px; font-weight: 800; font-family: Georgia, serif; box-shadow: -2px 2px 10px rgba(0,0,0,.18); cursor: pointer; padding: 0 0 0 4px; opacity: .92; }
+  #q-tab { position: fixed; right: 0; top: 58%; z-index: 150; transform: translateZ(0); width: 34px; height: 44px; border: none; border-radius: 22px 0 0 22px; background: linear-gradient(135deg,var(--purple-mid),var(--purple-deep)); color: #fff; font-size: 18px; font-weight: 800; font-family: Georgia, serif; box-shadow: -2px 2px 10px rgba(0,0,0,.18); cursor: pointer; padding: 0 0 0 4px; opacity: .92; }
   @media print { #q-tab { display: none !important; } }
   #faq-sheet, #fb-admin { position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,.45); align-items: flex-end; justify-content: center; }
   #fb-admin { z-index: 3001; }
@@ -5548,7 +5549,7 @@ function openGalleryForCurrentSpot() {
   const name = currentSpot.name;
   const card = document.getElementById('map-card');
   if (card) card.classList.remove('open');
-  cardOpen = false;
+  cardOpen = false; syncCardTouchGuard();
   const closeBtn = document.getElementById('card-fixed-close-btn');
   if (closeBtn) closeBtn.style.display = 'none';
   openGalleryFromMap(name);
@@ -6224,7 +6225,7 @@ async function deleteAdminSpot() {
   closeAdminSheet('admin-edit-modal');
   const card = document.getElementById('map-card');
   if (card) card.classList.remove('open');
-  cardOpen = false;
+  cardOpen = false; syncCardTouchGuard();
   const closeBtn = document.getElementById('card-fixed-close-btn');
   if (closeBtn) closeBtn.style.display = 'none';
   currentSpot = null;
@@ -8973,7 +8974,7 @@ function openCard(spot) {
 
   document.getElementById('card-detail').style.display = 'block';
   document.getElementById('map-card').classList.add('open');
-  cardOpen = true;
+  cardOpen = true; syncCardTouchGuard();
   const closeBtnOnOpen = document.getElementById('card-fixed-close-btn');
   if (closeBtnOnOpen) closeBtnOnOpen.style.display = 'flex';
   updateFloatingButtons();
@@ -9866,7 +9867,7 @@ async function submitNewSpot() {
   }
 
 function toggleCard() {
-  cardOpen = !cardOpen;
+  cardOpen = !cardOpen; syncCardTouchGuard();
   const card = document.getElementById('map-card');
   const closeBtn = document.getElementById('card-fixed-close-btn');
   if (cardOpen) {
@@ -9882,13 +9883,26 @@ function toggleCard() {
 // カードが開いている間、カードの外側へのタッチ移動だけを無効化する。
 // body自体は固定しない（iOS Safariでbody position:fixedにすると
 // カード自身のスクロールまで巻き込んで固まることがあったため）。
-document.addEventListener('touchmove', function(e) {
+// 2026-11-22 修正：この見張りを常に付けたままだと、iOS Safariがスクロールを毎回待つ形になり、
+// ギャラリーなど写真の多い画面で下のボタン（ナビ）や『Q』が写真と一緒に動いて見えていた。
+// カードが開いている間だけ付け、閉じたら外す。
+function cardTouchGuard(e) {
   if (!cardOpen) return;
   const card = document.getElementById('map-card');
   if (card && !card.contains(e.target) && !(e.target.closest && e.target.closest('.allow-touch-scroll'))) {
     e.preventDefault();
   }
-}, { passive: false });
+}
+let cardTouchGuardOn = false;
+function syncCardTouchGuard() {
+  if (cardOpen && !cardTouchGuardOn) {
+    document.addEventListener('touchmove', cardTouchGuard, { passive: false });
+    cardTouchGuardOn = true;
+  } else if (!cardOpen && cardTouchGuardOn) {
+    document.removeEventListener('touchmove', cardTouchGuard, { passive: false });
+    cardTouchGuardOn = false;
+  }
+}
 
 
 
@@ -9951,7 +9965,7 @@ function setOriginSpot() {
   originSpot = currentSpot;
   activeRadius = 0;
   document.getElementById('map-card').classList.remove('open');
-  cardOpen = false;
+  cardOpen = false; syncCardTouchGuard();
   const closeBtnOnOrigin = document.getElementById('card-fixed-close-btn');
   if (closeBtnOnOrigin) closeBtnOnOrigin.style.display = 'none';
   listViewOpen = true;
